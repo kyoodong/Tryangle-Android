@@ -3,9 +3,13 @@ package com.gomson.tryangle
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.*
+import android.media.ImageReader
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import android.util.Size
 import android.view.Surface
@@ -13,12 +17,30 @@ import android.view.TextureView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.asCoroutineDispatcher
+import java.lang.StringBuilder
+import java.nio.ByteBuffer
+import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
 
     val TAG = "MainActivity"
     val CAMERA_PERMISSION_CODE = 100
+
+    private var useGPU = true
+    private lateinit var imageSegmentationModel: ImageSegmentationModelExecutor
+    private val inferenceThread = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    private val mainScope = MainScope()
+
+    private var lensFacing = CameraCharacteristics.LENS_FACING_BACK
+
+    private lateinit var viewModel: MLExecutionViewModel
+    private var t1: Long = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,7 +59,15 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
-//                Log.i(TAG, "onSurfaceTextureUpdated")
+                val now = SystemClock.uptimeMillis()
+                if (now - t1 < 500)
+                    return
+
+                t1 = now
+                val bitmap = textureView.bitmap
+                    ?: return
+
+                viewModel.onApplyModel(bitmap, imageSegmentationModel, inferenceThread)
             }
 
             override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
@@ -50,6 +80,31 @@ class MainActivity : AppCompatActivity() {
                 openCamera()
             }
         }
+
+        viewModel = ViewModelProvider.AndroidViewModelFactory(application).create(MLExecutionViewModel::class.java)
+        viewModel.resultingBitmap.observe(
+            this,
+            Observer { resultImage ->
+                if (resultImage != null) {
+                    updateUIWithResults(resultImage)
+                }
+            }
+        )
+
+        imageSegmentationModel = ImageSegmentationModelExecutor(this, useGPU)
+    }
+
+    private fun updateUIWithResults(modelExecutionResult: ModelExecutionResult) {
+        resultImageView.setImageBitmap(modelExecutionResult.bitmapResult)
+        originalImageView.setImageBitmap(modelExecutionResult.bitmapOriginal)
+        maskImageView.setImageBitmap(modelExecutionResult.bitmapMaskOnly)
+
+        Log.i(TAG, modelExecutionResult.executionLog)
+        val sb = StringBuilder()
+        for (key in modelExecutionResult.itemsFound) {
+            sb.append("${imageSegmentationModel.labelsArrays[key]} ")
+        }
+        Log.i(TAG, sb.toString())
     }
 
     /**
