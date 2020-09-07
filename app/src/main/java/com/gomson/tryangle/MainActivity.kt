@@ -3,9 +3,11 @@ package com.gomson.tryangle
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.*
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import android.util.Size
 import android.view.Surface
@@ -14,11 +16,22 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import kotlinx.android.synthetic.main.activity_main.*
+import okhttp3.MediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import org.json.JSONObject
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import java.io.ByteArrayOutputStream
 
 class MainActivity : AppCompatActivity() {
 
     val TAG = "MainActivity"
     val CAMERA_PERMISSION_CODE = 100
+
+    val imageService = NetworkManager.retrofit.create(ImageService::class.java)
+    var last_time = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,7 +50,33 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
-//                Log.i(TAG, "onSurfaceTextureUpdated")
+                val now = SystemClock.uptimeMillis()
+
+                if (now - last_time < 20000) {
+                    return
+                }
+
+                last_time = now
+                val bitmap = textureView.bitmap ?: return
+                val baos = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
+                val byteArray = baos.toByteArray()
+                val requestBody = RequestBody.create(MediaType.parse("multipart/form-data"), byteArray)
+                val body = MultipartBody.Part.createFormData("file", "${SystemClock.uptimeMillis()}.jpeg", requestBody)
+                val call = imageService.imageSegmentation(body)
+                call.enqueue(object : Callback<Map<String, Any>> {
+                    override fun onFailure(call: Call<Map<String, Any>>, t: Throwable) {
+                        Log.d(TAG, "실패")
+                        t.printStackTrace()
+                    }
+
+                    override fun onResponse(
+                        call: Call<Map<String, Any>>,
+                        response: Response<Map<String, Any>>
+                    ) {
+                        Log.d(TAG, "성공")
+                    }
+                })
             }
 
             override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
