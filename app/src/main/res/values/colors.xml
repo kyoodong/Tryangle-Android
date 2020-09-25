@@ -7,4 +7,5 @@
     <color name="colorLightMint">#7be1b9</color>
     <color name="colorDark">#14131c</color>
     <color name="colorWhite">#ffffff</color>
+    <color name="colorBlack">#000000</color>
 </resources>

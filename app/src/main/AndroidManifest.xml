@@ -17,6 +17,9 @@
     <!-- 카메라가 없는 기기에는 설치할 수 없음 -->
     <uses-feature android:name="android.hardware.camera2.full" />
 
+    <!--  전면카메라/후면카메라 권한  -->
+    <uses-feature android:name="android.hardware.camera.any" />
+
 
     <application
         android:allowBackup="true"
