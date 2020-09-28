@@ -29,8 +29,12 @@ open class BaseService {
         }
     }
 
+    fun hasValidToken(): Boolean {
+        return accessToken != null && accessToken!!.expiredAt.time > System.currentTimeMillis()
+    }
+
     // @TODO 여러 리퀘스트가 동시에 호출된 경우 여러번 호출 될 위험이 있음
-    fun issueToken(callback: Callback<AccessToken>) {
+    fun issueToken(callback: Callback<AccessToken>?) {
         val call = NetworkManager.accessTokenService.issueAccessToken()
         call.enqueue(object : Callback<AccessToken> {
             override fun onResponse(call: Call<AccessToken>, response: Response<AccessToken>) {
@@ -45,12 +49,25 @@ open class BaseService {
                         apply()
                     }
                 }
-                callback.onResponse(call, response)
+
+                callback?.onResponse(call, response)
             }
 
             override fun onFailure(call: Call<AccessToken>, t: Throwable) {
-                callback.onFailure(call, t)
+                callback?.onFailure(call, t)
             }
         })
+    }
+
+    fun clearToken() {
+        val sharedPreferences =
+            context.getSharedPreferences(context.getString(R.string.app_name), Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.apply {
+            putString(ACCESS_TOKEN_KEY, null)
+            putLong(EXPIRED_AT_KEY, 0)
+            apply()
+        }
+        accessToken = null
     }
 }

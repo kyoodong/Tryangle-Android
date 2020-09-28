@@ -5,13 +5,22 @@ import com.gomson.tryangle.domain.Guide;
 
 import java.util.List;
 
-import lombok.Getter;
-
-@Getter
 public class GuideDTO {
 
     private List<List<Guide>> guideList;
     private List<Component> componentList;
     private List<Integer> dominantColorList;
 
+
+    public List<List<Guide>> getGuideList() {
+        return guideList;
+    }
+
+    public List<Component> getComponentList() {
+        return componentList;
+    }
+
+    public List<Integer> getDominantColorList() {
+        return dominantColorList;
+    }
 }

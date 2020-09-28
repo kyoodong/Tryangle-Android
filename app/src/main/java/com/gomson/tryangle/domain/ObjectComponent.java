@@ -6,8 +6,6 @@ import org.json.JSONException;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Getter;
-
 public class ObjectComponent extends Component {
 
     private int clazz;

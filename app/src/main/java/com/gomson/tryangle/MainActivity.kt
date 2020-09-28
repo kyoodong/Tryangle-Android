@@ -2,7 +2,7 @@ package com.gomson.tryangle
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.*
+import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
@@ -17,15 +17,10 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.gomson.tryangle.dto.GuideImageListDTO
 import com.gomson.tryangle.network.ImageService
-import com.gomson.tryangle.network.NetworkManager
 import kotlinx.android.synthetic.main.activity_main.*
-import okhttp3.MediaType
-import okhttp3.MultipartBody
-import okhttp3.RequestBody
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.concurrent.ExecutorService
@@ -59,6 +54,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        imageService = ImageService(baseContext)
+
+        // 토큰 발급
+        if (!imageService.hasValidToken()) {
+            imageService.issueToken(null)
+        }
+
         // 카메라 권한 체크
         if (allPermissionsGranted()) {
             startCamera()
@@ -66,13 +68,11 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
         }
 
-        captureButton.setOnClickListener { takePhoto() }
+//        captureButton.setOnClickListener { takePhoto() }
 
         outputDirectory = getOutputDirectory()
 
         cameraExecutor = Executors.newSingleThreadExecutor()
-
-        imageService = ImageService(baseContext)
 
         ratio_1_1.setOnClickListener {
             imageCapture = getImageCapture(1, 1)
@@ -156,7 +156,7 @@ class MainActivity : AppCompatActivity() {
                 // 20초에 한 번 재탐색
                 val now = SystemClock.uptimeMillis()
 
-                if (now - last_time < 2000) {
+                if (now - last_time < 200000) {
                     imageProxy.close()
                     return@Analyzer
                 }
@@ -184,7 +184,11 @@ class MainActivity : AppCompatActivity() {
                         call: Call<GuideImageListDTO>,
                         response: Response<GuideImageListDTO>
                     ) {
-                        Log.d(MainActivity.TAG, "성공")
+                        val guideImageListDto = response.body() ?: return
+                        guideImageListView.getAdapter().resetImageUrlList()
+                        guideImageListView.getAdapter()
+                            .addImageUrlList(guideImageListDto.guideImageList)
+                        Log.d(TAG, "성공")
                     }
                 })
                 imageProxy.close()

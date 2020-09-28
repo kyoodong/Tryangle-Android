@@ -1,12 +1,5 @@
 package com.gomson.tryangle.domain;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
-@AllArgsConstructor
-@NoArgsConstructor
 public class Image {
 
     private long id;
@@ -14,6 +7,17 @@ public class Image {
     private String author;
     private int compositionProblemCount;
     private int score;
+
+    public Image() {
+    }
+
+    public Image(long id, String url, String author, int compositionProblemCount, int score) {
+        this.id = id;
+        this.url = url;
+        this.author = author;
+        this.compositionProblemCount = compositionProblemCount;
+        this.score = score;
+    }
 
     public long getId() {
         return id;

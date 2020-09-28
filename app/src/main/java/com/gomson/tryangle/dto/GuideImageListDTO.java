@@ -2,9 +2,6 @@ package com.gomson.tryangle.dto;
 
 import java.util.List;
 
-import lombok.Getter;
-
-@Getter
 public class GuideImageListDTO {
 
     private GuideDTO guideDTO;
@@ -13,5 +10,13 @@ public class GuideImageListDTO {
     public GuideImageListDTO(GuideDTO guideDTO, List<String> guideImageList) {
         this.guideDTO = guideDTO;
         this.guideImageList = guideImageList;
+    }
+
+    public GuideDTO getGuideDTO() {
+        return guideDTO;
+    }
+
+    public List<String> getGuideImageList() {
+        return guideImageList;
     }
 }

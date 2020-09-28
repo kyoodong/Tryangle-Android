@@ -1,7 +1,5 @@
 package com.gomson.tryangle.domain;
 
-import lombok.Getter;
-
 public class PersonComponent extends ObjectComponent {
 
     private int pose;

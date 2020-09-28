@@ -3,8 +3,6 @@ package com.gomson.tryangle.domain;
 import java.time.LocalDateTime;
 import java.util.Date;
 
-import lombok.AllArgsConstructor;
-
 public class AccessToken {
 
     private long id;

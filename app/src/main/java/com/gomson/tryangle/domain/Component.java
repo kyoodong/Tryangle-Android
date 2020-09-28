@@ -1,13 +1,14 @@
 package com.gomson.tryangle.domain;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
-@AllArgsConstructor
 public class Component {
 
     private long id;
     private long componentId;
+
+    public Component(long id, long componentId) {
+        this.id = id;
+        this.componentId = componentId;
+    }
 
     public long getId() {
         return id;

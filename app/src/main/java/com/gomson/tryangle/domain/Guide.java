@@ -1,15 +1,14 @@
 package com.gomson.tryangle.domain;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-
-@AllArgsConstructor
 public class Guide {
 
     private int objectId;
     private int guideId;
 
+    public Guide(int objectId, int guideId) {
+        this.objectId = objectId;
+        this.guideId = guideId;
+    }
 
     public int getObjectId() {
         return objectId;

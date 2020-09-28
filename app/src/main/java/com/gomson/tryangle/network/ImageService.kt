@@ -30,7 +30,7 @@ class ImageService(context: Context): BaseService(context) {
             requestBody
         )
 
-        if (accessToken == null || accessToken!!.expiredAt.time < System.currentTimeMillis()) {
+        if (!hasValidToken()) {
             issueToken(object : Callback<AccessToken> {
                 override fun onResponse(call: Call<AccessToken>, response: Response<AccessToken>) {
                     val call = NetworkManager.imageService.recommendImage(body, accessToken!!.token)
@@ -43,7 +43,23 @@ class ImageService(context: Context): BaseService(context) {
             })
         } else {
             val call = NetworkManager.imageService.recommendImage(body, accessToken!!.token)
-            call.enqueue(callback)
+            call.enqueue(object : Callback<GuideImageListDTO> {
+                override fun onResponse(
+                    call: Call<GuideImageListDTO>,
+                    response: Response<GuideImageListDTO>
+                ) {
+                    if (response.isSuccessful) {
+                        callback.onResponse(call, response)
+                    } else {
+                        clearToken()
+                    }
+                }
+
+                override fun onFailure(call: Call<GuideImageListDTO>, t: Throwable) {
+                    clearToken()
+                    callback.onFailure(call, t)
+                }
+            })
         }
     }
 }
