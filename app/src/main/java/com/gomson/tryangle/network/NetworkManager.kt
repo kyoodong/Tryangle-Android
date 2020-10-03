@@ -11,8 +11,8 @@ import java.util.concurrent.TimeUnit
 internal class NetworkManager {
 
     companion object {
-//        private const val URL = "http://14.35.207.80:7778"
-        const val URL = "http://14.35.207.80:7776"
+//        private const val URL = "http://121.139.71.162:7778"
+        const val URL = "http://121.139.71.162:7776"
         private val client = OkHttpClient.Builder()
             .connectTimeout(1, TimeUnit.MINUTES)
             .readTimeout(1, TimeUnit.MINUTES)

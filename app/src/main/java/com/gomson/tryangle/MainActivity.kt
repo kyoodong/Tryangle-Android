@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
 import android.os.SystemClock
 import android.util.Log
 import android.util.Rational
@@ -18,6 +19,17 @@ import androidx.core.content.ContextCompat
 import com.gomson.tryangle.dto.GuideImageListDTO
 import com.gomson.tryangle.network.ImageService
 import kotlinx.android.synthetic.main.activity_main.*
+import org.opencv.android.BaseLoaderCallback
+import org.opencv.android.LoaderCallbackInterface
+import org.opencv.android.OpenCVLoader
+import org.opencv.android.Utils
+import org.opencv.core.Mat
+import org.opencv.core.MatOfDMatch
+import org.opencv.core.MatOfKeyPoint
+import org.opencv.features2d.FastFeatureDetector
+import org.opencv.features2d.Feature2D
+import org.opencv.features2d.FlannBasedMatcher
+import org.opencv.imgproc.Imgproc
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -49,6 +61,36 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bitmapBuffer: Bitmap
 
     private lateinit var imageService: ImageService
+    private lateinit var baseLoaderCallback: BaseLoaderCallback
+    private lateinit var handler: Handler
+    private var isOpenCvLoaded = false
+
+    private val featureDetector: Feature2D
+    private val keypoint1: MatOfKeyPoint
+    private val descriptor1: Mat
+    private val mask1: Mat
+    private val keypoint2: MatOfKeyPoint
+    private val descriptor2: Mat
+    private val mask2: Mat
+    private val flann: FlannBasedMatcher
+    private val matches: ArrayList<MatOfDMatch>
+
+    external fun MatchFeature(matAddrInput1: Long, matAddrInput2: Long): Int
+
+    init {
+        System.loadLibrary("opencv_java4")
+        System.loadLibrary("native-lib")
+
+        featureDetector = FastFeatureDetector.create()
+        keypoint1 = MatOfKeyPoint()
+        descriptor1 = Mat()
+        mask1 = Mat()
+        keypoint2 = MatOfKeyPoint()
+        descriptor2 = Mat()
+        mask2 = Mat()
+        flann = FlannBasedMatcher.create()
+        matches = ArrayList()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,6 +108,16 @@ class MainActivity : AppCompatActivity() {
             startCamera()
         } else {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+        }
+
+        handler = Handler(mainLooper)
+        baseLoaderCallback = object: BaseLoaderCallback(baseContext) {
+            override fun onManagerConnected(status: Int) {
+                when (status) {
+                    SUCCESS -> Log.i(TAG, "OpenCV loaded successfully")
+                    else -> super.onManagerConnected(status)
+                }
+            }
         }
 
 //        captureButton.setOnClickListener { takePhoto() }
@@ -87,6 +139,19 @@ class MainActivity : AppCompatActivity() {
         ratio_4_3.setOnClickListener {
             imageCapture = getImageCapture(4, 3)
             bindCameraConfiguration()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        if (!OpenCVLoader.initDebug()) {
+            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, baseLoaderCallback);
+        } else {
+            Log.d(TAG, "OpenCV library found inside package. Using it!");
+            baseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+            isOpenCvLoaded = true;
         }
     }
 
@@ -153,25 +218,51 @@ class MainActivity : AppCompatActivity() {
             val converter = YuvToRgbConverter(this)
 
             imageAnalysis!!.setAnalyzer(cameraExecutor, ImageAnalysis.Analyzer { imageProxy ->
-                // 20초에 한 번 재탐색
-                val now = SystemClock.uptimeMillis()
-
-                if (now - last_time < 200000) {
-                    imageProxy.close()
-                    return@Analyzer
-                }
-
-                last_time = now
 
                 if (!::bitmapBuffer.isInitialized) {
                     // The image rotation and RGB image buffer are initialized only once
                     // the analyzer has started running
                     bitmapBuffer = Bitmap.createBitmap(
-                        imageProxy.width, imageProxy.height, Bitmap.Config.ARGB_8888)
+                        imageProxy.width, imageProxy.height, Bitmap.Config.ARGB_8888
+                    )
                 }
 
                 // yuv -> RGB
                 imageProxy.use { converter.yuvToRgb(imageProxy.image!!, bitmapBuffer) }
+
+                // Grayscale 변환
+                val gray = Mat()
+                Utils.bitmapToMat(bitmapBuffer, gray)
+                var t = System.currentTimeMillis()
+                val count = MatchFeature(gray.nativeObjAddr, gray.nativeObjAddr)
+
+                Log.d(TAG, "Count = ${count}")
+                Log.d(TAG, "match time = ${System.currentTimeMillis() - t}")
+
+//                featureDetector.detect(gray, keypoint1)
+//
+//                featureDetector.detectAndCompute(gray, mask1, keypoint1, descriptor1)
+//                featureDetector.detectAndCompute(gray, mask2, keypoint2, descriptor2)
+//                Log.d(TAG, "detect time = ${System.currentTimeMillis() - t}")
+//
+//                if (keypoint1.toList().size >= 2 && keypoint2.toList().size >= 2) {
+//                    t = System.currentTimeMillis()
+//                    flann.knnMatch(descriptor1, descriptor2, matches, 2)
+//                }
+
+//                handler.post {
+//                    imageView.setImageBitmap(grayBitmap)
+//                }
+
+                // 20초에 한 번 재탐색
+                val now = SystemClock.uptimeMillis()
+
+                if (now - last_time < 20000) {
+                    imageProxy.close()
+                    return@Analyzer
+                }
+
+                last_time = now
 
                 // 추천 이미지 요청
                 imageService.recommendImage(bitmapBuffer, object : Callback<GuideImageListDTO> {
@@ -188,6 +279,7 @@ class MainActivity : AppCompatActivity() {
                         guideImageListView.getAdapter().resetImageUrlList()
                         guideImageListView.getAdapter()
                             .addImageUrlList(guideImageListDto.guideImageList)
+                        guideImageListDto.guideDTO.componentList
                         Log.d(TAG, "성공")
                     }
                 })
@@ -261,4 +353,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+
 }
