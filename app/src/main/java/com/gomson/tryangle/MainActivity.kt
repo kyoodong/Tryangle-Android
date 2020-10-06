@@ -3,6 +3,7 @@ package com.gomson.tryangle
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
@@ -10,13 +11,16 @@ import android.os.Handler
 import android.os.SystemClock
 import android.util.Log
 import android.util.Rational
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.gomson.tryangle.dto.GuideImageListDTO
+import com.gomson.tryangle.domain.ObjectComponent
 import com.gomson.tryangle.network.ImageService
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.BaseLoaderCallback
@@ -29,7 +33,6 @@ import org.opencv.core.MatOfKeyPoint
 import org.opencv.features2d.FastFeatureDetector
 import org.opencv.features2d.Feature2D
 import org.opencv.features2d.FlannBasedMatcher
-import org.opencv.imgproc.Imgproc
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -140,6 +143,49 @@ class MainActivity : AppCompatActivity() {
             imageCapture = getImageCapture(4, 3)
             bindCameraConfiguration()
         }
+
+        imageView.setOnClickListener {
+            if (previewView.childCount > 1) {
+                previewView.removeViews(1, previewView.childCount - 1)
+            }
+
+            imageService.imageSegmentation(bitmapBuffer, object: Callback<List<ObjectComponent>> {
+                override fun onResponse(
+                    call: Call<List<ObjectComponent>>,
+                    response: Response<List<ObjectComponent>>
+                ) {
+                    if (response.isSuccessful) {
+                        Log.i(TAG, "image Segmentation 성공")
+                        val objectComponentList = response.body() ?: return
+                        objectComponentList.forEach {
+                            val layout = Layout(it.maskList)
+                            val layeredImageView = ImageView(baseContext)
+                            val layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                            layeredImageView.layoutParams = layoutParams
+                            layeredImageView.setImageBitmap(layout.layeredImage)
+                            previewView.addView(layeredImageView)
+
+                            imageView.setImageBitmap(layout.layeredImage)
+                            Log.d(TAG, "setBitmap")
+                        }
+
+                        if (objectComponentList.isEmpty()) {
+                            Log.d(TAG, "Empty objectComponentList")
+                        }
+                    } else {
+                        Log.i(TAG, "image Segmentation 서버 에러")
+                    }
+                }
+
+                override fun onFailure(call: Call<List<ObjectComponent>>, t: Throwable) {
+                    Log.i(TAG, "image Segmentation 에러")
+                    t.printStackTrace()
+                }
+            })
+        }
     }
 
     override fun onResume() {
@@ -236,8 +282,8 @@ class MainActivity : AppCompatActivity() {
                 var t = System.currentTimeMillis()
                 val count = MatchFeature(gray.nativeObjAddr, gray.nativeObjAddr)
 
-                Log.d(TAG, "Count = ${count}")
-                Log.d(TAG, "match time = ${System.currentTimeMillis() - t}")
+//                Log.d(TAG, "Count = ${count}")
+//                Log.d(TAG, "match time = ${System.currentTimeMillis() - t}")
 
 //                featureDetector.detect(gray, keypoint1)
 //
@@ -257,32 +303,34 @@ class MainActivity : AppCompatActivity() {
                 // 20초에 한 번 재탐색
                 val now = SystemClock.uptimeMillis()
 
-                if (now - last_time < 20000) {
+                if (now - last_time < 2000) {
                     imageProxy.close()
                     return@Analyzer
                 }
 
                 last_time = now
 
-                // 추천 이미지 요청
-                imageService.recommendImage(bitmapBuffer, object : Callback<GuideImageListDTO> {
-                    override fun onFailure(call: Call<GuideImageListDTO>, t: Throwable) {
-                        Log.d(MainActivity.TAG, "실패")
-                        t.printStackTrace()
-                    }
+//                // 추천 이미지 요청
+//                imageService.recommendImage(bitmapBuffer, object : Callback<GuideImageListDTO> {
+//                    override fun onFailure(call: Call<GuideImageListDTO>, t: Throwable) {
+//                        Log.d(MainActivity.TAG, "실패")
+//                        t.printStackTrace()
+//                    }
+//
+//                    override fun onResponse(
+//                        call: Call<GuideImageListDTO>,
+//                        response: Response<GuideImageListDTO>
+//                    ) {
+//                        val guideImageListDto = response.body() ?: return
+//                        guideImageListView.getAdapter().resetImageUrlList()
+//                        guideImageListView.getAdapter()
+//                            .addImageUrlList(guideImageListDto.guideImageList)
+//                        guideImageListDto.guideDTO.componentList
+//                        Log.d(TAG, "성공")
+//                    }
+//                })
 
-                    override fun onResponse(
-                        call: Call<GuideImageListDTO>,
-                        response: Response<GuideImageListDTO>
-                    ) {
-                        val guideImageListDto = response.body() ?: return
-                        guideImageListView.getAdapter().resetImageUrlList()
-                        guideImageListView.getAdapter()
-                            .addImageUrlList(guideImageListDto.guideImageList)
-                        guideImageListDto.guideDTO.componentList
-                        Log.d(TAG, "성공")
-                    }
-                })
+
                 imageProxy.close()
             })
         }

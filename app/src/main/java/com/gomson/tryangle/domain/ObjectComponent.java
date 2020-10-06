@@ -1,5 +1,7 @@
 package com.gomson.tryangle.domain;
 
+import android.util.Log;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 
@@ -14,8 +16,8 @@ public class ObjectComponent extends Component {
     private float area;
     private String mask;
     private String roi;
-    private List<List<Integer>> maskList;
-    private List<Integer> roiList;
+    private ArrayList<ArrayList<Integer>> maskList;
+    private ArrayList<Integer> roiList;
 
     public ObjectComponent(long id, long componentId, int clazz, int centerPointX, int centerPointY, float area,
                            String mask, String roi) {
@@ -38,7 +40,13 @@ public class ObjectComponent extends Component {
                 JSONArray arr = array.getJSONArray(i);
                 this.maskList.add(new ArrayList<>());
                 for (int j = 0; j < arr.length(); j++) {
-                    this.maskList.get(i).add(arr.getInt(i));
+                    Object obj = arr.get(j);
+                    if (obj instanceof Integer) {
+                        this.maskList.get(i).add((Integer) obj);
+                    } else {
+                        Boolean b = (Boolean) obj;
+                        this.maskList.get(i).add(b ? 1 : 0);
+                    }
                 }
             }
         } catch (JSONException e) {
@@ -84,11 +92,11 @@ public class ObjectComponent extends Component {
         return roi;
     }
 
-    public List<List<Integer>> getMaskList() {
+    public ArrayList<ArrayList<Integer>> getMaskList() {
         return maskList;
     }
 
-    public List<Integer> getRoiList() {
+    public ArrayList<Integer> getRoiList() {
         return roiList;
     }
 }

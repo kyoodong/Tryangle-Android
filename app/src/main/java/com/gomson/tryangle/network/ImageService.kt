@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.SystemClock
 import com.gomson.tryangle.domain.AccessToken
+import com.gomson.tryangle.domain.ObjectComponent
 import com.gomson.tryangle.dto.GuideImageListDTO
 import okhttp3.MediaType
 import okhttp3.MultipartBody
@@ -14,6 +15,27 @@ import retrofit2.Response
 import java.io.ByteArrayOutputStream
 
 class ImageService(context: Context): BaseService(context) {
+
+    fun imageSegmentation(bitmap: Bitmap, callback: Callback<List<ObjectComponent>>) {
+        issueToken(null)
+
+        // RGB Bitmap -> ByteArray
+        val bos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos)
+        val byteArray = bos.toByteArray()
+        val requestBody = RequestBody.create(
+            MediaType.parse("multipart/form-data"),
+            byteArray
+        )
+        val body = MultipartBody.Part.createFormData(
+            "image",
+            "${SystemClock.uptimeMillis()}.jpeg",
+            requestBody
+        )
+
+        val call = NetworkManager.imageService.imageSegmentation(body, accessToken!!.token)
+        call.enqueue(callback)
+    }
 
     fun recommendImage(bitmap: Bitmap, callback: Callback<GuideImageListDTO>) {
         // RGB Bitmap -> ByteArray
