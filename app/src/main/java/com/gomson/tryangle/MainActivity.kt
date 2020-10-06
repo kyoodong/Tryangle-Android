@@ -3,7 +3,7 @@ package com.gomson.tryangle
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Color
+import android.graphics.Matrix
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
@@ -13,7 +13,6 @@ import android.util.Log
 import android.util.Rational
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
@@ -77,6 +76,8 @@ class MainActivity : AppCompatActivity() {
     private val mask2: Mat
     private val flann: FlannBasedMatcher
     private val matches: ArrayList<MatOfDMatch>
+
+    private var rotation: Int = 0
 
     external fun MatchFeature(matAddrInput1: Long, matAddrInput2: Long): Int
 
@@ -149,7 +150,12 @@ class MainActivity : AppCompatActivity() {
                 previewView.removeViews(1, previewView.childCount - 1)
             }
 
-            imageService.imageSegmentation(bitmapBuffer, object: Callback<List<ObjectComponent>> {
+            val matrix = Matrix()
+            matrix.postRotate(rotation.toFloat())
+            val bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
+                bitmapBuffer.width, bitmapBuffer.height, matrix, true)
+
+            imageService.imageSegmentation(bitmap, object: Callback<List<ObjectComponent>> {
                 override fun onResponse(
                     call: Call<List<ObjectComponent>>,
                     response: Response<List<ObjectComponent>>
@@ -158,25 +164,29 @@ class MainActivity : AppCompatActivity() {
                         Log.i(TAG, "image Segmentation 성공")
                         val objectComponentList = response.body() ?: return
                         objectComponentList.forEach {
-                            val layout = Layout(it.maskList)
-                            val layeredImageView = ImageView(baseContext)
-                            val layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                            layeredImageView.layoutParams = layoutParams
-                            layeredImageView.setImageBitmap(layout.layeredImage)
-                            previewView.addView(layeredImageView)
+                            val layout = Layout(it.maskList, it.roiList)
+                            if (layout.layeredImage != null) {
+                                val layeredImageView = ImageView(baseContext)
+                                val layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                                layeredImageView.layoutParams = layoutParams
+                                layeredImageView.setImageBitmap(layout.layeredImage)
+                                previewView.addView(layeredImageView)
 
-                            imageView.setImageBitmap(layout.layeredImage)
-                            Log.d(TAG, "setBitmap")
+                                imageView.setImageBitmap(layout.layeredImage)
+                                Log.d(TAG, "레이아웃 이미지 노출")
+                            } else {
+                                Log.d(TAG, "너무 작은 오브젝트")
+                            }
                         }
 
                         if (objectComponentList.isEmpty()) {
                             Log.d(TAG, "Empty objectComponentList")
                         }
                     } else {
-                        Log.i(TAG, "image Segmentation 서버 에러")
+                        Log.i(TAG, "image Segmentation 서버 에러 ${response.code()}")
                     }
                 }
 
@@ -264,6 +274,7 @@ class MainActivity : AppCompatActivity() {
             val converter = YuvToRgbConverter(this)
 
             imageAnalysis!!.setAnalyzer(cameraExecutor, ImageAnalysis.Analyzer { imageProxy ->
+                rotation = imageProxy.imageInfo.rotationDegrees
 
                 if (!::bitmapBuffer.isInitialized) {
                     // The image rotation and RGB image buffer are initialized only once
