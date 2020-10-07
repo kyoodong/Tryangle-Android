@@ -16,6 +16,8 @@ class Layout(
     private val height = mask.size
     private val visit = Array(height) { BooleanArray(width) }
     private val directions = arrayOf(intArrayOf(-1, 0), intArrayOf(0, 1), intArrayOf(1, 0), intArrayOf(0, -1))
+    private val directions8 = arrayOf(intArrayOf(-1, 0), intArrayOf(-1, 1), intArrayOf(0, 1),
+        intArrayOf(1, 1), intArrayOf(1, 0), intArrayOf(1, -1), intArrayOf(-1, -1), intArrayOf(0, -1))
     private var cumulativeX = 0
     private var cumulativeY = 0
     var pixelCount = 0
@@ -43,6 +45,15 @@ class Layout(
 
                 when (mask[curY][curX]) {
                     0 -> {
+                        for (j in directions8.indices) {
+                            val ny = curY + directions8[j][0]
+                            val nx = curX + directions8[j][1]
+
+                            if (ny < 0 || nx < 0 || ny >= height || nx >= width)
+                                continue
+
+                            mask[ny][nx] = 2
+                        }
                         mask[curY][curX] = 2
                     }
                     1 -> {
@@ -72,11 +83,11 @@ class Layout(
             for (y in mask.indices) {
                 for (x in mask[y].indices) {
                     if (mask[y][x] == 0) {
-                        pixels[index] = Color.rgb(0, 0, 0)
+                        pixels[index] = Color.argb(0, 0, 0, 0)
                     } else if (mask[y][x] == 1) {
-                        pixels[index] = Color.rgb(127, 127, 127)
+                        pixels[index] = Color.argb(50, 127, 127, 127)
                     } else {
-                        pixels[index] = Color.rgb(255, 255, 255)
+                        pixels[index] = Color.argb(255 ,127, 127, 127)
                     }
                     index++
                 }

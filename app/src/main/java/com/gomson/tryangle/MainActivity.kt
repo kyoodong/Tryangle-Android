@@ -146,6 +146,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         imageView.setOnClickListener {
+            Log.d(TAG, "previewView.childCount = ${previewView.childCount}")
             if (previewView.childCount > 1) {
                 previewView.removeViews(1, previewView.childCount - 1)
             }
