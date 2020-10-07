@@ -2,6 +2,7 @@ package com.gomson.tryangle
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
@@ -23,6 +24,7 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.popup_more.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
 import java.io.File
@@ -59,9 +61,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cameraProvider: ProcessCameraProvider
     val TAG = "MainActivity"
 
+    private var COLOR_WHITE = 0
+    private var COLOR_LIGHTGRAY = 0
+    private var COLOR_LIGHTMINT = 0
+
     lateinit var popupMoreView: PopupWindow
     lateinit var popupRatioView: PopupWindow
+
     var currentRatio = RatioMode.RATIO_3_4
+    var isFlash = false
+    var isGrid = false
+//    val isTimer
 
     val ratioPopupViewClickListener = View.OnClickListener{ view->
         var clickRatio = RatioMode.RATIO_3_4
@@ -109,6 +119,10 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
         }
 
+        COLOR_WHITE =  ContextCompat.getColor(this, R.color.colorWhite)
+        COLOR_LIGHTGRAY =  ContextCompat.getColor(this, R.color.colorLightgray)
+        COLOR_LIGHTMINT = ContextCompat.getColor(this, R.color.colorLightMint)
+
         layoutInflater.inflate(R.layout.popup_more, null).let {
             popupMoreView = PopupWindow(it, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
             it.flashLayout.setOnClickListener {
@@ -118,7 +132,17 @@ class MainActivity : AppCompatActivity() {
 
             }
             it.gridLayout.setOnClickListener {
-//                previewView.grid = !previewView.grid
+
+                isGrid = !isGrid
+                gridLinesView.visibility = if (isGrid){
+                    View.VISIBLE
+                } else{
+                    View.INVISIBLE
+                }
+                popupMoreView.contentView.grid.setColorFilter(
+                    if (isGrid) COLOR_WHITE else COLOR_LIGHTGRAY ,
+                    android.graphics.PorterDuff.Mode.MULTIPLY
+                )
             }
             it.settingLayout.setOnClickListener {
 
@@ -140,18 +164,21 @@ class MainActivity : AppCompatActivity() {
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         ratioBtn.setOnClickListener {
-            val white =  ContextCompat.getColor(this, R.color.colorWhite)
-            val lightMint = ContextCompat.getColor(this, R.color.colorLightMint)
-            popupRatioView.contentView.ratio9_16.setColorFilter(if (currentRatio==RatioMode.RATIO_9_16) lightMint else white , android.graphics.PorterDuff.Mode.MULTIPLY)
-            popupRatioView.contentView.ratio3_4.setColorFilter( if (currentRatio==RatioMode.RATIO_3_4) lightMint else white, android.graphics.PorterDuff.Mode.MULTIPLY)
-            popupRatioView.contentView.ratio1_1.setColorFilter( if (currentRatio==RatioMode.RATIO_1_1) lightMint else white, android.graphics.PorterDuff.Mode.MULTIPLY)
+            popupRatioView.contentView.ratio9_16.setColorFilter(if (currentRatio==RatioMode.RATIO_9_16) COLOR_LIGHTMINT else COLOR_WHITE , android.graphics.PorterDuff.Mode.MULTIPLY)
+            popupRatioView.contentView.ratio3_4.setColorFilter( if (currentRatio==RatioMode.RATIO_3_4) COLOR_LIGHTMINT else COLOR_WHITE, android.graphics.PorterDuff.Mode.MULTIPLY)
+            popupRatioView.contentView.ratio1_1.setColorFilter( if (currentRatio==RatioMode.RATIO_1_1) COLOR_LIGHTMINT else COLOR_WHITE, android.graphics.PorterDuff.Mode.MULTIPLY)
 
 
             popupRatioView.animationStyle=-1
             popupRatioView.showAsDropDown(topLayout, 0, 0)
         }
         moreBtn.setOnClickListener{
+            popupMoreView.contentView.grid.setColorFilter(
+                if (isGrid) COLOR_WHITE else COLOR_LIGHTGRAY ,
+                android.graphics.PorterDuff.Mode.MULTIPLY)
+
             popupMoreView.showAsDropDown(topLayout,0,0)
+
         }
         reverseBtn.setOnClickListener {
             cameraSelector = if (CameraSelector.DEFAULT_BACK_CAMERA == cameraSelector)
