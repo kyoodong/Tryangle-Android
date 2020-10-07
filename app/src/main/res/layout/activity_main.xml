@@ -10,8 +10,8 @@
         android:background="@color/colorBlack"
         tools:context=".MainActivity">
 
-        <androidx.camera.view.PreviewView
-            android:id="@+id/previewView"
+        <FrameLayout
+            android:id="@+id/previewLayout"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             app:layout_constraintVertical_weight="1"
@@ -19,7 +19,22 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
+            >
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/previewView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             />
+
+        <com.gomson.tryangle.GridLinesView
+            android:id="@+id/gridLinesView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            />
+
+        </FrameLayout>
+
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/topLayout"

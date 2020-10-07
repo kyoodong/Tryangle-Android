@@ -49,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     val imageService = NetworkManager.retrofit.create(ImageService::class.java)
     var last_time = 0L
 
+    private var cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
     private var imageCapture: ImageCapture? = null
     private var preview: Preview? = null
 
@@ -60,28 +61,31 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var popupMoreView: PopupWindow
     lateinit var popupRatioView: PopupWindow
-    var currentRatio = RatioMode.RATIO_1_1
+    var currentRatio = RatioMode.RATIO_3_4
 
     val ratioPopupViewClickListener = View.OnClickListener{ view->
         var clickRatio = RatioMode.RATIO_3_4
-        previewView.layoutParams  = (previewView.layoutParams as ConstraintLayout.LayoutParams).apply {
+        previewLayout.layoutParams  = (previewLayout.layoutParams as ConstraintLayout.LayoutParams).apply {
             when (view.id) {
                 R.id.ratio3_4 -> {
                     clickRatio = RatioMode.RATIO_3_4
                     topToTop = ConstraintSet.PARENT_ID
                     height = 0
-                    previewView.requestLayout()
+                    ratioBtn.setBackgroundResource(R.drawable.ratio3_4)
+                    previewLayout.requestLayout()
                 }
                 R.id.ratio1_1 -> {
                     clickRatio = RatioMode.RATIO_1_1
-                    height = previewView.width
+                    height = previewLayout.width
                     topToTop = topLayout.id
-                    previewView.requestLayout()
+                    ratioBtn.setBackgroundResource(R.drawable.ratio1_1)
+                    previewLayout.requestLayout()
                 }
                 R.id.ratio9_16 -> {
                     clickRatio = RatioMode.RATIO_9_16
                     height = ViewGroup.LayoutParams.MATCH_PARENT
-                    previewView.requestLayout()
+                    ratioBtn.setBackgroundResource(R.drawable.ratio9_16)
+                    previewLayout.requestLayout()
                 }
             }
         }
@@ -114,7 +118,7 @@ class MainActivity : AppCompatActivity() {
 
             }
             it.gridLayout.setOnClickListener {
-
+//                previewView.grid = !previewView.grid
             }
             it.settingLayout.setOnClickListener {
 
@@ -125,7 +129,7 @@ class MainActivity : AppCompatActivity() {
             it.ratio1_1.setOnClickListener(ratioPopupViewClickListener)
             it.ratio3_4.setOnClickListener(ratioPopupViewClickListener)
             it.ratio9_16.setOnClickListener(ratioPopupViewClickListener)
-            it.ratioFull.setOnClickListener(ratioPopupViewClickListener)
+//            it.ratioFull.setOnClickListener(ratioPopupViewClickListener)
             popupRatioView = PopupWindow(it, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
         }
 
@@ -136,11 +140,23 @@ class MainActivity : AppCompatActivity() {
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         ratioBtn.setOnClickListener {
+            val white =  ContextCompat.getColor(this, R.color.colorWhite)
+            val lightMint = ContextCompat.getColor(this, R.color.colorLightMint)
+            popupRatioView.contentView.ratio9_16.setColorFilter(if (currentRatio==RatioMode.RATIO_9_16) lightMint else white , android.graphics.PorterDuff.Mode.MULTIPLY)
+            popupRatioView.contentView.ratio3_4.setColorFilter( if (currentRatio==RatioMode.RATIO_3_4) lightMint else white, android.graphics.PorterDuff.Mode.MULTIPLY)
+            popupRatioView.contentView.ratio1_1.setColorFilter( if (currentRatio==RatioMode.RATIO_1_1) lightMint else white, android.graphics.PorterDuff.Mode.MULTIPLY)
+
+
             popupRatioView.animationStyle=-1
             popupRatioView.showAsDropDown(topLayout, 0, 0)
         }
         moreBtn.setOnClickListener{
             popupMoreView.showAsDropDown(topLayout,0,0)
+        }
+        reverseBtn.setOnClickListener {
+            cameraSelector = if (CameraSelector.DEFAULT_BACK_CAMERA == cameraSelector)
+                CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
+            bindCameraConfiguration()
         }
     }
 
@@ -179,9 +195,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun bindCameraConfiguration() {
-        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
         if (imageCapture == null)
-            imageCapture = getImageCapture(16, 9)
+            imageCapture = getImageCapture(4, 3)
 
         try {
             cameraProvider.unbindAll()
