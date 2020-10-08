@@ -16,7 +16,7 @@ import java.io.ByteArrayOutputStream
 
 class ImageService(context: Context): BaseService(context) {
 
-    fun imageSegmentation(bitmap: Bitmap, callback: Callback<List<ObjectComponent>>) {
+    fun imageSegmentation(bitmap: Bitmap): Response<List<ObjectComponent>> {
         issueToken(null)
 
         // RGB Bitmap -> ByteArray
@@ -34,7 +34,7 @@ class ImageService(context: Context): BaseService(context) {
         )
 
         val call = NetworkManager.imageService.imageSegmentation(body, accessToken!!.token)
-        call.enqueue(callback)
+        return call.execute()
     }
 
     fun recommendImage(bitmap: Bitmap, callback: Callback<GuideImageListDTO>) {

@@ -3,30 +3,35 @@ package com.gomson.tryangle
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.nfc.Tag
 import android.util.Log
 import java.io.ByteArrayOutputStream
 import java.util.*
 import kotlin.collections.ArrayList
 
-class Layout(
+class Layer(
     val mask: ArrayList<ArrayList<Int>>,
     private val roi: ArrayList<Int>) {
 
     private val width = mask[0].size
     private val height = mask.size
+    private val roiWidth = roi[3] - roi[1]
+    private val roiHeight = roi[2] - roi[0]
     private val visit = Array(height) { BooleanArray(width) }
     private val directions = arrayOf(intArrayOf(-1, 0), intArrayOf(0, 1), intArrayOf(1, 0), intArrayOf(0, -1))
     private val directions8 = arrayOf(intArrayOf(-1, 0), intArrayOf(-1, 1), intArrayOf(0, 1),
         intArrayOf(1, 1), intArrayOf(1, 0), intArrayOf(1, -1), intArrayOf(-1, -1), intArrayOf(0, -1))
     private var cumulativeX = 0
     private var cumulativeY = 0
-    var pixelCount = 0
+    private var pixelCount = 0
+    private val queue: Queue<Pair<Int, Int>> = LinkedList()
+
+    var ratioInRoi = 0
     var centerPoint = Pair(0, 0)
     val layeredImage: Bitmap?
 
 
     private fun bfs(y: Int, x: Int) {
-        val queue: Queue<Pair<Int, Int>> = LinkedList()
         queue.add(Pair(y, x))
 
         while (queue.isNotEmpty()) {
@@ -75,13 +80,14 @@ class Layout(
         }
 
         val ratio = pixelCount.toFloat() / (width * height)
+        ratioInRoi = (pixelCount.toFloat() / (roiWidth * roiHeight) * 100).toInt()
         if (ratio > 0.02) {
             centerPoint = Pair(cumulativeY / pixelCount, cumulativeX / pixelCount)
 
-            val pixels = IntArray(width * height)
+            val pixels = IntArray(roiWidth * roiHeight)
             var index = 0
-            for (y in mask.indices) {
-                for (x in mask[y].indices) {
+            for (y in roi[0] until roi[2]) {
+                for (x in roi[1] until roi[3]) {
                     if (mask[y][x] == 0) {
                         pixels[index] = Color.argb(0, 0, 0, 0)
                     } else if (mask[y][x] == 1) {
@@ -92,7 +98,7 @@ class Layout(
                     index++
                 }
             }
-            layeredImage = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
+            layeredImage = Bitmap.createBitmap(pixels, roiWidth, roiHeight, Bitmap.Config.ARGB_8888)
         } else {
             layeredImage = null
         }
