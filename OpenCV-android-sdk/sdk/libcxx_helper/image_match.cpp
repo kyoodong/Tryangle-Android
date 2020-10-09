@@ -17,7 +17,7 @@ Java_com_gomson_tryangle_MainActivity_ConvertRGBtoGray(JNIEnv *env, jobject thiz
 
 extern "C"
 JNIEXPORT jobject JNICALL
-Java_com_gomson_tryangle_MainActivity_MatchFeature(JNIEnv *env, jobject thiz, jlong mat_addr_input1,
+Java_com_gomson_tryangle_ImageAnalyzer_MatchFeature(JNIEnv *env, jobject thiz, jlong mat_addr_input1,
                                                    jlong mat_addr_input2, jint ratio_in_roi) {
     jclass cls = env->FindClass("com/gomson/tryangle/dto/MatchingResult");
     jmethodID constructor = env->GetMethodID(cls, "<init>", "(IFFFFFFFF)V");
@@ -37,11 +37,6 @@ Java_com_gomson_tryangle_MainActivity_MatchFeature(JNIEnv *env, jobject thiz, jl
     resize(image1, resizedImage1, Size(image1.cols / 2, image1.rows / 2));
     resize(image2, resizedImage2, Size(image2.cols / 2, image2.rows / 2));
 
-    gettimeofday(&endTime, NULL);
-    diffTime = endTime.tv_sec + endTime.tv_usec / 1000000.0 - startTime.tv_sec - startTime.tv_usec / 1000000.0;
-    __android_log_print(ANDROID_LOG_DEBUG, "CHK", "Convert color time : %f\n", diffTime);
-    startTime = endTime;
-
 //    Ptr<AKAZE> detector = AKAZE::create();
     Ptr<SIFT> detector = SIFT::create();
 //    Ptr<ORB> detector = ORB::create();
@@ -53,18 +48,7 @@ Java_com_gomson_tryangle_MainActivity_MatchFeature(JNIEnv *env, jobject thiz, jl
     Mat descriptors1, descriptors2;
 
     detector->detectAndCompute( resizedImage1, noArray(), keypoints1, descriptors1 );
-
-    gettimeofday(&endTime, NULL);
-    diffTime = endTime.tv_sec + endTime.tv_usec / 1000000.0 - startTime.tv_sec - startTime.tv_usec / 1000000.0;
-    __android_log_print(ANDROID_LOG_DEBUG, "CHK", "Detect And compute time1 : %f\n", diffTime);
-    startTime = endTime;
-
     detector->detectAndCompute( resizedImage2, noArray(), keypoints2, descriptors2 );
-
-    gettimeofday(&endTime, NULL);
-    diffTime = endTime.tv_sec + endTime.tv_usec / 1000000.0 - startTime.tv_sec - startTime.tv_usec / 1000000.0;
-    __android_log_print(ANDROID_LOG_DEBUG, "CHK", "Detect And compute time2 : %f\n", diffTime);
-    startTime = endTime;
 
 //    detector->detect(image1, keypoints1);
 //    detector->detect(image2, keypoints2);
@@ -81,11 +65,6 @@ Java_com_gomson_tryangle_MainActivity_MatchFeature(JNIEnv *env, jobject thiz, jl
 //        return -1;
 
     matcher->knnMatch( descriptors1, descriptors2, knn_matches, 2 );
-
-    gettimeofday(&endTime, NULL);
-    diffTime = endTime.tv_sec + endTime.tv_usec / 1000000.0 - startTime.tv_sec - startTime.tv_usec / 1000000.0;
-    __android_log_print(ANDROID_LOG_DEBUG, "CHK", "KnnMatch time2 : %f\n", diffTime);
-    startTime = endTime;
 //    matcher.knnMatch(descriptors1, descriptors2, knn_matches, 2);
 
     int count = 0;

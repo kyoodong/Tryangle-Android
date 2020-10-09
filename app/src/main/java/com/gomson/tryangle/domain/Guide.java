@@ -2,19 +2,19 @@ package com.gomson.tryangle.domain;
 
 public class Guide {
 
-    private int objectId;
+    private long objectId;
     private int guideId;
 
-    public Guide(int objectId, int guideId) {
+    public Guide(long objectId, int guideId) {
         this.objectId = objectId;
         this.guideId = guideId;
     }
 
-    public int getObjectId() {
+    public long getObjectId() {
         return objectId;
     }
 
-    public void setObjectId(int objectId) {
+    public void setObjectId(long objectId) {
         this.objectId = objectId;
     }
 

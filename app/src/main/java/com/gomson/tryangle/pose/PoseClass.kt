@@ -1,4 +1,4 @@
-package com.gomson.tryangle
+package com.gomson.tryangle.pose
 
 enum class PoseClass {
 

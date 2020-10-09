@@ -59,7 +59,7 @@
         app:layout_constraintDimensionRatio="h, 3:4"/>
 
     <ImageView
-        android:id="@+id/overlayImageView"
+        android:id="@+id/layerImageView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/topLayout"

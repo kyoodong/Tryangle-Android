@@ -1,4 +1,4 @@
-package com.gomson.tryangle
+package com.gomson.tryangle.pose
 
 import org.tensorflow.lite.examples.posenet.lib.BodyPart
 import org.tensorflow.lite.examples.posenet.lib.KeyPoint

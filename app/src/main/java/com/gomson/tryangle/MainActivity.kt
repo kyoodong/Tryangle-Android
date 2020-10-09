@@ -21,9 +21,14 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.gomson.tryangle.domain.LineComponent
 import com.gomson.tryangle.domain.ObjectComponent
-import com.gomson.tryangle.domain.ObjectComponentImage
+import com.gomson.tryangle.domain.PersonComponent
 import com.gomson.tryangle.dto.MatchingResult
+import com.gomson.tryangle.guider.Guider
+import com.gomson.tryangle.guider.LineGuider
+import com.gomson.tryangle.guider.ObjectGuider
+import com.gomson.tryangle.guider.PoseGuider
 import com.gomson.tryangle.network.ImageService
+import com.gomson.tryangle.pose.PoseClassifier
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
@@ -41,7 +46,7 @@ import java.text.SimpleDateFormat
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), ImageAnalyzer.OnLayerBitmapUpdateListener {
 
     companion object {
         private const val TAG = "MainActivity"
@@ -61,9 +66,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cameraExecutor: ExecutorService
 
     private lateinit var cameraProvider: ProcessCameraProvider
-    private lateinit var bitmapBuffer: Bitmap
 
-    private lateinit var imageService: ImageService
     private lateinit var baseLoaderCallback: BaseLoaderCallback
     private lateinit var handler: Handler
     private var isOpenCvLoaded = false
@@ -78,16 +81,7 @@ class MainActivity : AppCompatActivity() {
     private val flann: FlannBasedMatcher
     private val matches: ArrayList<MatOfDMatch>
 
-    private var rotation: Int = 0
-    private var needToRequestSegmentation = true
-    private var objectComponentImageList: ArrayList<ObjectComponentImage> = ArrayList()
-
     private lateinit var converter: YuvToRgbConverter
-    private val hough = Hough()
-    private var effectiveLines = ArrayList<LineComponent>()
-    private val guider = Guider()
-
-    external fun MatchFeature(matAddrInput1: Long, matAddrInput2: Long, ratioInRoi: Int): MatchingResult
 
     init {
         System.loadLibrary("opencv_java4")
@@ -108,13 +102,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        imageService = ImageService(baseContext)
         converter = YuvToRgbConverter(this)
-
-        // 토큰 발급
-        if (!imageService.hasValidToken()) {
-            imageService.issueToken(null)
-        }
 
         // 카메라 권한 체크
         if (allPermissionsGranted()) {
@@ -228,162 +216,8 @@ class MainActivity : AppCompatActivity() {
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
 
-            imageAnalysis!!.setAnalyzer(cameraExecutor, ImageAnalysis.Analyzer { imageProxy ->
-                rotation = imageProxy.imageInfo.rotationDegrees
-                if (!::bitmapBuffer.isInitialized) {
-                    // The image rotation and RGB image buffer are initialized only once
-                    // the analyzer has started running
-                    bitmapBuffer = Bitmap.createBitmap(
-                        imageProxy.width, imageProxy.height, Bitmap.Config.ARGB_8888
-                    )
-                }
-
-                // yuv -> RGB
-                imageProxy.use { converter.yuvToRgb(imageProxy.image!!, bitmapBuffer) }
-
-                val matrix = Matrix()
-                matrix.postRotate(rotation.toFloat())
-                val bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
-                    bitmapBuffer.width, bitmapBuffer.height, matrix, true)
-
-                // 세그멘테이션을 요청할 필요가 있다면
-                if (needToRequestSegmentation) {
-                    val segmentationResponse = imageService.imageSegmentation(bitmap)
-                    if (segmentationResponse.isSuccessful) {
-                        Log.i(TAG, "image Segmentation 성공")
-                        val objectComponentList = segmentationResponse.body() ?: return@Analyzer
-
-                        // 오브젝트 컴포넌트가 없는 경우 재요청
-                        if (objectComponentList.isEmpty()) {
-                            Log.d(TAG, "Empty objectComponentList")
-                        }
-
-                        objectComponentImageList.clear()
-
-                        val posenet = Posenet(baseContext)
-                        val poseClassifier = PoseClassifier()
-
-                        objectComponentList.forEach {
-                            val layer = Layer(it.maskList, it.roiList)
-                            if (layer.layeredImage != null) {
-                                val roiImage = Bitmap.createBitmap(bitmap,
-                                    it.roiList[1], it.roiList[0],
-                                    it.roiList[3] - it.roiList[1],
-                                    it.roiList[2] - it.roiList[0])
-
-                                if (it.clazz == ObjectComponent.PERSON) {
-                                    val scaledBitmap = Bitmap.createScaledBitmap(roiImage, MODEL_WIDTH, MODEL_HEIGHT, true)
-                                    val person = posenet.estimateSinglePose(scaledBitmap)
-                                    val poseClass = poseClassifier.classify(person.keyPoints.toTypedArray())
-                                }
-
-                                objectComponentImageList.add(ObjectComponentImage(it,
-                                    layer, roiImage))
-                                Log.d(TAG, "레이아웃 이미지 노출")
-                            } else {
-                                Log.d(TAG, "너무 작은 오브젝트")
-                            }
-                        }
-
-                        posenet.close()
-
-                        needToRequestSegmentation = objectComponentImageList.isEmpty()
-
-                        if (objectComponentImageList.isNotEmpty()) {
-                            effectiveLines.clear()
-                            val newLines = hough.findHoughLine(bitmap)
-                            if (newLines != null) {
-                                effectiveLines.addAll(newLines)
-                            }
-                            Log.d("dd", "dd")
-                        }
-                    } else {
-                        Log.i(TAG, "image Segmentation 서버 에러 ${segmentationResponse.code()}")
-                    }
-                }
-
-                // 원본 카메라 이미지
-                val originalImage = Mat()
-                Utils.bitmapToMat(bitmap, originalImage)
-
-                var t = System.currentTimeMillis()
-                var totalCount = 0
-                var num = 0
-                var averageCount = 0
-
-                // 오브젝트별 이미지
-                for (objectComponentImage in objectComponentImageList) {
-                    val objectImage = Mat()
-                    Utils.bitmapToMat(objectComponentImage.roiImage, objectImage)
-
-                    val matchingResult = MatchFeature(objectImage.nativeObjAddr, originalImage.nativeObjAddr,
-                        objectComponentImage.layer.ratioInRoi)
-                    totalCount += matchingResult.matchRatio
-                    num++
-
-                    if (matchingResult.matchRatio > 30) {
-                        val width =
-                            (maxOf(matchingResult.pointX1, maxOf(matchingResult.pointX2, maxOf(matchingResult.pointX3, matchingResult.pointX4))) -
-                                    minOf(matchingResult.pointX1, minOf(matchingResult.pointX2, minOf(matchingResult.pointX3, matchingResult.pointX4)))).toInt()
-                        val height =
-                            (maxOf(matchingResult.pointY1, maxOf(matchingResult.pointY2, maxOf(matchingResult.pointY3, matchingResult.pointY4))) -
-                                    minOf(matchingResult.pointY1, minOf(matchingResult.pointY2, minOf(matchingResult.pointY3, matchingResult.pointY4)))).toInt()
-
-                        val rect = Rect(matchingResult.pointX1.toInt(), matchingResult.pointY1.toInt(), matchingResult.pointX1.toInt() + width, matchingResult.pointY1.toInt() + height)
-                        val b = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-                        val canvas = Canvas(b)
-                        canvas.drawBitmap(objectComponentImage.layer.layeredImage!!, null, rect, null)
-
-                        handler.post {
-                            overlayImageView.setImageBitmap(b)
-                            imageView.setImageBitmap(objectComponentImage.roiImage)
-                        }
-                    }
-                    Log.d(TAG, "MatchRatio = ${matchingResult.matchRatio}")
-                }
-
-                if (num > 0) {
-                    averageCount = totalCount / num
-
-                    if (averageCount < 20) {
-                        needToRequestSegmentation = true
-                    }
-                }
-                Log.d(TAG, "match time = ${System.currentTimeMillis() - t}")
-
-                // 20초에 한 번 재탐색
-                val now = SystemClock.uptimeMillis()
-
-                if (now - last_time < 2000) {
-                    imageProxy.close()
-                    return@Analyzer
-                }
-
-                last_time = now
-
-//                // 추천 이미지 요청
-//                imageService.recommendImage(bitmapBuffer, object : Callback<GuideImageListDTO> {
-//                    override fun onFailure(call: Call<GuideImageListDTO>, t: Throwable) {
-//                        Log.d(MainActivity.TAG, "실패")
-//                        t.printStackTrace()
-//                    }
-//
-//                    override fun onResponse(
-//                        call: Call<GuideImageListDTO>,
-//                        response: Response<GuideImageListDTO>
-//                    ) {
-//                        val guideImageListDto = response.body() ?: return
-//                        guideImageListView.getAdapter().resetImageUrlList()
-//                        guideImageListView.getAdapter()
-//                            .addImageUrlList(guideImageListDto.guideImageList)
-//                        guideImageListDto.guideDTO.componentList
-//                        Log.d(TAG, "성공")
-//                    }
-//                })
-
-
-                imageProxy.close()
-            })
+            val imageAnalyzer = ImageAnalyzer(baseContext, this)
+            imageAnalysis!!.setAnalyzer(cameraExecutor, imageAnalyzer)
         }
 
         try {
@@ -453,5 +287,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
+    override fun onUpdate(layerBitmap: Bitmap) {
+        runOnUiThread {
+            layerImageView.setImageBitmap(layerBitmap)
+        }
+    }
 }
