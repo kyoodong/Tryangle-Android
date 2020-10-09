@@ -106,12 +106,9 @@ public:
 extern "C"
 JNIEXPORT jobjectArray JNICALL
 Java_com_gomson_tryangle_Hough_find_1hough_1line(JNIEnv *env, jobject thiz, jlong mat_addr_input) {
-    jclass class_line = env->FindClass("com/gomson/tryangle/domain/Line");
-    jclass class_point = env->FindClass("org/opencv/core/Point");
+    jclass class_line = env->FindClass("com/gomson/tryangle/domain/LineComponent");
     jmethodID line_constructor = env->GetMethodID(class_line, "<init>",
-                                             "(Lorg/opencv/core/Point;Lorg/opencv/core/Point;)V");
-    jmethodID point_constructor = env->GetMethodID(class_point, "<init>",
-                                                  "(DD)V");
+                                                  "(JJIIII)V");
 
     Mat &image = *(Mat *) mat_addr_input;
     Mat kernel = Mat::ones(3, 3, CV_8U);
@@ -212,18 +209,21 @@ Java_com_gomson_tryangle_Hough_find_1hough_1line(JNIEnv *env, jobject thiz, jlon
 
     std::sort(clusters.begin(), clusters.end(), std::greater<Cluster>());
 
-    jobject default_point = env->NewObject(class_point, point_constructor, 0., 0.);
     jobjectArray result = env->NewObjectArray(std::min(3, (int) clusters.size()), class_line,
-                                              env->NewObject(class_line, line_constructor, default_point, default_point));
+                                              env->NewObject(class_line,
+                                                      line_constructor,
+                                                             (jlong) 0,
+                                                             (jlong) 0,
+                                                             0, 0, 0, 0));
 
     for (int i = 0; i < clusters.size() && i < 3; i++) {
-        jobject start_point = env->NewObject(class_point, point_constructor,
-                                             (double) clusters[i].representive_line.start_point.x,
-                                             (double) clusters[i].representive_line.start_point.y);
-        jobject end_point = env->NewObject(class_point, point_constructor,
-                                           (double) clusters[i].representive_line.end_point.x,
-                                           (double) clusters[i].representive_line.end_point.y);
-        jobject line = env->NewObject(class_line, line_constructor, start_point, end_point);
+        jobject line = env->NewObject(class_line, line_constructor,
+                (jlong) 0,
+                (jlong) 0,
+                clusters[i].representive_line.start_point.x,
+                clusters[i].representive_line.start_point.y,
+                clusters[i].representive_line.end_point.x,
+                clusters[i].representive_line.end_point.y);
         env->SetObjectArrayElement(result, i, line);
     }
 

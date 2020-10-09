@@ -13,15 +13,13 @@ import android.os.Handler
 import android.os.SystemClock
 import android.util.Log
 import android.util.Rational
-import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.gomson.tryangle.domain.Line
+import com.gomson.tryangle.domain.LineComponent
 import com.gomson.tryangle.domain.ObjectComponent
 import com.gomson.tryangle.domain.ObjectComponentImage
 import com.gomson.tryangle.dto.MatchingResult
@@ -86,7 +84,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var converter: YuvToRgbConverter
     private val hough = Hough()
-    private var effectiveLines: Array<Line>? = null
+    private var effectiveLines = ArrayList<LineComponent>()
     private val guider = Guider()
 
     external fun MatchFeature(matAddrInput1: Long, matAddrInput2: Long, ratioInRoi: Int): MatchingResult
@@ -292,8 +290,12 @@ class MainActivity : AppCompatActivity() {
                         needToRequestSegmentation = objectComponentImageList.isEmpty()
 
                         if (objectComponentImageList.isNotEmpty()) {
-                            effectiveLines = hough.findHoughLine(bitmap)
-//                            guider.
+                            effectiveLines.clear()
+                            val newLines = hough.findHoughLine(bitmap)
+                            if (newLines != null) {
+                                effectiveLines.addAll(newLines)
+                            }
+                            Log.d("dd", "dd")
                         }
                     } else {
                         Log.i(TAG, "image Segmentation 서버 에러 ${segmentationResponse.code()}")
