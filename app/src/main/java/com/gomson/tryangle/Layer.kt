@@ -81,7 +81,7 @@ class Layer(
 
         val ratio = pixelCount.toFloat() / (width * height)
         ratioInRoi = (pixelCount.toFloat() / (roiWidth * roiHeight) * 100).toInt()
-        if (ratio > 0.02) {
+        if (ratio > 0.01) {
             centerPoint = Pair(cumulativeY / pixelCount, cumulativeX / pixelCount)
 
             val pixels = IntArray(roiWidth * roiHeight)

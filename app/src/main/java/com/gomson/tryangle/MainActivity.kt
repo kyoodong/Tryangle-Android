@@ -21,6 +21,7 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.gomson.tryangle.domain.ObjectComponent
 import com.gomson.tryangle.domain.ObjectComponentImage
 import com.gomson.tryangle.dto.MatchingResult
 import com.gomson.tryangle.network.ImageService
@@ -35,6 +36,7 @@ import org.opencv.core.MatOfKeyPoint
 import org.opencv.features2d.FastFeatureDetector
 import org.opencv.features2d.Feature2D
 import org.opencv.features2d.FlannBasedMatcher
+import org.tensorflow.lite.examples.posenet.lib.Posenet
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.concurrent.ExecutorService
@@ -255,6 +257,9 @@ class MainActivity : AppCompatActivity() {
 
                         objectComponentImageList.clear()
 
+                        val posenet = Posenet(baseContext)
+                        val poseClassifier = PoseClassifier()
+
                         objectComponentList.forEach {
                             val layer = Layer(it.maskList, it.roiList)
                             if (layer.layeredImage != null) {
@@ -262,6 +267,14 @@ class MainActivity : AppCompatActivity() {
                                     it.roiList[1], it.roiList[0],
                                     it.roiList[3] - it.roiList[1],
                                     it.roiList[2] - it.roiList[0])
+
+                                if (it.clazz == ObjectComponent.PERSON) {
+                                    val scaledBitmap = Bitmap.createScaledBitmap(roiImage, MODEL_WIDTH, MODEL_HEIGHT, true)
+                                    val person = posenet.estimateSinglePose(scaledBitmap)
+                                    val poseClass = poseClassifier.classify(person.keyPoints.toTypedArray())
+                                    Log.d(TAG, "dd")
+                                }
+
                                 objectComponentImageList.add(ObjectComponentImage(it,
                                     layer, roiImage))
                                 Log.d(TAG, "레이아웃 이미지 노출")
@@ -269,6 +282,8 @@ class MainActivity : AppCompatActivity() {
                                 Log.d(TAG, "너무 작은 오브젝트")
                             }
                         }
+
+                        posenet.close()
 
                         needToRequestSegmentation = objectComponentImageList.isEmpty()
                     } else {
