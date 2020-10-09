@@ -21,6 +21,7 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.gomson.tryangle.domain.Line
 import com.gomson.tryangle.domain.ObjectComponent
 import com.gomson.tryangle.domain.ObjectComponentImage
 import com.gomson.tryangle.dto.MatchingResult
@@ -83,6 +84,11 @@ class MainActivity : AppCompatActivity() {
     private var needToRequestSegmentation = true
     private var objectComponentImageList: ArrayList<ObjectComponentImage> = ArrayList()
 
+    private lateinit var converter: YuvToRgbConverter
+    private val hough = Hough()
+    private var effectiveLines: Array<Line>? = null
+    private val guider = Guider()
+
     external fun MatchFeature(matAddrInput1: Long, matAddrInput2: Long, ratioInRoi: Int): MatchingResult
 
     init {
@@ -105,6 +111,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         imageService = ImageService(baseContext)
+        converter = YuvToRgbConverter(this)
 
         // 토큰 발급
         if (!imageService.hasValidToken()) {
@@ -223,8 +230,6 @@ class MainActivity : AppCompatActivity() {
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
 
-            val converter = YuvToRgbConverter(this)
-
             imageAnalysis!!.setAnalyzer(cameraExecutor, ImageAnalysis.Analyzer { imageProxy ->
                 rotation = imageProxy.imageInfo.rotationDegrees
                 if (!::bitmapBuffer.isInitialized) {
@@ -272,7 +277,6 @@ class MainActivity : AppCompatActivity() {
                                     val scaledBitmap = Bitmap.createScaledBitmap(roiImage, MODEL_WIDTH, MODEL_HEIGHT, true)
                                     val person = posenet.estimateSinglePose(scaledBitmap)
                                     val poseClass = poseClassifier.classify(person.keyPoints.toTypedArray())
-                                    Log.d(TAG, "dd")
                                 }
 
                                 objectComponentImageList.add(ObjectComponentImage(it,
@@ -286,6 +290,11 @@ class MainActivity : AppCompatActivity() {
                         posenet.close()
 
                         needToRequestSegmentation = objectComponentImageList.isEmpty()
+
+                        if (objectComponentImageList.isNotEmpty()) {
+                            effectiveLines = hough.findHoughLine(bitmap)
+//                            guider.
+                        }
                     } else {
                         Log.i(TAG, "image Segmentation 서버 에러 ${segmentationResponse.code()}")
                     }

@@ -23,6 +23,7 @@ add_library( # Sets the name of the library.
         # Provides a relative path to your source file(s).
         image_match.cpp
         guide.cpp
+        hough.cpp
         )
 
 
