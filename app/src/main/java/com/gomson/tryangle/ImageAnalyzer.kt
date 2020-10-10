@@ -5,10 +5,12 @@ import android.graphics.*
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import com.gomson.tryangle.domain.Guide
 import com.gomson.tryangle.domain.LineComponent
 import com.gomson.tryangle.domain.ObjectComponent
 import com.gomson.tryangle.domain.PersonComponent
 import com.gomson.tryangle.dto.MatchingResult
+import com.gomson.tryangle.guider.Guides
 import com.gomson.tryangle.guider.LineGuider
 import com.gomson.tryangle.guider.ObjectGuider
 import com.gomson.tryangle.guider.PoseGuider
@@ -22,7 +24,7 @@ private const val TAG = "ImageAnalyzer"
 
 class ImageAnalyzer(
     context: Context,
-    val layerBitmapUpdateListener: OnLayerBitmapUpdateListener?
+    private val analyzeListener: OnAnalyzeListener?
 ): ImageAnalysis.Analyzer, AutoCloseable {
 
     private var rotation: Int = 0
@@ -37,10 +39,10 @@ class ImageAnalyzer(
     private val imageService = ImageService(context)
     private val posenet = Posenet(context)
     private val poseClassifier = PoseClassifier()
-
     private lateinit var poseGuider: PoseGuider
     private lateinit var objectGuider: ObjectGuider
     private lateinit var lineGuider: LineGuider
+    private val guides = Array<ArrayList<Guide>>(20) {i -> ArrayList() }
 
     init {
         // 토큰 발급
@@ -84,17 +86,20 @@ class ImageAnalyzer(
                     return
                 }
 
-                val objectComponentList = segmentationResponse.body()!!
+                val objectComponents = segmentationResponse.body()!!
 
                 // 오브젝트 컴포넌트가 없는 경우 재요청
-                if (objectComponentList.isEmpty()) {
+                if (objectComponents.isEmpty()) {
                     Log.d(TAG, "Empty objectComponentList")
                 }
 
-                objectComponents.clear()
+                for (guide in guides) {
+                    guide.clear()
+                }
 
-                for (i in 0 until objectComponentList.size) {
-                    val objectComponent = objectComponentList[i]
+                this.objectComponents.clear()
+
+                for (objectComponent in objectComponents) {
                     val layer = Layer(objectComponent.maskList, objectComponent.roiList)
                     if (layer.layeredImage != null) {
                         val roiImage = Bitmap.createBitmap(bitmap,
@@ -123,32 +128,35 @@ class ImageAnalyzer(
                                 person,
                                 poseClass
                             )
-                            objectComponents.add(personComponent)
-                            poseGuider.guide(personComponent)
+                            this.objectComponents.add(personComponent)
+                            Guides.compositeGuide(guides, poseGuider.guide(personComponent))
                         } else {
-                            objectComponents.add(objectComponent)
+                            this.objectComponents.add(objectComponent)
                         }
 
-                        objectGuider.guide(objectComponent)
+                        Guides.compositeGuide(guides, objectGuider.guide(objectComponent))
                         Log.d(TAG, "레이아웃 이미지 노출")
                     } else {
                         Log.d(TAG, "너무 작은 오브젝트")
                     }
                 }
 
-                needToRequestSegmentation = objectComponents.isEmpty()
+                needToRequestSegmentation = this.objectComponents.isEmpty()
 
-                if (objectComponents.isNotEmpty()) {
+                if (this.objectComponents.isNotEmpty()) {
                     effectiveLines.clear()
                     val newLines = hough.findHoughLine(bitmap)
                     if (newLines != null) {
                         effectiveLines.addAll(newLines)
 
                         for (effectiveLine in effectiveLines) {
-                            lineGuider.guide(effectiveLine)
+                            Guides.compositeGuide(guides, lineGuider.guide(effectiveLine))
                         }
                     }
                 }
+
+                analyzeListener?.onGuideUpdate(guides)
+                Log.d(TAG, "dd")
             } else {
                 Log.i(TAG, "image Segmentation 서버 에러 ${segmentationResponse.code()}")
             }
@@ -189,9 +197,8 @@ class ImageAnalyzer(
                 canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
                 canvas.drawBitmap(objectComponentImage.layer.layeredImage!!, null, rect, null)
 
-                layerBitmapUpdateListener?.onUpdate(layerBitmap)
+                analyzeListener?.onUpdateLayerImage(layerBitmap)
             }
-            Log.d(TAG, "MatchRatio = ${matchingResult.matchRatio}")
         }
 
         if (num > 0) {
@@ -201,7 +208,6 @@ class ImageAnalyzer(
                 needToRequestSegmentation = true
             }
         }
-        Log.d(TAG, "match time = ${System.currentTimeMillis() - t}")
 
 //                // 추천 이미지 요청
 //                imageService.recommendImage(bitmapBuffer, object : Callback<GuideImageListDTO> {
@@ -231,7 +237,8 @@ class ImageAnalyzer(
         posenet.close()
     }
 
-    interface OnLayerBitmapUpdateListener {
-        fun onUpdate(layerBitmap: Bitmap)
+    interface OnAnalyzeListener {
+        fun onUpdateLayerImage(layerBitmap: Bitmap)
+        fun onGuideUpdate(guides: Array<ArrayList<Guide>>)
     }
 }

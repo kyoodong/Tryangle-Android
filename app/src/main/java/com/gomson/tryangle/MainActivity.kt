@@ -3,14 +3,10 @@ package com.gomson.tryangle
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Matrix
-import android.graphics.Rect
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
-import android.os.SystemClock
 import android.util.Log
 import android.util.Rational
 import android.widget.Toast
@@ -19,34 +15,23 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.gomson.tryangle.domain.LineComponent
-import com.gomson.tryangle.domain.ObjectComponent
-import com.gomson.tryangle.domain.PersonComponent
-import com.gomson.tryangle.dto.MatchingResult
-import com.gomson.tryangle.guider.Guider
-import com.gomson.tryangle.guider.LineGuider
-import com.gomson.tryangle.guider.ObjectGuider
-import com.gomson.tryangle.guider.PoseGuider
-import com.gomson.tryangle.network.ImageService
-import com.gomson.tryangle.pose.PoseClassifier
+import com.gomson.tryangle.domain.Guide
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
-import org.opencv.android.Utils
 import org.opencv.core.Mat
 import org.opencv.core.MatOfDMatch
 import org.opencv.core.MatOfKeyPoint
 import org.opencv.features2d.FastFeatureDetector
 import org.opencv.features2d.Feature2D
 import org.opencv.features2d.FlannBasedMatcher
-import org.tensorflow.lite.examples.posenet.lib.Posenet
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class MainActivity : AppCompatActivity(), ImageAnalyzer.OnLayerBitmapUpdateListener {
+class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
     companion object {
         private const val TAG = "MainActivity"
@@ -287,9 +272,17 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnLayerBitmapUpdateListe
         }
     }
 
-    override fun onUpdate(layerBitmap: Bitmap) {
+    override fun onUpdateLayerImage(layerBitmap: Bitmap) {
         runOnUiThread {
             layerImageView.setImageBitmap(layerBitmap)
+        }
+    }
+
+    override fun onGuideUpdate(guides: Array<ArrayList<Guide>>) {
+        for (guideList in guides) {
+            for (guide in guideList) {
+                Log.d(TAG, "guide = ${GUIDE_LIST[guide.guideId]}")
+            }
         }
     }
 }
