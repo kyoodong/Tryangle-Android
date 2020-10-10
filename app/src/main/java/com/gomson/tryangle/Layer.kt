@@ -1,17 +1,13 @@
 package com.gomson.tryangle
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.nfc.Tag
-import android.util.Log
-import java.io.ByteArrayOutputStream
 import java.util.*
 import kotlin.collections.ArrayList
 
 class Layer(
     val mask: ArrayList<ArrayList<Int>>,
-    private val roi: ArrayList<Int>) {
+    roi: ArrayList<Int>) {
 
     private val width = mask[0].size
     private val height = mask.size
@@ -25,9 +21,9 @@ class Layer(
     private var cumulativeY = 0
     private var pixelCount = 0
     private val queue: Queue<Pair<Int, Int>> = LinkedList()
+    private var centerPoint = Pair(0, 0)
 
     var ratioInRoi = 0
-    var centerPoint = Pair(0, 0)
     val layeredImage: Bitmap?
 
 
@@ -79,10 +75,9 @@ class Layer(
             }
         }
 
-        val ratio = pixelCount.toFloat() / (width * height)
         ratioInRoi = (pixelCount.toFloat() / (roiWidth * roiHeight) * 100).toInt()
-        if (ratio > 0.01) {
-            centerPoint = Pair(cumulativeY / pixelCount, cumulativeX / pixelCount)
+        if (getArea() > 0.01) {
+            centerPoint = Pair(cumulativeX / pixelCount, cumulativeY / pixelCount)
 
             val pixels = IntArray(roiWidth * roiHeight)
             var index = 0
@@ -102,5 +97,13 @@ class Layer(
         } else {
             layeredImage = null
         }
+    }
+
+    fun getCenterPoint(): Pair<Int, Int> {
+        return centerPoint
+    }
+
+    fun getArea(): Float {
+        return pixelCount.toFloat() / (width * height)
     }
 }

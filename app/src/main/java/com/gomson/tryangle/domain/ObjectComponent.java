@@ -121,4 +121,16 @@ public class ObjectComponent extends Component {
     public void setLayer(Layer layer) {
         this.layer = layer;
     }
+
+    public void setCenterPointX(int centerPointX) {
+        this.centerPointX = centerPointX;
+    }
+
+    public void setCenterPointY(int centerPointY) {
+        this.centerPointY = centerPointY;
+    }
+
+    public void setArea(float area) {
+        this.area = area;
+    }
 }

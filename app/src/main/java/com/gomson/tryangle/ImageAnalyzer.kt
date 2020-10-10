@@ -19,11 +19,12 @@ import com.gomson.tryangle.pose.PoseClassifier
 import org.opencv.android.Utils
 import org.opencv.core.Mat
 import org.tensorflow.lite.examples.posenet.lib.Posenet
+import kotlin.math.abs
 
 private const val TAG = "ImageAnalyzer"
 
 class ImageAnalyzer(
-    context: Context,
+    private val context: Context,
     private val analyzeListener: OnAnalyzeListener?
 ): ImageAnalysis.Analyzer, AutoCloseable {
 
@@ -43,6 +44,7 @@ class ImageAnalyzer(
     private lateinit var objectGuider: ObjectGuider
     private lateinit var lineGuider: LineGuider
     private val guides = Array<ArrayList<Guide>>(20) {i -> ArrayList() }
+    private val objectMovementThreshold = 50
 
     init {
         // 토큰 발급
@@ -101,6 +103,9 @@ class ImageAnalyzer(
 
                 for (objectComponent in objectComponents) {
                     val layer = Layer(objectComponent.maskList, objectComponent.roiList)
+                    objectComponent.centerPointX = layer.getCenterPoint().first
+                    objectComponent.centerPointY = layer.getCenterPoint().second
+                    objectComponent.area = layer.getArea()
                     if (layer.layeredImage != null) {
                         val roiImage = Bitmap.createBitmap(bitmap,
                             objectComponent.roiList[1], objectComponent.roiList[0],
@@ -156,7 +161,6 @@ class ImageAnalyzer(
                 }
 
                 analyzeListener?.onGuideUpdate(guides)
-                Log.d(TAG, "dd")
             } else {
                 Log.i(TAG, "image Segmentation 서버 에러 ${segmentationResponse.code()}")
             }
@@ -166,36 +170,44 @@ class ImageAnalyzer(
         val originalImage = Mat()
         Utils.bitmapToMat(bitmap, originalImage)
 
-        var t = System.currentTimeMillis()
         var totalCount = 0
         var num = 0
         var averageCount = 0
 
         // 오브젝트별 이미지
-        for (objectComponentImage in objectComponents) {
+        for (objectComponent in objectComponents) {
             val objectImage = Mat()
-            Utils.bitmapToMat(objectComponentImage.roiImage, objectImage)
+            Utils.bitmapToMat(objectComponent.roiImage, objectImage)
 
             val matchingResult = MatchFeature(objectImage.nativeObjAddr, originalImage.nativeObjAddr,
-                objectComponentImage.layer.ratioInRoi)
+                objectComponent.layer.ratioInRoi)
             totalCount += matchingResult.matchRatio
             num++
 
             if (matchingResult.matchRatio > 30) {
-                val width =
-                    (maxOf(matchingResult.pointX1, maxOf(matchingResult.pointX2, maxOf(matchingResult.pointX3, matchingResult.pointX4))) -
-                            minOf(matchingResult.pointX1, minOf(matchingResult.pointX2, minOf(matchingResult.pointX3, matchingResult.pointX4)))).toInt()
-                val height =
-                    (maxOf(matchingResult.pointY1, maxOf(matchingResult.pointY2, maxOf(matchingResult.pointY3, matchingResult.pointY4))) -
-                            minOf(matchingResult.pointY1, minOf(matchingResult.pointY2, minOf(matchingResult.pointY3, matchingResult.pointY4)))).toInt()
+                val maxX = maxOf(matchingResult.pointX1, maxOf(matchingResult.pointX2, maxOf(matchingResult.pointX3, matchingResult.pointX4)))
+                val minX = minOf(matchingResult.pointX1, minOf(matchingResult.pointX2, minOf(matchingResult.pointX3, matchingResult.pointX4)))
+                val maxY = maxOf(matchingResult.pointY1, maxOf(matchingResult.pointY2, maxOf(matchingResult.pointY3, matchingResult.pointY4)))
+                val minY = minOf(matchingResult.pointY1, minOf(matchingResult.pointY2, minOf(matchingResult.pointY3, matchingResult.pointY4)))
+
+                val width = (maxX - minX).toInt()
+                val height = (maxY - minY).toInt()
 
                 val rect = Rect(matchingResult.pointX1.toInt(), matchingResult.pointY1.toInt(), matchingResult.pointX1.toInt() + width, matchingResult.pointY1.toInt() + height)
+                val newCenterX = minX + width / 2
+                val newCenterY = minY + height / 2
+
+                // 객체가 너무 많이 움직인 경우
+                if (abs(newCenterX - objectComponent.centerPointX) > objectMovementThreshold ||
+                    abs(newCenterY - objectComponent.centerPointY) > objectMovementThreshold)
+                    needToRequestSegmentation = true
+
                 if (!::layerBitmap.isInitialized) {
                     layerBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
                 }
                 val canvas = Canvas(layerBitmap)
                 canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
-                canvas.drawBitmap(objectComponentImage.layer.layeredImage!!, null, rect, null)
+                canvas.drawBitmap(objectComponent.layer.layeredImage!!, null, rect, null)
 
                 analyzeListener?.onUpdateLayerImage(layerBitmap)
             }
