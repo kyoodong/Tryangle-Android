@@ -111,28 +111,31 @@ Java_com_gomson_tryangle_Hough_find_1hough_1line(JNIEnv *env, jobject thiz, jlon
                                                   "(JJIIII)V");
 
     Mat &image = *(Mat *) mat_addr_input;
-    Mat kernel = Mat::ones(3, 3, CV_8U);
-    uchar *data = kernel.data;
-    data[3 + 1] = 5;
+//    resize(image, image, Size(640, 640));
+
+    float kernel_data[9] = {0, -1, 0,
+                          -1, 5, -1,
+                          0, -1, 0};
+    Mat kernel = Mat(3, 3, CV_32F, kernel_data);
     Mat gray, filtered_image, erode_image, canny_image;
-    std::vector<Vec4i> hough_e_lines;
+    std::vector<Vec4i> hough_lines;
 
     cvtColor(image, gray, COLOR_RGB2GRAY);
     filter2D(gray, filtered_image, -1, kernel);
 
-    kernel = Mat::ones(4, 4, CV_8U);
-    erode(filtered_image, erode_image, kernel);
+    Mat mask = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(4, 4));
+    erode(filtered_image, erode_image, mask, Point(-1, -1), 1, BORDER_REFLECT_101);
 
-    Canny(erode_image, canny_image, 2500, 1500, 5, true);
-    HoughLinesP(canny_image, hough_e_lines, 1, 3.14 / 360, 100, 200, 200);
+    Canny(erode_image, canny_image, 1500, 2500, 5, true);
+    HoughLinesP(canny_image, hough_lines, 1, 3.14 / 360, 100, 200, 200);
 
-    if (hough_e_lines.empty()) {
+    if (hough_lines.empty()) {
         return nullptr;
     }
 
     std::vector<Cluster> clusters;
 
-    for (Vec4i hough_e_line : hough_e_lines) {
+    for (Vec4i hough_e_line : hough_lines) {
         int x1, y1, x2, y2;
 
         x1 = hough_e_line[0];
@@ -142,7 +145,7 @@ Java_com_gomson_tryangle_Hough_find_1hough_1line(JNIEnv *env, jobject thiz, jlon
 
         struct line line = {x1, y1, x2, y2};
 
-        int threshold = 25;
+        int threshold = 35;
 
         // 수평선만 검출
         if (abs(y1 - y2) < threshold) {

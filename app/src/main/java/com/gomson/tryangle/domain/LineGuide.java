@@ -1,8 +1,24 @@
 package com.gomson.tryangle.domain;
 
+import org.opencv.core.Point;
+
 public class LineGuide extends Guide {
 
-    public LineGuide(long objectId, int guideId) {
+    private Point startPoint;
+    private Point endPoint;
+
+    public LineGuide(long objectId, int guideId, Point startPoint, Point endPoint) {
         super(objectId, guideId);
+
+        this.startPoint = startPoint;
+        this.endPoint = endPoint;
+    }
+
+    public Point getStartPoint() {
+        return startPoint;
+    }
+
+    public Point getEndPoint() {
+        return endPoint;
     }
 }

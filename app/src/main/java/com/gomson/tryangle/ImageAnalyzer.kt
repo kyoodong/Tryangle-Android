@@ -53,7 +53,7 @@ class ImageAnalyzer(
         }
     }
 
-    external fun MatchFeature(matAddrInput1: Long, matAddrInput2: Long, ratioInRoi: Int): MatchingResult
+    external fun MatchFeature(matAddrInput1: Long, matAddrInput2: Long, ratioInRoi: Int): MatchingResult?
 
     override fun analyze(imageProxy: ImageProxy) {
         rotation = imageProxy.imageInfo.rotationDegrees
@@ -73,6 +73,11 @@ class ImageAnalyzer(
 
         bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
             bitmapBuffer.width, bitmapBuffer.height, matrix, true)
+
+        // 개발용
+//        val option = BitmapFactory.Options()
+//        option.inScaled = false
+//        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test, option)
 
         poseGuider = PoseGuider(bitmap.width, bitmap.height)
         objectGuider = ObjectGuider(bitmap.width, bitmap.height)
@@ -180,7 +185,8 @@ class ImageAnalyzer(
             Utils.bitmapToMat(objectComponent.roiImage, objectImage)
 
             val matchingResult = MatchFeature(objectImage.nativeObjAddr, originalImage.nativeObjAddr,
-                objectComponent.layer.ratioInRoi)
+                objectComponent.layer.ratioInRoi) ?: continue
+
             totalCount += matchingResult.matchRatio
             num++
 
@@ -199,8 +205,10 @@ class ImageAnalyzer(
 
                 // 객체가 너무 많이 움직인 경우
                 if (abs(newCenterX - objectComponent.centerPointX) > objectMovementThreshold ||
-                    abs(newCenterY - objectComponent.centerPointY) > objectMovementThreshold)
+                    abs(newCenterY - objectComponent.centerPointY) > objectMovementThreshold) {
                     needToRequestSegmentation = true
+                    Log.d(TAG, "객체가 많이 움직여서 reload")
+                }
 
                 if (!::layerBitmap.isInitialized) {
                     layerBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
@@ -218,7 +226,10 @@ class ImageAnalyzer(
 
             if (averageCount < 20) {
                 needToRequestSegmentation = true
+                Log.d(TAG, "객체 발견하지 못하여 Reload")
             }
+        } else {
+            Log.d(TAG, "num == 0")
         }
 
 //                // 추천 이미지 요청

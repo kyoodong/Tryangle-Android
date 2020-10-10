@@ -2,7 +2,7 @@ package com.gomson.tryangle
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
+import android.graphics.*
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
@@ -16,6 +16,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.gomson.tryangle.domain.Guide
+import com.gomson.tryangle.domain.LineGuide
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
@@ -39,9 +40,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     }
-
-    // 마지막에 추천 이미지를 받은 시간
-    var last_time = 0L
 
     // 카메라
     private var imageCapture: ImageCapture? = null
@@ -67,6 +65,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     private val matches: ArrayList<MatOfDMatch>
 
     private lateinit var converter: YuvToRgbConverter
+    private lateinit var layerBitmap: Bitmap
+    private lateinit var guideBitmap: Bitmap
+    private lateinit var guides: Array<ArrayList<Guide>>
 
     init {
         System.loadLibrary("opencv_java4")
@@ -273,16 +274,50 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     }
 
     override fun onUpdateLayerImage(layerBitmap: Bitmap) {
+        this.layerBitmap = layerBitmap
+
         runOnUiThread {
+            this.layerBitmap = layerBitmap
             layerImageView.setImageBitmap(layerBitmap)
         }
     }
 
     override fun onGuideUpdate(guides: Array<ArrayList<Guide>>) {
-        for (guideList in guides) {
-            for (guide in guideList) {
-                Log.d(TAG, "guide = ${GUIDE_LIST[guide.guideId]}")
+        this.guides = guides
+
+        if (!::guideBitmap.isInitialized) {
+            guideBitmap = Bitmap.createBitmap(
+                previewView.bitmap!!.width,
+                previewView.bitmap!!.height,
+                Bitmap.Config.ARGB_8888)
+        }
+
+        val canvas = Canvas(guideBitmap)
+        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
+
+        for (guideCluster in guides) {
+            for (guide in guideCluster) {
+                when (guide.guideId) {
+                    // 수직선
+                    0, 1 -> {
+                        val lineGuide = guide as LineGuide
+                        val paint = Paint()
+                        paint.color = Color.rgb(255, 0, 0)
+                        paint.isAntiAlias = true
+                        paint.strokeWidth = 5f
+                        canvas.drawLine(lineGuide.startPoint.x.toFloat(),
+                            lineGuide.startPoint.y.toFloat(),
+                            lineGuide.endPoint.x.toFloat(),
+                            lineGuide.endPoint.y.toFloat(), paint)
+                    }
+                }
             }
         }
+
+        runOnUiThread {
+            guideImageView.setImageBitmap(guideBitmap)
+        }
+
+        Log.i(TAG, "가이드 업데이트")
     }
 }
