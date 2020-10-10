@@ -12,6 +12,6 @@ class Hough {
     fun findHoughLine(image: Bitmap): Array<LineComponent>? {
         val imageMat = Mat()
         Utils.bitmapToMat(image, imageMat)
-        return find_hough_line(imageMat.nativeObjAddr, test.nativeObjAddr, test2.nativeObjAddr)
+        return find_hough_line(imageMat.nativeObjAddr)
     }
 }
