@@ -15,8 +15,11 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.gomson.tryangle.domain.Guide
-import com.gomson.tryangle.domain.LineGuide
+import com.gomson.tryangle.domain.component.Component
+import com.gomson.tryangle.domain.component.ObjectComponent
+import com.gomson.tryangle.domain.guide.Guide
+import com.gomson.tryangle.domain.guide.LineGuide
+import com.gomson.tryangle.domain.guide.ObjectGuide
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
@@ -68,6 +71,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     private lateinit var layerBitmap: Bitmap
     private lateinit var guideBitmap: Bitmap
     private lateinit var guides: Array<ArrayList<Guide>>
+
+    private var components = ArrayList<Component>()
+    private var mainGuide: Guide? = null
 
     init {
         System.loadLibrary("opencv_java4")
@@ -297,20 +303,42 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
         for (guideCluster in guides) {
             for (guide in guideCluster) {
-                when (guide.guideId) {
-                    // 수직선
-                    0, 1 -> {
-                        val lineGuide = guide as LineGuide
-                        val paint = Paint()
-                        paint.color = Color.rgb(255, 0, 0)
-                        paint.isAntiAlias = true
-                        paint.strokeWidth = 5f
-                        canvas.drawLine(lineGuide.startPoint.x.toFloat(),
-                            lineGuide.startPoint.y.toFloat(),
-                            lineGuide.endPoint.x.toFloat(),
-                            lineGuide.endPoint.y.toFloat(), paint)
+                mainGuide = guide
+
+                if (guide is LineGuide) {
+                    val lineGuide = guide as LineGuide
+                    val paint = Paint()
+                    paint.color = Color.rgb(255, 0, 0)
+                    paint.isAntiAlias = true
+                    paint.strokeWidth = 5f
+                    canvas.drawLine(lineGuide.startPoint.x.toFloat(),
+                        lineGuide.startPoint.y.toFloat(),
+                        lineGuide.endPoint.x.toFloat(),
+                        lineGuide.endPoint.y.toFloat(), paint)
+                }
+
+                else if (guide is ObjectGuide) {
+                    val objectGuide = guide as ObjectGuide
+                    for (component in components) {
+                        if (component !is ObjectComponent)
+                            continue
+
+                        val objectComponent = component as ObjectComponent
+                        if (objectComponent.componentId == objectGuide.componentId) {
+                            val layerImage = objectComponent.layer.layeredImage ?: break
+                            val rect = Rect(
+                                objectComponent.roiList[1] + objectGuide.diffX,
+                                objectComponent.roiList[0] + objectGuide.diffY,
+                                objectComponent.roiList[3] + objectGuide.diffX,
+                                objectComponent.roiList[2] + objectGuide.diffY,
+                            )
+                            canvas.drawBitmap(layerImage, null, rect, null)
+                            break
+                        }
                     }
                 }
+
+                guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
             }
         }
 
@@ -319,5 +347,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         }
 
         Log.i(TAG, "가이드 업데이트")
+    }
+
+    override fun onUpdateComponents(components: ArrayList<Component>) {
+        this.components = components
     }
 }

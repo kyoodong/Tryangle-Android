@@ -1,6 +1,9 @@
 package com.gomson.tryangle.guider
 
-import com.gomson.tryangle.domain.*
+import com.gomson.tryangle.domain.component.Component
+import com.gomson.tryangle.domain.component.ObjectComponent
+import com.gomson.tryangle.domain.guide.Guide
+import com.gomson.tryangle.domain.guide.ObjectGuide
 import kotlin.math.abs
 
 open class ObjectGuider(
@@ -35,19 +38,51 @@ open class ObjectGuider(
             if (leftDiff < middleDiff) {
                 // 왼쪽에 치우친 경우
                 if (leftDiff > error)
-                    guides[5].add(ObjectGuide(component.id, 5, leftSide - component.centerPointX, 0, component.clazz))
+                    guides[5].add(
+                        ObjectGuide(
+                            component.id,
+                            5,
+                            leftSide - component.centerPointX,
+                            0,
+                            component.clazz
+                        )
+                    )
             } else {
                 // 중앙에 있는 경우
                 if (middleDiff > error)
-                    guides[4].add(ObjectGuide(component.id, 4, middleDiff - component.centerPointX, 0, component.clazz))
+                    guides[4].add(
+                        ObjectGuide(
+                            component.id,
+                            4,
+                            middleDiff - component.centerPointX,
+                            0,
+                            component.clazz
+                        )
+                    )
             }
         } else {
             if (rightDiff < middleDiff) {
                 if (rightDiff > error)
-                    guides[5].add(ObjectGuide(component.id, 5, middleDiff - component.centerPointX, 0, component.clazz))
+                    guides[5].add(
+                        ObjectGuide(
+                            component.id,
+                            5,
+                            middleDiff - component.centerPointX,
+                            0,
+                            component.clazz
+                        )
+                    )
             } else {
                 if (middleDiff > error)
-                    guides[4].add(ObjectGuide(component.id, 4, middleDiff - component.centerPointX, 0, component.clazz))
+                    guides[4].add(
+                        ObjectGuide(
+                            component.id,
+                            4,
+                            middleDiff - component.centerPointX,
+                            0,
+                            component.clazz
+                        )
+                    )
             }
         }
         return guides

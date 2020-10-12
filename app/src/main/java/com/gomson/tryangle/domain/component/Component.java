@@ -1,4 +1,4 @@
-package com.gomson.tryangle.domain;
+package com.gomson.tryangle.domain.component;
 
 public class Component {
 
@@ -16,5 +16,9 @@ public class Component {
 
     public long getComponentId() {
         return componentId;
+    }
+
+    void setComponentId(long componentId) {
+        this.componentId = componentId;
     }
 }

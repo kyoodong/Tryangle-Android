@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.SystemClock
 import com.gomson.tryangle.domain.AccessToken
-import com.gomson.tryangle.domain.ObjectComponent
+import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.dto.GuideImageListDTO
 import okhttp3.MediaType
 import okhttp3.MultipartBody

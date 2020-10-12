@@ -1,7 +1,7 @@
 package com.gomson.tryangle
 
 import android.graphics.Bitmap
-import com.gomson.tryangle.domain.LineComponent
+import com.gomson.tryangle.domain.component.LineComponent
 import org.opencv.android.Utils
 import org.opencv.core.Mat
 

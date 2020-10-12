@@ -1,6 +1,9 @@
 package com.gomson.tryangle.guider
 
-import com.gomson.tryangle.domain.*
+import com.gomson.tryangle.domain.component.Component
+import com.gomson.tryangle.domain.component.LineComponent
+import com.gomson.tryangle.domain.guide.Guide
+import com.gomson.tryangle.domain.guide.LineGuide
 import org.opencv.core.Point
 import kotlin.math.abs
 
@@ -20,17 +23,24 @@ class LineGuider: Guider() {
 
         // 수평선 양 끝 점의 차이가 lower_threshold 초과이면 가이드 멘트
         if (yDiff in lowerThreshold until upperThreshold) {
-            guides[0].add(LineGuide(component.id, 0,
-                Point(component.startX.toDouble(), component.startY.toDouble()),
-                Point(component.endX.toDouble(), component.endY.toDouble())
-            ))
+            guides[0].add(
+                LineGuide(
+                    component.id, 0,
+                    Point(component.startX.toDouble(), component.startY.toDouble()),
+                    Point(component.endX.toDouble(), component.endY.toDouble())
+                )
+            )
         }
 
         // 수직선
         if (xDiff in lowerThreshold until upperThreshold) {
-            guides[1].add(LineGuide(component.id, 1,
-                Point(component.startX.toDouble(), component.startY.toDouble()),
-                Point(component.endX.toDouble(), component.endY.toDouble())))
+            guides[1].add(
+                LineGuide(
+                    component.id, 1,
+                    Point(component.startX.toDouble(), component.startY.toDouble()),
+                    Point(component.endX.toDouble(), component.endY.toDouble())
+                )
+            )
         }
 
         return guides

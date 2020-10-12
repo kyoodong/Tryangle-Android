@@ -1,10 +1,10 @@
 package com.gomson.tryangle.guider
 
-import com.gomson.tryangle.domain.Component
+import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.pose.PoseClass
-import com.gomson.tryangle.domain.Guide
-import com.gomson.tryangle.domain.ObjectGuide
-import com.gomson.tryangle.domain.PersonComponent
+import com.gomson.tryangle.domain.guide.Guide
+import com.gomson.tryangle.domain.guide.ObjectGuide
+import com.gomson.tryangle.domain.component.PersonComponent
 import org.tensorflow.lite.examples.posenet.lib.BodyPart
 import org.tensorflow.lite.examples.posenet.lib.KeyPoint
 import org.tensorflow.lite.examples.posenet.lib.Person
@@ -85,7 +85,15 @@ class PoseGuider(
                     !component.person.has(BodyPart.RIGHT_ANKLE)) {
                     val personHeight = component.roiList[2] - component.roiList[0]
                     val diff = -personHeight * 10 / 170
-                    guides[3].add(ObjectGuide(component.id, 3, 0, diff, component.clazz))
+                    guides[3].add(
+                        ObjectGuide(
+                            component.id,
+                            3,
+                            0,
+                            diff,
+                            component.clazz
+                        )
+                    )
                 }
 
                 // 엉덩이는 있지만 무릎에서 잘린 경우
@@ -96,14 +104,30 @@ class PoseGuider(
                         !component.person.has(BodyPart.RIGHT_ANKLE)) {
                     val personHeight = component.roiList[2] - component.roiList[0]
                     val diff = personHeight * 20 / 170
-                    guides[7].add(ObjectGuide(component.id, 7, 0, diff, component.clazz))
+                    guides[7].add(
+                        ObjectGuide(
+                            component.id,
+                            7,
+                            0,
+                            diff,
+                            component.clazz
+                        )
+                    )
                 }
 
                 // 머리만 덜렁 있는 사진
                 if (component.person.hasHead() && !component.person.hasUpperBody() && !component.person.hasLowerBody()) {
                     val personHeight = component.roiList[2] - component.roiList[0]
                     val diff = -personHeight * 20 / 170
-                    guides[8].add(ObjectGuide(component.id, 8, 0, diff, component.clazz))
+                    guides[8].add(
+                        ObjectGuide(
+                            component.id,
+                            8,
+                            0,
+                            diff,
+                            component.clazz
+                        )
+                    )
                 }
             }
 
@@ -111,7 +135,15 @@ class PoseGuider(
             if (component.person.hasFullBody() &&
                 imageHeight > component.roiList[2] + FOOT_LOWER_THRESHOLD) {
                 val diff = imageHeight - component.roiList[2] + FOOT_LOWER_THRESHOLD
-                guides[2].add(ObjectGuide(component.id, 2, 0, diff, component.clazz))
+                guides[2].add(
+                    ObjectGuide(
+                        component.id,
+                        2,
+                        0,
+                        diff,
+                        component.clazz
+                    )
+                )
             }
 
             // 사람이 사진의 윗쪽에 위치한 경우
@@ -119,7 +151,15 @@ class PoseGuider(
                 if (component.person.hasHead()) {
                     val top = imageHeight / 3
                     val diff = top - component.roiList[0]
-                    guides[9].add(ObjectGuide(component.id, 9, 0, diff, component.clazz))
+                    guides[9].add(
+                        ObjectGuide(
+                            component.id,
+                            9,
+                            0,
+                            diff,
+                            component.clazz
+                        )
+                    )
                 }
             }
         }

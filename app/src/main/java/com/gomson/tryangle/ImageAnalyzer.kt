@@ -5,12 +5,10 @@ import android.graphics.*
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import com.gomson.tryangle.domain.Guide
-import com.gomson.tryangle.domain.LineComponent
-import com.gomson.tryangle.domain.ObjectComponent
-import com.gomson.tryangle.domain.PersonComponent
+import com.gomson.tryangle.domain.component.*
+import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.dto.MatchingResult
-import com.gomson.tryangle.guider.Guides
+import com.gomson.tryangle.domain.guide.Guides
 import com.gomson.tryangle.guider.LineGuider
 import com.gomson.tryangle.guider.ObjectGuider
 import com.gomson.tryangle.guider.PoseGuider
@@ -30,9 +28,8 @@ class ImageAnalyzer(
 
     private var rotation: Int = 0
     private var needToRequestSegmentation = true
-    private var objectComponents: ArrayList<ObjectComponent> = ArrayList()
+    private var components = ComponentList()
     private val hough = Hough()
-    private var effectiveLines = ArrayList<LineComponent>()
     private lateinit var bitmapBuffer: Bitmap
     private lateinit var bitmap: Bitmap
     private lateinit var layerBitmap: Bitmap
@@ -43,7 +40,7 @@ class ImageAnalyzer(
     private lateinit var poseGuider: PoseGuider
     private lateinit var objectGuider: ObjectGuider
     private lateinit var lineGuider: LineGuider
-    private val guides = Array<ArrayList<Guide>>(20) {i -> ArrayList() }
+    private val guides = Array<ArrayList<Guide>>(20) { i -> ArrayList() }
     private val objectMovementThreshold = 50
 
     init {
@@ -71,13 +68,13 @@ class ImageAnalyzer(
         val matrix = Matrix()
         matrix.postRotate(rotation.toFloat())
 
-        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
-            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
+//        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
+//            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
 
         // 개발용
-//        val option = BitmapFactory.Options()
-//        option.inScaled = false
-//        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test, option)
+        val option = BitmapFactory.Options()
+        option.inScaled = false
+        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test, option)
 
         poseGuider = PoseGuider(bitmap.width, bitmap.height)
         objectGuider = ObjectGuider(bitmap.width, bitmap.height)
@@ -104,7 +101,7 @@ class ImageAnalyzer(
                     guide.clear()
                 }
 
-                this.objectComponents.clear()
+                this.components.clear()
 
                 for (objectComponent in objectComponents) {
                     val layer = Layer(objectComponent.maskList, objectComponent.roiList)
@@ -124,24 +121,26 @@ class ImageAnalyzer(
                             val scaledBitmap = Bitmap.createScaledBitmap(roiImage, MODEL_WIDTH, MODEL_HEIGHT, true)
                             val person = posenet.estimateSinglePose(scaledBitmap)
                             val poseClass = poseClassifier.classify(person.keyPoints.toTypedArray())
-                            val personComponent = PersonComponent(
-                                objectComponent.id,
-                                objectComponent.componentId,
-                                objectComponent.clazz,
-                                objectComponent.centerPointX,
-                                objectComponent.centerPointY,
-                                objectComponent.area,
-                                objectComponent.mask,
-                                objectComponent.roi,
-                                objectComponent.roiImage,
-                                objectComponent.layer,
-                                person,
-                                poseClass
-                            )
-                            this.objectComponents.add(personComponent)
+                            val personComponent =
+                                PersonComponent(
+                                    objectComponent.id,
+                                    objectComponent.componentId,
+                                    objectComponent.clazz,
+                                    objectComponent.centerPointX,
+                                    objectComponent.centerPointY,
+                                    objectComponent.area,
+                                    objectComponent.mask,
+                                    objectComponent.roi,
+                                    objectComponent.roiImage,
+                                    objectComponent.layer,
+                                    person,
+                                    poseClass
+                                )
+
+                            this.components.add(personComponent)
                             Guides.compositeGuide(guides, poseGuider.guide(personComponent))
                         } else {
-                            this.objectComponents.add(objectComponent)
+                            this.components.add(objectComponent)
                         }
 
                         Guides.compositeGuide(guides, objectGuider.guide(objectComponent))
@@ -151,18 +150,24 @@ class ImageAnalyzer(
                     }
                 }
 
-                needToRequestSegmentation = this.objectComponents.isEmpty()
+                needToRequestSegmentation = this.components.isEmpty()
 
-                if (this.objectComponents.isNotEmpty()) {
-                    effectiveLines.clear()
+                if (this.components.isNotEmpty()) {
                     val newLines = hough.findHoughLine(bitmap)
                     if (newLines != null) {
-                        effectiveLines.addAll(newLines)
+                        components.addAll(newLines)
 
-                        for (effectiveLine in effectiveLines) {
-                            Guides.compositeGuide(guides, lineGuider.guide(effectiveLine))
+                        for (component in components) {
+                            if (component !is LineComponent) {
+                                continue
+                            }
+
+                            val lineComponent = component as LineComponent
+                            Guides.compositeGuide(guides, lineGuider.guide(lineComponent))
                         }
                     }
+
+                    analyzeListener?.onUpdateComponents(components)
                 }
 
                 analyzeListener?.onGuideUpdate(guides)
@@ -180,7 +185,8 @@ class ImageAnalyzer(
         var averageCount = 0
 
         // 오브젝트별 이미지
-        for (objectComponent in objectComponents) {
+        for (component in components) {
+            val objectComponent = component as ObjectComponent
             val objectImage = Mat()
             Utils.bitmapToMat(objectComponent.roiImage, objectImage)
 
@@ -263,5 +269,6 @@ class ImageAnalyzer(
     interface OnAnalyzeListener {
         fun onUpdateLayerImage(layerBitmap: Bitmap)
         fun onGuideUpdate(guides: Array<ArrayList<Guide>>)
+        fun onUpdateComponents(components: ArrayList<Component>)
     }
 }
