@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="계정">
+
+        <Preference
+            app:summary="Report technical issues or suggest new features"
+            app:title="인스타 계정으로 로그인" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="카메라 설정">
+
+        <ListPreference app:title="화질" />
+
+        <SwitchPreference app:title="필터 자동 설정" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="트라이앵글 설정">
+
+        <Preference app:title="도움말" />
+
+        <Preference app:title="개인정보취급방침" />
+
+        <Preference app:title="이용약관" />
+
+        <Preference app:title="오픈소스 라이선스" />
+    </PreferenceCategory>
+
+
+</PreferenceScreen>

@@ -1,6 +1,7 @@
 package com.gomson.tryangle
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.media.MediaScannerConnection
@@ -14,10 +15,7 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
@@ -29,6 +27,7 @@ import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -37,6 +36,10 @@ enum class RatioMode constructor(val width: Int, val height: Int){
     RATIO_1_1(1,1),
     RATIO_9_16(9,16),
 //    RATIO_FULL(0,0)
+}
+
+enum class TimerMode constructor(val milliseconds:Int, val btnImg:Int) {
+    TIMER_OFF(0,R.id.off)
 }
 
 class MainActivity : AppCompatActivity() {
@@ -57,6 +60,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var outputDirectory: File
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var camera: Camera
 
     private lateinit var cameraProvider: ProcessCameraProvider
     val TAG = "MainActivity"
@@ -71,7 +75,9 @@ class MainActivity : AppCompatActivity() {
     var currentRatio = RatioMode.RATIO_3_4
     var isFlash = false
     var isGrid = false
-//    val isTimer
+//    val currentTimer ;
+
+    val timer = Timer()
 
     val ratioPopupViewClickListener = View.OnClickListener{ view->
         var clickRatio = RatioMode.RATIO_3_4
@@ -126,26 +132,27 @@ class MainActivity : AppCompatActivity() {
         layoutInflater.inflate(R.layout.popup_more, null).let {
             popupMoreView = PopupWindow(it, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
             it.flashLayout.setOnClickListener {
-
+                if(camera.cameraInfo.hasFlashUnit()) {
+                    isFlash = !isFlash
+                    camera.cameraControl.enableTorch(isFlash)
+                    popupMoreView.contentView.flash.isSelected= isFlash
+                }
             }
             it.timerLayout.setOnClickListener {
 
             }
             it.gridLayout.setOnClickListener {
-
                 isGrid = !isGrid
                 gridLinesView.visibility = if (isGrid){
                     View.VISIBLE
                 } else{
                     View.INVISIBLE
                 }
-                popupMoreView.contentView.grid.setColorFilter(
-                    if (isGrid) COLOR_WHITE else COLOR_LIGHTGRAY ,
-                    android.graphics.PorterDuff.Mode.MULTIPLY
-                )
+                popupMoreView.contentView.grid.isSelected = isGrid
             }
             it.settingLayout.setOnClickListener {
-
+                val nextIntent = Intent(this, PreferenceActivity::class.java)
+                startActivity(nextIntent)
             }
         }
 
@@ -153,14 +160,17 @@ class MainActivity : AppCompatActivity() {
             it.ratio1_1.setOnClickListener(ratioPopupViewClickListener)
             it.ratio3_4.setOnClickListener(ratioPopupViewClickListener)
             it.ratio9_16.setOnClickListener(ratioPopupViewClickListener)
-//            it.ratioFull.setOnClickListener(ratioPopupViewClickListener)
             popupRatioView = PopupWindow(it, LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
         }
 
-        captureButton.setOnClickListener { takePhoto() }
+        captureButton.setOnClickListener {
+//            if(timer)
+
+            takePhoto()
+
+        }
 
         outputDirectory = getOutputDirectory()
-
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         ratioBtn.setOnClickListener {
@@ -173,12 +183,7 @@ class MainActivity : AppCompatActivity() {
             popupRatioView.showAsDropDown(topLayout, 0, 0)
         }
         moreBtn.setOnClickListener{
-            popupMoreView.contentView.grid.setColorFilter(
-                if (isGrid) COLOR_WHITE else COLOR_LIGHTGRAY ,
-                android.graphics.PorterDuff.Mode.MULTIPLY)
-
             popupMoreView.showAsDropDown(topLayout,0,0)
-
         }
         reverseBtn.setOnClickListener {
             cameraSelector = if (CameraSelector.DEFAULT_BACK_CAMERA == cameraSelector)
@@ -186,6 +191,8 @@ class MainActivity : AppCompatActivity() {
             bindCameraConfiguration()
         }
     }
+
+
 
     private fun getImageCapture(heightRatio: Int, widthRatio: Int): ImageCapture {
         val imageCapture = ImageCapture.Builder()
@@ -228,7 +235,7 @@ class MainActivity : AppCompatActivity() {
 
         try {
             cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(
+            camera = cameraProvider.bindToLifecycle(
                 this, cameraSelector, preview, imageCapture
             )
             preview?.setSurfaceProvider(previewView.createSurfaceProvider())
@@ -269,7 +276,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-
+        timer.cancel()
         cameraExecutor.shutdown()
     }
 

@@ -20,6 +20,8 @@
     <!--  전면카메라/후면카메라 권한  -->
     <uses-feature android:name="android.hardware.camera.any" />
 
+    <!--  플래시 사용  -->
+    <uses-permission android:name="android.permission.FLASHLIGHT" />
 
     <application
         android:allowBackup="true"
@@ -35,6 +37,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".PreferenceActivity"/>
     </application>
 
 </manifest>

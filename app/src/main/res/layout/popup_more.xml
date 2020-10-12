@@ -25,7 +25,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:src="@drawable/flash_off" />
+            android:src="@drawable/selector_flash" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -80,7 +80,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:src="@drawable/grid" />
+            android:src="@drawable/selector_grid" />
 
         <TextView
             android:layout_width="wrap_content"
