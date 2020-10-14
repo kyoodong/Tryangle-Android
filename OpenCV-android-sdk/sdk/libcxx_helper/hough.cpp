@@ -106,7 +106,7 @@ public:
 extern "C"
 JNIEXPORT jobjectArray JNICALL
 Java_com_gomson_tryangle_Hough_find_1hough_1line(JNIEnv *env, jobject thiz, jlong mat_addr_input) {
-    jclass class_line = env->FindClass("com/gomson/tryangle/domain/LineComponent");
+    jclass class_line = env->FindClass("com/gomson/tryangle/domain/component/LineComponent");
     jmethodID line_constructor = env->GetMethodID(class_line, "<init>",
                                                   "(JJIIII)V");
 

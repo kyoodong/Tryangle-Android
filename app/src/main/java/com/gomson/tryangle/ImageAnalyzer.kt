@@ -186,6 +186,9 @@ class ImageAnalyzer(
 
         // 오브젝트별 이미지
         for (component in components) {
+            if (component !is ObjectComponent)
+                continue
+
             val objectComponent = component as ObjectComponent
             val objectImage = Mat()
             Utils.bitmapToMat(objectComponent.roiImage, objectImage)

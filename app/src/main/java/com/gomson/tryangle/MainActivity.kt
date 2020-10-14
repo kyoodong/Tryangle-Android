@@ -24,12 +24,6 @@ import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
-import org.opencv.core.Mat
-import org.opencv.core.MatOfDMatch
-import org.opencv.core.MatOfKeyPoint
-import org.opencv.features2d.FastFeatureDetector
-import org.opencv.features2d.Feature2D
-import org.opencv.features2d.FlannBasedMatcher
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.concurrent.ExecutorService
@@ -330,6 +324,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     }
 
     override fun onUpdateComponents(components: ArrayList<Component>) {
-        this.components = components
+        this.components.clear()
+        this.components.addAll(components)
+        this.components.sortByDescending {
+            it.priority
+        }
     }
 }

@@ -1,6 +1,6 @@
 package com.gomson.tryangle.domain.component;
 
-public class Component {
+public abstract class Component {
 
     private long id;
     private long componentId;
@@ -9,6 +9,8 @@ public class Component {
         this.id = id;
         this.componentId = componentId;
     }
+
+    public abstract double getPriority();
 
     public long getId() {
         return id;

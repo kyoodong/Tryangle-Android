@@ -30,4 +30,11 @@ public class LineComponent extends Component {
     public int getEndY() {
         return endY;
     }
+
+    @Override
+    public double getPriority() {
+        double score = Math.abs(startX - endX) + Math.abs(startY - endY);
+        score /= 100;
+        return score;
+    }
 }

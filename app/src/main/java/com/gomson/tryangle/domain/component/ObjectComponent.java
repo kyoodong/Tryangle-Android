@@ -133,4 +133,43 @@ public class ObjectComponent extends Component {
     public void setArea(float area) {
         this.area = area;
     }
+
+    public double getRoiArea() {
+        int height = maskList.size();
+        int width = maskList.get(0).size();
+        int roiHeight = roiList.get(2) - roiList.get(0);
+        int roiWidth = roiList.get(3) - roiList.get(1);
+
+        return (double) (roiHeight * roiWidth) / (height * width);
+    }
+
+    private double normalize(double max, double normMax, double value) {
+        return value / max * normMax;
+    }
+
+    @Override
+    public double getPriority() {
+        int height = maskList.size();
+        int width = maskList.get(0).size();
+        int centerX = width / 2;
+        int centerY = height / 2;
+
+        // 오브젝트 가이드가 먼저 이루어져야하므로 오브젝트 컴포넌트 가중치를 부여
+        int objectClassScore = 100;
+
+        // 오브젝트가 사진 내에서 차지하는 비율을 점수화
+        double areaScore = area * 100 * 2;
+        areaScore = Math.min(100, areaScore);
+
+        // 중앙 지점에서의 유클리디언 거리를 이용하여 점수 측정
+        double positionScore = 1000 - Math.sqrt(Math.pow(Math.abs(centerX - centerPointX), 2)
+                + Math.pow(Math.abs(centerY - centerPointY), 2));
+        positionScore = Math.max(0, positionScore);
+
+        // 100점 만점으로 환산
+        double score = normalize(100, 70, areaScore) + normalize(1000, 30, positionScore);
+
+        // 오브젝트는 100점을 추가지급하여 100점부터 시작함
+        return objectClassScore + score;
+    }
 }
