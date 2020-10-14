@@ -16,7 +16,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.gomson.tryangle.domain.component.Component
-import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.LineGuide
 import com.gomson.tryangle.domain.guide.ObjectGuide
@@ -54,7 +53,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     private lateinit var converter: YuvToRgbConverter
     private lateinit var layerBitmap: Bitmap
     private lateinit var guideBitmap: Bitmap
-    private lateinit var guides: Array<ArrayList<Guide>>
+    private val guideClusters = ArrayList<ArrayList<Guide>>()
 
     private var components = ArrayList<Component>()
     private var mainGuide: Guide? = null
@@ -262,72 +261,63 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         }
     }
 
-    override fun onGuideUpdate(guides: Array<ArrayList<Guide>>) {
-        this.guides = guides
-
-        if (!::guideBitmap.isInitialized) {
-            guideBitmap = Bitmap.createBitmap(
-                previewView.bitmap!!.width,
-                previewView.bitmap!!.height,
-                Bitmap.Config.ARGB_8888)
-        }
-
-        val canvas = Canvas(guideBitmap)
-        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
-
-        for (guideCluster in guides) {
-            for (guide in guideCluster) {
-                mainGuide = guide
-
-                if (guide is LineGuide) {
-                    val lineGuide = guide as LineGuide
-                    val paint = Paint()
-                    paint.color = Color.rgb(255, 0, 0)
-                    paint.isAntiAlias = true
-                    paint.strokeWidth = 5f
-                    canvas.drawLine(lineGuide.startPoint.x.toFloat(),
-                        lineGuide.startPoint.y.toFloat(),
-                        lineGuide.endPoint.x.toFloat(),
-                        lineGuide.endPoint.y.toFloat(), paint)
-                }
-
-                else if (guide is ObjectGuide) {
-                    val objectGuide = guide as ObjectGuide
-                    for (component in components) {
-                        if (component !is ObjectComponent)
-                            continue
-
-                        val objectComponent = component as ObjectComponent
-                        if (objectComponent.componentId == objectGuide.componentId) {
-                            val layerImage = objectComponent.layer.layeredImage ?: break
-                            val rect = Rect(
-                                objectComponent.roiList[1] + objectGuide.diffX,
-                                objectComponent.roiList[0] + objectGuide.diffY,
-                                objectComponent.roiList[3] + objectGuide.diffX,
-                                objectComponent.roiList[2] + objectGuide.diffY,
-                            )
-                            canvas.drawBitmap(layerImage, null, rect, null)
-                            break
-                        }
-                    }
-                }
-
-                guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
-            }
-        }
-
-        runOnUiThread {
-            guideImageView.setImageBitmap(guideBitmap)
-        }
-
-        Log.i(TAG, "가이드 업데이트")
-    }
-
     override fun onUpdateComponents(components: ArrayList<Component>) {
         this.components.clear()
         this.components.addAll(components)
         this.components.sortByDescending {
             it.priority
         }
+    }
+
+    private fun displayGuide() {
+        val guide = mainGuide ?: return
+        val canvas = Canvas(guideBitmap)
+        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
+
+        if (guide is LineGuide) {
+            val lineGuide = guide as LineGuide
+            val paint = Paint()
+            paint.color = Color.rgb(255, 0, 0)
+            paint.isAntiAlias = true
+            paint.strokeWidth = 5f
+            canvas.drawLine(lineGuide.startPoint.x.toFloat(),
+                lineGuide.startPoint.y.toFloat(),
+                lineGuide.endPoint.x.toFloat(),
+                lineGuide.endPoint.y.toFloat(), paint)
+        }
+
+        else if (guide is ObjectGuide) {
+            val objectGuide = guide as ObjectGuide
+            val layerImage = objectGuide.component.layer.layeredImage ?: return
+            val roi = objectGuide.component.roi + objectGuide.diffPoint
+            canvas.drawBitmap(layerImage, null, roi.toRect(), null)
+        }
+
+        guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
+
+        runOnUiThread {
+            guideImageView.setImageBitmap(guideBitmap)
+        }
+    }
+
+    override fun onGuideUpdate(guides: Array<ArrayList<Guide>>, mainGuide: Guide) {
+        this.guideClusters.clear()
+        this.guideClusters.addAll(guides)
+
+        if (!::guideBitmap.isInitialized) {
+            guideBitmap = Bitmap.createBitmap(
+//                previewView.bitmap!!.width,
+                640,
+//                previewView.bitmap!!.height,
+                640,
+                Bitmap.Config.ARGB_8888)
+        }
+
+        displayGuide()
+        Log.i(TAG, "가이드 업데이트")
+    }
+
+    override fun onMatchGuide(guide: Guide, newMainGuide: Guide?) {
+        TODO("Not yet implemented")
     }
 }

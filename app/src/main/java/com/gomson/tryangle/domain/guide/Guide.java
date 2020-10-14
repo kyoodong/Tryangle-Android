@@ -1,21 +1,15 @@
 package com.gomson.tryangle.domain.guide;
 
+import com.gomson.tryangle.domain.component.Component;
+
 public class Guide {
 
-    private long componentId;
+    private Component component;
     private int guideId;
 
-    public Guide(long componentId, int guideId) {
-        this.componentId = componentId;
+    public Guide(Component component, int guideId) {
+        this.component = component;
         this.guideId = guideId;
-    }
-
-    public long getComponentId() {
-        return componentId;
-    }
-
-    public void setComponentId(long componentId) {
-        this.componentId = componentId;
     }
 
     public int getGuideId() {
@@ -24,5 +18,9 @@ public class Guide {
 
     public void setGuideId(int guideId) {
         this.guideId = guideId;
+    }
+
+    public Component getComponent() {
+        return component;
     }
 }

@@ -3,6 +3,8 @@ package com.gomson.tryangle.domain.component;
 import android.graphics.Bitmap;
 
 import com.gomson.tryangle.Layer;
+import com.gomson.tryangle.domain.Point;
+import com.gomson.tryangle.domain.Roi;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -14,44 +16,42 @@ public class ObjectComponent extends Component {
     public static final int PERSON = 1;
 
     private int clazz;
-    private int centerPointX;
-    private int centerPointY;
+    private Point centerPoint;
     private float area;
-    private String mask;
-    private String roi;
-    private ArrayList<ArrayList<Integer>> maskList;
-    private ArrayList<Integer> roiList;
+    private String maskStr;
+    private String roiStr;
+    private ArrayList<ArrayList<Integer>> mask;
+    private Roi roi;
 
     private Bitmap roiImage;
     private Layer layer;
 
-    public ObjectComponent(long id, long componentId, int clazz, int centerPointX, int centerPointY, float area,
-                           String mask, String roi) {
+    public ObjectComponent(long id, long componentId, int clazz, Point centerPoint, float area,
+                           String maskStr, String roiStr) {
         super(id, componentId);
         this.clazz = clazz;
-        this.centerPointX = centerPointX;
-        this.centerPointY = centerPointY;
+        this.centerPoint = centerPoint;
         this.area = area;
-        setMask(mask);
-        setRoi(roi);
+        setMaskStr(maskStr);
+        setRoiStr(roiStr);
     }
 
-    public void setMask(String mask) {
-        this.mask = mask;
+    public void setMaskStr(String maskStr) {
+        this.maskStr = maskStr;
 
         try {
-            this.maskList = new ArrayList<>();
-            JSONArray array = new JSONArray(mask);
+            this.mask = new ArrayList<>();
+            JSONArray array = new JSONArray(maskStr);
             for (int i = 0; i < array.length(); i++) {
                 JSONArray arr = array.getJSONArray(i);
-                this.maskList.add(new ArrayList<>());
+                this.mask.add(new ArrayList<>());
                 for (int j = 0; j < arr.length(); j++) {
                     Object obj = arr.get(j);
                     if (obj instanceof Integer) {
-                        this.maskList.get(i).add((Integer) obj);
+                        this.mask.get(i).add((Integer) obj);
                     } else {
                         Boolean b = (Boolean) obj;
-                        this.maskList.get(i).add(b ? 1 : 0);
+                        this.mask.get(i).add(b ? 1 : 0);
                     }
                 }
             }
@@ -60,15 +60,12 @@ public class ObjectComponent extends Component {
         }
     }
 
-    public void setRoi(String roi) {
-        this.roi = roi;
+    public void setRoiStr(String roiStr) {
+        this.roiStr = roiStr;
 
         try {
-            this.roiList = new ArrayList<>();
-            JSONArray array = new JSONArray(roi);
-            for (int i = 0; i < array.length(); i++) {
-                this.roiList.add(array.getInt(i));
-            }
+            JSONArray array = new JSONArray(roiStr);
+            this.roi = new Roi(array.getInt(1), array.getInt(3), array.getInt(0), array.getInt(2));
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -78,32 +75,28 @@ public class ObjectComponent extends Component {
         return clazz;
     }
 
-    public int getCenterPointX() {
-        return centerPointX;
-    }
-
-    public int getCenterPointY() {
-        return centerPointY;
+    public Point getCenterPoint() {
+        return centerPoint;
     }
 
     public float getArea() {
         return area;
     }
 
-    public String getMask() {
+    public String getMaskStr() {
+        return maskStr;
+    }
+
+    public String getRoiStr() {
+        return roiStr;
+    }
+
+    public ArrayList<ArrayList<Integer>> getMask() {
         return mask;
     }
 
-    public String getRoi() {
+    public Roi getRoi() {
         return roi;
-    }
-
-    public ArrayList<ArrayList<Integer>> getMaskList() {
-        return maskList;
-    }
-
-    public ArrayList<Integer> getRoiList() {
-        return roiList;
     }
 
     public Bitmap getRoiImage() {
@@ -122,25 +115,19 @@ public class ObjectComponent extends Component {
         this.layer = layer;
     }
 
-    public void setCenterPointX(int centerPointX) {
-        this.centerPointX = centerPointX;
-    }
-
-    public void setCenterPointY(int centerPointY) {
-        this.centerPointY = centerPointY;
-    }
-
     public void setArea(float area) {
         this.area = area;
     }
 
     public double getRoiArea() {
-        int height = maskList.size();
-        int width = maskList.get(0).size();
-        int roiHeight = roiList.get(2) - roiList.get(0);
-        int roiWidth = roiList.get(3) - roiList.get(1);
+        int height = mask.size();
+        int width = mask.get(0).size();
 
-        return (double) (roiHeight * roiWidth) / (height * width);
+        return (double) (roi.getHeight() * roi.getWidth()) / (height * width);
+    }
+
+    public void setCenterPoint(Point centerPoint) {
+        this.centerPoint = centerPoint;
     }
 
     private double normalize(double max, double normMax, double value) {
@@ -149,8 +136,8 @@ public class ObjectComponent extends Component {
 
     @Override
     public double getPriority() {
-        int height = maskList.size();
-        int width = maskList.get(0).size();
+        int height = mask.size();
+        int width = mask.get(0).size();
         int centerX = width / 2;
         int centerY = height / 2;
 
@@ -162,8 +149,8 @@ public class ObjectComponent extends Component {
         areaScore = Math.min(100, areaScore);
 
         // 중앙 지점에서의 유클리디언 거리를 이용하여 점수 측정
-        double positionScore = 1000 - Math.sqrt(Math.pow(Math.abs(centerX - centerPointX), 2)
-                + Math.pow(Math.abs(centerY - centerPointY), 2));
+        double positionScore = 1000 - Math.sqrt(Math.pow(Math.abs(centerX - centerPoint.getX()), 2)
+                + Math.pow(Math.abs(centerY - centerPoint.getY()), 2));
         positionScore = Math.max(0, positionScore);
 
         // 100점 만점으로 환산

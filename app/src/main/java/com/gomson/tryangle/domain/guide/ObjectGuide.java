@@ -1,39 +1,23 @@
 package com.gomson.tryangle.domain.guide;
 
+import com.gomson.tryangle.domain.Point;
+import com.gomson.tryangle.domain.component.ObjectComponent;
+
 public class ObjectGuide extends Guide {
 
-    private int diffX;
-    private int diffY;
-    private int objectClass;
+    private Point diffPoint;
 
-    public ObjectGuide(long objectId, int guideId, int diffX, int diffY, int objectClass) {
-        super(objectId, guideId);
-        this.diffX = diffX;
-        this.diffY = diffY;
-        this.objectClass = objectClass;
+    public ObjectGuide(ObjectComponent component, int guideId, Point diffPoint) {
+        super(component, guideId);
+        this.diffPoint = diffPoint;
     }
 
-    public int getDiffX() {
-        return diffX;
+    public Point getDiffPoint() {
+        return diffPoint;
     }
 
-    public void setDiffX(int diffX) {
-        this.diffX = diffX;
-    }
-
-    public int getDiffY() {
-        return diffY;
-    }
-
-    public void setDiffY(int diffY) {
-        this.diffY = diffY;
-    }
-
-    public int getObjectClass() {
-        return objectClass;
-    }
-
-    public void setObjectClass(int objectClass) {
-        this.objectClass = objectClass;
+    @Override
+    public ObjectComponent getComponent() {
+        return (ObjectComponent) super.getComponent();
     }
 }

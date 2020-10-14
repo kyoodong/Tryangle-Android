@@ -1,5 +1,6 @@
 package com.gomson.tryangle.guider
 
+import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.pose.PoseClass
 import com.gomson.tryangle.domain.guide.Guide
@@ -76,22 +77,20 @@ class PoseGuider(
             val gamma = 5
 
             // 사람이 사진 밑쪽에 위치한 경우
-            if (component.roiList[2] + gamma > imageHeight) {
+            if (component.roi.bottom + gamma > imageHeight) {
                 // 발목이 잘린 경우
                 // 무릎은 있으나 발목, 발꿈치 등이 모두 없는 경우
                 if (component.person.has(BodyPart.LEFT_KNEE) &&
                     component.person.has(BodyPart.RIGHT_KNEE) &&
                     !component.person.has(BodyPart.LEFT_ANKLE) &&
                     !component.person.has(BodyPart.RIGHT_ANKLE)) {
-                    val personHeight = component.roiList[2] - component.roiList[0]
+                    val personHeight = component.roi.bottom - component.roi.top
                     val diff = -personHeight * 10 / 170
                     guides[3].add(
                         ObjectGuide(
-                            component.id,
+                            component,
                             3,
-                            0,
-                            diff,
-                            component.clazz
+                            Point(0, diff)
                         )
                     )
                 }
@@ -102,30 +101,26 @@ class PoseGuider(
                         !component.person.has(BodyPart.LEFT_ANKLE) &&
                         !component.person.has(BodyPart.RIGHT_KNEE) &&
                         !component.person.has(BodyPart.RIGHT_ANKLE)) {
-                    val personHeight = component.roiList[2] - component.roiList[0]
+                    val personHeight = component.roi.getHeight()
                     val diff = personHeight * 20 / 170
                     guides[7].add(
                         ObjectGuide(
-                            component.id,
+                            component,
                             7,
-                            0,
-                            diff,
-                            component.clazz
+                            Point(0, diff)
                         )
                     )
                 }
 
                 // 머리만 덜렁 있는 사진
                 if (component.person.hasHead() && !component.person.hasUpperBody() && !component.person.hasLowerBody()) {
-                    val personHeight = component.roiList[2] - component.roiList[0]
+                    val personHeight = component.roi.getHeight()
                     val diff = -personHeight * 20 / 170
                     guides[8].add(
                         ObjectGuide(
-                            component.id,
+                            component,
                             8,
-                            0,
-                            diff,
-                            component.clazz
+                            Point(0, diff)
                         )
                     )
                 }
@@ -133,31 +128,27 @@ class PoseGuider(
 
             // 발 끝을 맞추도록 유도
             if (component.person.hasFullBody() &&
-                imageHeight > component.roiList[2] + FOOT_LOWER_THRESHOLD) {
-                val diff = imageHeight - component.roiList[2] + FOOT_LOWER_THRESHOLD
+                imageHeight > component.roi.bottom + FOOT_LOWER_THRESHOLD) {
+                val diff = imageHeight - component.roi.bottom + FOOT_LOWER_THRESHOLD
                 guides[2].add(
                     ObjectGuide(
-                        component.id,
+                        component,
                         2,
-                        0,
-                        diff,
-                        component.clazz
+                        Point(0, diff)
                     )
                 )
             }
 
             // 사람이 사진의 윗쪽에 위치한 경우
-            if (component.roiList[0] < gamma) {
+            if (component.roi.top < gamma) {
                 if (component.person.hasHead()) {
                     val top = imageHeight / 3
-                    val diff = top - component.roiList[0]
+                    val diff = top - component.roi.top
                     guides[9].add(
                         ObjectGuide(
-                            component.id,
+                            component,
                             9,
-                            0,
-                            diff,
-                            component.clazz
+                            Point(0, diff)
                         )
                     )
                 }

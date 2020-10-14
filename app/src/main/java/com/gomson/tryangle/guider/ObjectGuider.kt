@@ -1,5 +1,7 @@
 package com.gomson.tryangle.guider
 
+import com.gomson.tryangle.domain.Point
+import com.gomson.tryangle.domain.Roi
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
@@ -25,9 +27,10 @@ open class ObjectGuider(
         val middleSide = imageWidth / 2
         val error = imageWidth / 2
 
-        val leftDiff = abs(leftSide - component.centerPointX)
-        val rightDiff = abs(rightSide - component.centerPointX)
-        val middleDiff = abs(middleSide - component.centerPointX)
+        // @TODO y 도 비교해야함
+        val leftDiff = abs(leftSide - component.centerPoint.x)
+        val rightDiff = abs(rightSide - component.centerPoint.x)
+        val middleDiff = abs(middleSide - component.centerPoint.x)
 
         // @TODO 황금 비율 영역
 //        golden_ratio_area_list = self.get_golden_ratio_area()
@@ -40,11 +43,9 @@ open class ObjectGuider(
                 if (leftDiff > error)
                     guides[5].add(
                         ObjectGuide(
-                            component.id,
+                            component,
                             5,
-                            leftSide - component.centerPointX,
-                            0,
-                            component.clazz
+                            Point(leftSide - component.centerPoint.x, 0)
                         )
                     )
             } else {
@@ -52,11 +53,9 @@ open class ObjectGuider(
                 if (middleDiff > error)
                     guides[4].add(
                         ObjectGuide(
-                            component.id,
+                            component,
                             4,
-                            middleDiff - component.centerPointX,
-                            0,
-                            component.clazz
+                            Point(middleSide - component.centerPoint.x, 0)
                         )
                     )
             }
@@ -65,23 +64,17 @@ open class ObjectGuider(
                 if (rightDiff > error)
                     guides[5].add(
                         ObjectGuide(
-                            component.id,
+                            component,
                             5,
-                            middleDiff - component.centerPointX,
-                            0,
-                            component.clazz
+                            Point(rightSide - component.centerPoint.x, 0)
                         )
                     )
             } else {
                 if (middleDiff > error)
-                    guides[4].add(
-                        ObjectGuide(
-                            component.id,
-                            4,
-                            middleDiff - component.centerPointX,
-                            0,
-                            component.clazz
-                        )
+                    ObjectGuide(
+                        component,
+                        4,
+                        Point(middleSide - component.centerPoint.x, 0)
                     )
             }
         }
