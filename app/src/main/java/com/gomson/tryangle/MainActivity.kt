@@ -57,16 +57,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     private lateinit var handler: Handler
     private var isOpenCvLoaded = false
 
-    private val featureDetector: Feature2D
-    private val keypoint1: MatOfKeyPoint
-    private val descriptor1: Mat
-    private val mask1: Mat
-    private val keypoint2: MatOfKeyPoint
-    private val descriptor2: Mat
-    private val mask2: Mat
-    private val flann: FlannBasedMatcher
-    private val matches: ArrayList<MatOfDMatch>
-
     private lateinit var converter: YuvToRgbConverter
     private lateinit var layerBitmap: Bitmap
     private lateinit var guideBitmap: Bitmap
@@ -78,16 +68,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     init {
         System.loadLibrary("opencv_java4")
         System.loadLibrary("native-lib")
-
-        featureDetector = FastFeatureDetector.create()
-        keypoint1 = MatOfKeyPoint()
-        descriptor1 = Mat()
-        mask1 = Mat()
-        keypoint2 = MatOfKeyPoint()
-        descriptor2 = Mat()
-        mask2 = Mat()
-        flann = FlannBasedMatcher.create()
-        matches = ArrayList()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
