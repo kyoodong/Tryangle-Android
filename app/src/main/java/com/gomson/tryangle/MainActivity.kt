@@ -21,7 +21,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.popup_more.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
 import java.io.File
@@ -66,9 +65,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     }
 
-    val imageService = NetworkManager.retrofit.create(ImageService::class.java)
+//    val imageService = NetworkManager.retrofit.create(ImageService::class.java)
 
-    var last_time = 0L
     // 카메라
     private var imageCapture: ImageCapture? = null
     private var imageAnalysis: ImageAnalysis? = null
@@ -91,6 +89,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     private val mask2: Mat
     private val flann: FlannBasedMatcher
     private val matches: ArrayList<MatOfDMatch>
+    private lateinit var camera: Camera
 
     private lateinit var converter: YuvToRgbConverter
 
@@ -115,42 +114,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     val timer = Timer()
 
     // 마지막에 추천 이미지를 받은 시간
-    var last_time = 0L
-
-    val ratioPopupViewClickListener = View.OnClickListener { view ->
-        var clickRatio = RatioMode.RATIO_3_4
-        previewLayout.layoutParams =
-            (previewLayout.layoutParams as ConstraintLayout.LayoutParams).apply {
-                when (view.id) {
-                    R.id.ratio3_4 -> {
-                        clickRatio = RatioMode.RATIO_3_4
-                        topToTop = ConstraintSet.PARENT_ID
-                        height = 0
-                        ratioBtn.setBackgroundResource(R.drawable.ratio3_4)
-                        previewLayout.requestLayout()
-                    }
-                    R.id.ratio1_1 -> {
-                        clickRatio = RatioMode.RATIO_1_1
-                        height = previewLayout.width
-                        topToTop = topLayout.id
-                        ratioBtn.setBackgroundResource(R.drawable.ratio1_1)
-                        previewLayout.requestLayout()
-                    }
-                    R.id.ratio9_16 -> {
-                        clickRatio = RatioMode.RATIO_9_16
-                        height = ViewGroup.LayoutParams.MATCH_PARENT
-                        ratioBtn.setBackgroundResource(R.drawable.ratio9_16)
-                        previewLayout.requestLayout()
-                    }
-                }
-            }
-        if (clickRatio != currentRatio) {
-            currentRatio = clickRatio
-            imageCapture = getImageCapture(clickRatio.height, clickRatio.width)
-            bindCameraConfiguration()
-        }
-        popupRatioView.dismiss()
-    }
+    var last_time = 0
 
 
     init {
