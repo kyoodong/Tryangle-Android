@@ -19,6 +19,7 @@ import com.gomson.tryangle.pose.PoseClassifier
 import org.opencv.android.Utils
 import org.opencv.core.Mat
 import org.tensorflow.lite.examples.posenet.lib.Posenet
+import kotlin.math.min
 
 private const val TAG = "ImageAnalyzer"
 
@@ -43,6 +44,9 @@ class ImageAnalyzer(
     private lateinit var lineGuider: LineGuider
     private val guideClusters = Array<ArrayList<Guide>>(20) { i -> ArrayList() }
     private var mainGuide: Guide? = null
+
+    var width = 0
+    var height = 0
 
     init {
         // 토큰 발급
@@ -69,14 +73,18 @@ class ImageAnalyzer(
         val matrix = Matrix()
         matrix.postRotate(rotation.toFloat())
 
+
         // 릴리즈용
-        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
-            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
+//        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
+//            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
 
         // 개발용
-//        val option = BitmapFactory.Options()
-//        option.inScaled = false
-//        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test, option)
+        val option = BitmapFactory.Options()
+        option.inScaled = false
+        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test, option)
+
+        width = bitmap.width
+        height = bitmap.height
 
         poseGuider = PoseGuider(bitmap.width, bitmap.height)
         objectGuider = ObjectGuider(bitmap.width, bitmap.height)
@@ -121,12 +129,27 @@ class ImageAnalyzer(
 
                     if (layer.layeredImage != null) {
                         if (objectComponent.clazz == ObjectComponent.PERSON) {
-                            val gamma = 10
-                            val roiImage = Bitmap.createBitmap(bitmap,
-                                objectComponent.roi.left - gamma,
-                                objectComponent.roi.top - gamma,
-                                objectComponent.roi.getWidth() + gamma * 2,
-                                objectComponent.roi.getHeight() + gamma * 2)
+                            val personImage = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+                            for (y in 0 until bitmap.height) {
+                                for (x in 0 until bitmap.width) {
+                                    if (objectComponent.mask[y][x] == 0) {
+                                        personImage.setPixel(x, y, Color.argb(0, 0, 0, 0))
+                                        continue
+                                    }
+
+                                    val pixel = bitmap.getPixel(x, y)
+                                    personImage.setPixel(x, y, pixel)
+                                }
+                            }
+
+                            val gamma = 5
+                            var roiX = min(objectComponent.roi.left - gamma, 0)
+                            var roiY = min(objectComponent.roi.top - gamma, 0)
+                            val roiImage = Bitmap.createBitmap(personImage,
+                                roiX,
+                                roiY,
+                                min(objectComponent.roi.getWidth() + gamma * 2, bitmap.width - roiX),
+                                min(objectComponent.roi.getHeight() + gamma * 2, bitmap.height - roiY))
 
                             val scaledBitmap = Bitmap.createScaledBitmap(roiImage, MODEL_WIDTH, MODEL_HEIGHT, true)
                             val person = posenet.estimateSinglePose(scaledBitmap)
@@ -191,6 +214,8 @@ class ImageAnalyzer(
 
                 if (mainGuide != null)
                     analyzeListener?.onGuideUpdate(guideClusters, mainGuide!!)
+                else
+                    Log.d(TAG, "가이드 없음")
             } else {
                 Log.i(TAG, "image Segmentation 서버 에러 ${segmentationResponse.code()}")
             }
@@ -245,11 +270,12 @@ class ImageAnalyzer(
                 canvas.drawBitmap(objectComponent.layer.layeredImage!!, null, rect, null)
 
                 if (mainGuide != null) {
-                    if (mainGuide is ObjectGuide) {
+                    if (mainGuide is ObjectGuide && objectComponent.componentId == mainGuide!!.component.componentId) {
                         val objGuide = mainGuide as ObjectGuide
 
                         // 가이드 내에서 도달해야하는 목표지점
-                        if (objGuide.diffPoint.isClose(center)) {
+                        val targetPoint = objGuide.component.centerPoint + objGuide.diffPoint
+                        if (targetPoint.isClose(center)) {
                             Log.i(TAG, "가이드 목표 도달!")
                             analyzeListener?.onMatchGuide(objGuide, null)
                         }

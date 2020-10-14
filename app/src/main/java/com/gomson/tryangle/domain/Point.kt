@@ -29,6 +29,6 @@ class Point(val x: Int, val y: Int) {
 
     fun isFar(point: Point): Boolean {
         val diff = distance(point)
-        return diff > 100
+        return diff > 150
     }
 }

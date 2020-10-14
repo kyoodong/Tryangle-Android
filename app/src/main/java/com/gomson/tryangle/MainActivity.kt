@@ -53,10 +53,11 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     private lateinit var converter: YuvToRgbConverter
     private lateinit var layerBitmap: Bitmap
     private lateinit var guideBitmap: Bitmap
-    private val guideClusters = ArrayList<ArrayList<Guide>>()
+    private var guideClusters: Array<ArrayList<Guide>>? = null
 
     private var components = ArrayList<Component>()
     private var mainGuide: Guide? = null
+    private lateinit var imageAnalyzer: ImageAnalyzer
 
     init {
         System.loadLibrary("opencv_java4")
@@ -181,7 +182,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
 
-            val imageAnalyzer = ImageAnalyzer(baseContext, this)
+            imageAnalyzer = ImageAnalyzer(baseContext, this)
             imageAnalysis!!.setAnalyzer(cameraExecutor, imageAnalyzer)
         }
 
@@ -272,7 +273,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     private fun displayGuide() {
         val guide = mainGuide ?: return
         val canvas = Canvas(guideBitmap)
-        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
+        canvas.drawColor(Color.argb(255, 0, 0, 0), BlendMode.COLOR)
 
         if (guide is LineGuide) {
             val lineGuide = guide as LineGuide
@@ -301,15 +302,13 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     }
 
     override fun onGuideUpdate(guides: Array<ArrayList<Guide>>, mainGuide: Guide) {
-        this.guideClusters.clear()
-        this.guideClusters.addAll(guides)
+        this.guideClusters = guides
+        this.mainGuide = mainGuide
 
         if (!::guideBitmap.isInitialized) {
             guideBitmap = Bitmap.createBitmap(
-//                previewView.bitmap!!.width,
-                640,
-//                previewView.bitmap!!.height,
-                640,
+                imageAnalyzer.width,
+                imageAnalyzer.height,
                 Bitmap.Config.ARGB_8888)
         }
 
@@ -318,6 +317,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     }
 
     override fun onMatchGuide(guide: Guide, newMainGuide: Guide?) {
-        TODO("Not yet implemented")
+        Log.i(TAG, "가이드에 맞음!")
     }
 }
