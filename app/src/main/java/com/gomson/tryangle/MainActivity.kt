@@ -1,6 +1,7 @@
 package com.gomson.tryangle
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.media.MediaScannerConnection
@@ -9,14 +10,29 @@ import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import android.util.Rational
+import android.view.View
+import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
+import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.popup_more.view.*
+import kotlinx.android.synthetic.main.popup_ratio.view.*
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.gomson.tryangle.domain.Guide
-import kotlinx.android.synthetic.main.activity_main.*
+import com.gomson.tryangle.network.ImageService
+import com.gomson.tryangle.network.NetworkManager
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
@@ -26,10 +42,19 @@ import org.opencv.core.MatOfKeyPoint
 import org.opencv.features2d.FastFeatureDetector
 import org.opencv.features2d.Feature2D
 import org.opencv.features2d.FlannBasedMatcher
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+
+
+enum class RatioMode constructor(val width: Int, val height: Int) {
+    RATIO_3_4(3, 4),
+    RATIO_1_1(1, 1),
+    RATIO_9_16(9, 16),
+//    RATIO_FULL(0,0)
+}
+
+enum class TimerMode constructor(val milliseconds: Int, val btnImg: Int) {
+    TIMER_OFF(0, R.id.off)
+}
+
 
 class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
@@ -40,8 +65,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     }
 
-    // 마지막에 추천 이미지를 받은 시간
-    var last_time = 0L
+//    val imageService = NetworkManager.retrofit.create(ImageService::class.java)
 
     // 카메라
     private var imageCapture: ImageCapture? = null
@@ -65,8 +89,33 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     private val mask2: Mat
     private val flann: FlannBasedMatcher
     private val matches: ArrayList<MatOfDMatch>
+    private lateinit var camera: Camera
 
     private lateinit var converter: YuvToRgbConverter
+
+    private var cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+    private var preview: Preview? = null
+
+
+    val TAG = "MainActivity"
+
+    private var COLOR_WHITE = 0
+    private var COLOR_LIGHTGRAY = 0
+    private var COLOR_LIGHTMINT = 0
+
+    lateinit var popupMoreView: PopupWindow
+    lateinit var popupRatioView: PopupWindow
+
+    var currentRatio = RatioMode.RATIO_3_4
+    var isFlash = false
+    var isGrid = false
+//    val currentTimer ;
+
+    val timer = Timer()
+
+    // 마지막에 추천 이미지를 받은 시간
+    var last_time = 0
+
 
     init {
         System.loadLibrary("opencv_java4")
@@ -83,6 +132,41 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         matches = ArrayList()
     }
 
+    val ratioPopupViewClickListener = View.OnClickListener { view ->
+        var clickRatio = RatioMode.RATIO_3_4
+        previewLayout.layoutParams =
+            (previewLayout.layoutParams as ConstraintLayout.LayoutParams).apply {
+                when (view.id) {
+                    R.id.ratio3_4 -> {
+                        clickRatio = RatioMode.RATIO_3_4
+                        topToTop = ConstraintSet.PARENT_ID
+                        height = 0
+                        ratioBtn.setBackgroundResource(R.drawable.ratio3_4)
+                        previewLayout.requestLayout()
+                    }
+                    R.id.ratio1_1 -> {
+                        clickRatio = RatioMode.RATIO_1_1
+                        height = previewLayout.width
+                        topToTop = topLayout.id
+                        ratioBtn.setBackgroundResource(R.drawable.ratio1_1)
+                        previewLayout.requestLayout()
+                    }
+                    R.id.ratio9_16 -> {
+                        clickRatio = RatioMode.RATIO_9_16
+                        height = ViewGroup.LayoutParams.MATCH_PARENT
+                        ratioBtn.setBackgroundResource(R.drawable.ratio9_16)
+                        previewLayout.requestLayout()
+                    }
+                }
+            }
+        if (clickRatio != currentRatio) {
+            currentRatio = clickRatio
+            imageCapture = getImageCapture(clickRatio.height, clickRatio.width)
+            bindCameraConfiguration()
+        }
+        popupRatioView.dismiss()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -93,11 +177,50 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         if (allPermissionsGranted()) {
             startCamera()
         } else {
-            ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+            ActivityCompat.requestPermissions(
+                this,
+                REQUIRED_PERMISSIONS,
+                REQUEST_CODE_PERMISSIONS
+            )
         }
 
+        COLOR_WHITE = ContextCompat.getColor(this, R.color.colorWhite)
+        COLOR_LIGHTGRAY = ContextCompat.getColor(this, R.color.colorLightgray)
+        COLOR_LIGHTMINT = ContextCompat.getColor(this, R.color.colorLightMint)
+
+        layoutInflater.inflate(R.layout.popup_more, null).let {
+            popupMoreView = PopupWindow(
+                it,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                true
+            )
+            it.flashLayout.setOnClickListener {
+                if (camera.cameraInfo.hasFlashUnit()) {
+                    isFlash = !isFlash
+                    camera.cameraControl.enableTorch(isFlash)
+                    popupMoreView.contentView.flash.isSelected = isFlash
+                }
+            }
+            it.timerLayout.setOnClickListener {
+
+            }
+            it.gridLayout.setOnClickListener {
+                isGrid = !isGrid
+                gridLinesView.visibility = if (isGrid) {
+                    View.VISIBLE
+                } else {
+                    View.INVISIBLE
+                }
+                popupMoreView.contentView.grid.isSelected = isGrid
+            }
+            it.settingLayout.setOnClickListener {
+                val nextIntent = Intent(this, PreferenceActivity::class.java)
+                startActivity(nextIntent)
+            }
+        }
         handler = Handler(mainLooper)
-        baseLoaderCallback = object: BaseLoaderCallback(baseContext) {
+        baseLoaderCallback = object : BaseLoaderCallback(baseContext) {
             override fun onManagerConnected(status: Int) {
                 when (status) {
                     SUCCESS -> Log.i(TAG, "OpenCV loaded successfully")
@@ -109,21 +232,51 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 //        captureButton.setOnClickListener { takePhoto() }
 
         outputDirectory = getOutputDirectory()
-
         cameraExecutor = Executors.newSingleThreadExecutor()
 
-        ratio_1_1.setOnClickListener {
-            imageCapture = getImageCapture(1, 1)
-            bindCameraConfiguration()
+        layoutInflater.inflate(R.layout.popup_ratio, null).let {
+            it.ratio1_1.setOnClickListener(ratioPopupViewClickListener)
+            it.ratio3_4.setOnClickListener(ratioPopupViewClickListener)
+            it.ratio9_16.setOnClickListener(ratioPopupViewClickListener)
+            popupRatioView = PopupWindow(
+                it,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                true
+            )
         }
 
-        ratio_16_9.setOnClickListener {
-            imageCapture = getImageCapture(16, 9)
-            bindCameraConfiguration()
+        captureButton.setOnClickListener {
+            takePhoto()
         }
 
-        ratio_4_3.setOnClickListener {
-            imageCapture = getImageCapture(4, 3)
+        outputDirectory = getOutputDirectory()
+        cameraExecutor = Executors.newSingleThreadExecutor()
+
+        ratioBtn.setOnClickListener {
+            popupRatioView.contentView.ratio9_16.setColorFilter(
+                if (currentRatio == RatioMode.RATIO_9_16) COLOR_LIGHTMINT else COLOR_WHITE,
+                android.graphics.PorterDuff.Mode.MULTIPLY
+            )
+            popupRatioView.contentView.ratio3_4.setColorFilter(
+                if (currentRatio == RatioMode.RATIO_3_4) COLOR_LIGHTMINT else COLOR_WHITE,
+                android.graphics.PorterDuff.Mode.MULTIPLY
+            )
+            popupRatioView.contentView.ratio1_1.setColorFilter(
+                if (currentRatio == RatioMode.RATIO_1_1) COLOR_LIGHTMINT else COLOR_WHITE,
+                android.graphics.PorterDuff.Mode.MULTIPLY
+            )
+
+
+            popupRatioView.animationStyle = -1
+            popupRatioView.showAsDropDown(topLayout, 0, 0)
+        }
+        moreBtn.setOnClickListener {
+            popupMoreView.showAsDropDown(topLayout, 0, 0)
+        }
+        reverseBtn.setOnClickListener {
+            cameraSelector = if (CameraSelector.DEFAULT_BACK_CAMERA == cameraSelector)
+                CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
             bindCameraConfiguration()
         }
     }
@@ -132,8 +285,15 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         super.onResume()
 
         if (!OpenCVLoader.initDebug()) {
-            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, baseLoaderCallback);
+            Log.d(
+                TAG,
+                "Internal OpenCV library not found. Using OpenCV Manager for initialization"
+            );
+            OpenCVLoader.initAsync(
+                OpenCVLoader.OPENCV_VERSION,
+                this,
+                baseLoaderCallback
+            );
         } else {
             Log.d(TAG, "OpenCV library found inside package. Using it!");
             baseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
@@ -141,21 +301,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         }
     }
 
-    private fun getImageCapture(heightRatio: Int, widthRatio: Int): ImageCapture {
-        val imageCapture = ImageCapture.Builder()
-            .apply {
-                setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-                setTargetAspectRatioCustom(Rational(widthRatio, heightRatio))
-            }
-            .build()
-        return imageCapture
-    }
-
     /**
      * 필요한 권한을 로드하는 함수
      */
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
-        ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
+        ContextCompat.checkSelfPermission(
+            baseContext,
+            it
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     /**
@@ -169,9 +322,21 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
             mediaDir else filesDir
     }
 
-    /**
-     * 카메라 서비스 시작하는 메소드
-     */
+
+    private fun getImageCapture(heightRatio: Int, widthRatio: Int): ImageCapture {
+        val imageCapture = ImageCapture.Builder()
+            .apply {
+                setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+                setTargetAspectRatioCustom(Rational(widthRatio, heightRatio))
+            }
+            .build()
+        preview = Preview.Builder()
+            .setTargetAspectRatioCustom(Rational(widthRatio, heightRatio))
+            .build()
+        return imageCapture
+    }
+
+
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener(Runnable {
