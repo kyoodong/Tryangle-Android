@@ -8,6 +8,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
+private const val TIMEOUT = 3L
+
 internal class NetworkManager {
 
     companion object {
@@ -15,10 +17,10 @@ internal class NetworkManager {
         const val URL = "http://121.139.71.162:7776"
 
         private val client = OkHttpClient.Builder()
-            .connectTimeout(1, TimeUnit.MINUTES)
-            .readTimeout(1, TimeUnit.MINUTES)
-            .writeTimeout(1, TimeUnit.MINUTES)
-            .callTimeout(1, TimeUnit.MINUTES)
+            .connectTimeout(TIMEOUT, TimeUnit.MINUTES)
+            .readTimeout(TIMEOUT, TimeUnit.MINUTES)
+            .writeTimeout(TIMEOUT, TimeUnit.MINUTES)
+            .callTimeout(TIMEOUT, TimeUnit.MINUTES)
             .build()
 
         val gson = GsonBuilder().registerTypeAdapter(AccessToken::class.java, AccessTokenDeserializer())
