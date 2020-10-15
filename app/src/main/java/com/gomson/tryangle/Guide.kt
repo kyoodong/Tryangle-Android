@@ -3,7 +3,7 @@
 package com.gomson.tryangle
 
 
-val GUIDE_LIST = arrayOf(
+val GUIDE_MSG_LIST = arrayOf(
     "수평선을 맞추어 찍어 보세요",
     "수직선을 맞추어 찍어 보세요",
     "발 끝을 맞추어 찍으면 다리가 길게 보입니다",
