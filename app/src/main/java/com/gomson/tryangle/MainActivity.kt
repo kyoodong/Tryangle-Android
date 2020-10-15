@@ -273,7 +273,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     private fun displayGuide() {
         val guide = mainGuide ?: return
         val canvas = Canvas(guideBitmap)
-        canvas.drawColor(Color.argb(255, 0, 0, 0), BlendMode.COLOR)
+        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
 
         if (guide is LineGuide) {
             val lineGuide = guide as LineGuide

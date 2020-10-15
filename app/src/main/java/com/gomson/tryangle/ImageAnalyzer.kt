@@ -19,6 +19,7 @@ import com.gomson.tryangle.pose.PoseClassifier
 import org.opencv.android.Utils
 import org.opencv.core.Mat
 import org.tensorflow.lite.examples.posenet.lib.Posenet
+import kotlin.math.max
 import kotlin.math.min
 
 private const val TAG = "ImageAnalyzer"
@@ -75,13 +76,13 @@ class ImageAnalyzer(
 
 
         // 릴리즈용
-//        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
-//            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
+        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
+            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
 
         // 개발용
-        val option = BitmapFactory.Options()
-        option.inScaled = false
-        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test, option)
+//        val option = BitmapFactory.Options()
+//        option.inScaled = false
+//        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test, option)
 
         width = bitmap.width
         height = bitmap.height
@@ -129,23 +130,23 @@ class ImageAnalyzer(
 
                     if (layer.layeredImage != null) {
                         if (objectComponent.clazz == ObjectComponent.PERSON) {
-                            val personImage = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-                            for (y in 0 until bitmap.height) {
-                                for (x in 0 until bitmap.width) {
-                                    if (objectComponent.mask[y][x] == 0) {
-                                        personImage.setPixel(x, y, Color.argb(0, 0, 0, 0))
-                                        continue
-                                    }
+//                            val personImage = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+//                            for (y in 0 until bitmap.height) {
+//                                for (x in 0 until bitmap.width) {
+//                                    if (objectComponent.mask[y][x] == 0) {
+//                                        personImage.setPixel(x, y, Color.argb(0, 0, 0, 0))
+//                                        continue
+//                                    }
+//
+//                                    val pixel = bitmap.getPixel(x, y)
+//                                    personImage.setPixel(x, y, pixel)
+//                                }
+//                            }
 
-                                    val pixel = bitmap.getPixel(x, y)
-                                    personImage.setPixel(x, y, pixel)
-                                }
-                            }
-
-                            val gamma = 5
-                            var roiX = min(objectComponent.roi.left - gamma, 0)
-                            var roiY = min(objectComponent.roi.top - gamma, 0)
-                            val roiImage = Bitmap.createBitmap(personImage,
+                            val gamma = 30
+                            var roiX = max(objectComponent.roi.left - gamma, 0)
+                            var roiY = max(objectComponent.roi.top - gamma, 0)
+                            val roiImage = Bitmap.createBitmap(bitmap,
                                 roiX,
                                 roiY,
                                 min(objectComponent.roi.getWidth() + gamma * 2, bitmap.width - roiX),
