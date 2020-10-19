@@ -1,6 +1,4 @@
-package com.gomson.tryangle.guider
-
-import com.gomson.tryangle.domain.Guide
+package com.gomson.tryangle.domain.guide
 
 class Guides {
 

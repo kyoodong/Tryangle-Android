@@ -1,6 +1,11 @@
 package com.gomson.tryangle.guider
 
-import com.gomson.tryangle.domain.*
+import com.gomson.tryangle.domain.Point
+import com.gomson.tryangle.domain.Roi
+import com.gomson.tryangle.domain.component.Component
+import com.gomson.tryangle.domain.component.ObjectComponent
+import com.gomson.tryangle.domain.guide.Guide
+import com.gomson.tryangle.domain.guide.ObjectGuide
 import kotlin.math.abs
 
 open class ObjectGuider(
@@ -22,9 +27,10 @@ open class ObjectGuider(
         val middleSide = imageWidth / 2
         val error = imageWidth / 2
 
-        val leftDiff = abs(leftSide - component.centerPointX)
-        val rightDiff = abs(rightSide - component.centerPointX)
-        val middleDiff = abs(middleSide - component.centerPointX)
+        // @TODO y 도 비교해야함
+        val leftDiff = abs(leftSide - component.centerPoint.x)
+        val rightDiff = abs(rightSide - component.centerPoint.x)
+        val middleDiff = abs(middleSide - component.centerPoint.x)
 
         // @TODO 황금 비율 영역
 //        golden_ratio_area_list = self.get_golden_ratio_area()
@@ -35,19 +41,41 @@ open class ObjectGuider(
             if (leftDiff < middleDiff) {
                 // 왼쪽에 치우친 경우
                 if (leftDiff > error)
-                    guides[5].add(ObjectGuide(component.id, 5, leftSide - component.centerPointX, 0, component.clazz))
+                    guides[5].add(
+                        ObjectGuide(
+                            component,
+                            5,
+                            Point(leftSide - component.centerPoint.x, 0)
+                        )
+                    )
             } else {
                 // 중앙에 있는 경우
                 if (middleDiff > error)
-                    guides[4].add(ObjectGuide(component.id, 4, middleDiff - component.centerPointX, 0, component.clazz))
+                    guides[4].add(
+                        ObjectGuide(
+                            component,
+                            4,
+                            Point(middleSide - component.centerPoint.x, 0)
+                        )
+                    )
             }
         } else {
             if (rightDiff < middleDiff) {
                 if (rightDiff > error)
-                    guides[5].add(ObjectGuide(component.id, 5, middleDiff - component.centerPointX, 0, component.clazz))
+                    guides[5].add(
+                        ObjectGuide(
+                            component,
+                            5,
+                            Point(rightSide - component.centerPoint.x, 0)
+                        )
+                    )
             } else {
                 if (middleDiff > error)
-                    guides[4].add(ObjectGuide(component.id, 4, middleDiff - component.centerPointX, 0, component.clazz))
+                    ObjectGuide(
+                        component,
+                        4,
+                        Point(middleSide - component.centerPoint.x, 0)
+                    )
             }
         }
         return guides
