@@ -7,7 +7,7 @@
         android:id="@+id/parentLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/colorBlack"
+        android:background="@color/colorDark"
         tools:context=".MainActivity">
 
         <FrameLayout
@@ -94,7 +94,7 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/guideLayout"
             android:layout_width="match_parent"
-            android:background="@color/colorBlack"
+            android:background="@color/colorDark"
             android:layout_height="100dp"
             app:layout_constraintBottom_toBottomOf="@+id/layerImageView">
 
