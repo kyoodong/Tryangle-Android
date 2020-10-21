@@ -223,10 +223,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
             }
             it.gridLayout.setOnClickListener {
                 isGrid = !isGrid
-                with(this) {
-                    binding.gridLinesView.visibility = isGrid.visibleIf()
-                }
-
+                binding.gridLinesView.visibility = isGrid.visibleIf()
                 popupMoreView.contentView.grid.isSelected = isGrid
             }
             it.settingLayout.setOnClickListener {

@@ -23,22 +23,20 @@
             <androidx.camera.view.PreviewView
                 android:id="@+id/previewView"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
+                android:layout_height="match_parent" />
 
-                <com.gomson.tryangle.GridLinesView
-                    android:id="@+id/gridLinesView"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:visibility="invisible" />
-
-            </androidx.camera.view.PreviewView>
+            <com.gomson.tryangle.GridLinesView
+                android:id="@+id/gridLinesView"
+                android:visibility="invisible"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
             <TextView
                 android:id="@+id/timerTextView"
-                android:layout_gravity="center"
-                android:textColor="@color/colorWhite"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:textColor="@color/colorWhite"
                 android:textSize="65sp"
                 app:layout_constraintBottom_toBottomOf="@+id/bottomLayout"
                 app:layout_constraintEnd_toEndOf="parent"
