@@ -22,7 +22,6 @@ import androidx.camera.core.Camera
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
-
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.gomson.tryangle.domain.component.Component
@@ -246,7 +245,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
         binding.captureButton.setOnClickListener {
             countDownTimer(TimerMode.values()[currentTimerModeIndex])
-//            takePhoto()
         }
 
         outputDirectory = getOutputDirectory()
@@ -357,9 +355,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         val preview = Preview.Builder()
             .build()
 
-        // 카메라 뒷면 선택
-        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
         // 기본 카메라 비율을 16:9로 설정
         if (imageCapture == null)
             imageCapture = getImageCapture(16, 9)
@@ -447,7 +442,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         runOnUiThread {
             binding.layerImageView.setImageBitmap(layerBitmap)
             this.layerBitmap = layerBitmap
-            layerImageView.setImageBitmap(layerBitmap)
+            binding.layerImageView.setImageBitmap(layerBitmap)
         }
     }
 
@@ -484,8 +479,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         }
 
         runOnUiThread {
-            guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
-            guideImageView.setImageBitmap(guideBitmap)
+            binding.guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
+            binding.guideImageView.setImageBitmap(guideBitmap)
         }
     }
 
