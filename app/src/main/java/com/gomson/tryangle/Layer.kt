@@ -1,22 +1,18 @@
 package com.gomson.tryangle
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.nfc.Tag
-import android.util.Log
-import java.io.ByteArrayOutputStream
+import com.gomson.tryangle.domain.Point
+import com.gomson.tryangle.domain.Roi
 import java.util.*
 import kotlin.collections.ArrayList
 
 class Layer(
     val mask: ArrayList<ArrayList<Int>>,
-    private val roi: ArrayList<Int>) {
+    roi: Roi) {
 
     private val width = mask[0].size
     private val height = mask.size
-    private val roiWidth = roi[3] - roi[1]
-    private val roiHeight = roi[2] - roi[0]
     private val visit = Array(height) { BooleanArray(width) }
     private val directions = arrayOf(intArrayOf(-1, 0), intArrayOf(0, 1), intArrayOf(1, 0), intArrayOf(0, -1))
     private val directions8 = arrayOf(intArrayOf(-1, 0), intArrayOf(-1, 1), intArrayOf(0, 1),
@@ -25,9 +21,9 @@ class Layer(
     private var cumulativeY = 0
     private var pixelCount = 0
     private val queue: Queue<Pair<Int, Int>> = LinkedList()
+    private var centerPoint = Point(0, 0)
 
     var ratioInRoi = 0
-    var centerPoint = Pair(0, 0)
     val layeredImage: Bitmap?
 
 
@@ -71,23 +67,22 @@ class Layer(
     }
 
     init {
-        for (y in roi[0] until roi[2]) {
-            for (x in roi[1] until roi[3]) {
+        for (y in roi.top until roi.bottom) {
+            for (x in roi.left until roi.right) {
                 if (mask[y][x] == 1 && !visit[y][x]) {
                     bfs(y, x)
                 }
             }
         }
 
-        val ratio = pixelCount.toFloat() / (width * height)
-        ratioInRoi = (pixelCount.toFloat() / (roiWidth * roiHeight) * 100).toInt()
-        if (ratio > 0.01) {
-            centerPoint = Pair(cumulativeY / pixelCount, cumulativeX / pixelCount)
+        ratioInRoi = (pixelCount.toFloat() / (roi.getWidth() * roi.getHeight()) * 100).toInt()
+        if (getArea() > 0.01) {
+            centerPoint = Point(cumulativeX / pixelCount, cumulativeY / pixelCount)
 
-            val pixels = IntArray(roiWidth * roiHeight)
+            val pixels = IntArray(roi.getWidth() * roi.getHeight())
             var index = 0
-            for (y in roi[0] until roi[2]) {
-                for (x in roi[1] until roi[3]) {
+            for (y in roi.top until roi.bottom) {
+                for (x in roi.left until roi.right) {
                     if (mask[y][x] == 0) {
                         pixels[index] = Color.argb(0, 0, 0, 0)
                     } else if (mask[y][x] == 1) {
@@ -98,9 +93,17 @@ class Layer(
                     index++
                 }
             }
-            layeredImage = Bitmap.createBitmap(pixels, roiWidth, roiHeight, Bitmap.Config.ARGB_8888)
+            layeredImage = Bitmap.createBitmap(pixels, roi.getWidth(), roi.getHeight(), Bitmap.Config.ARGB_8888)
         } else {
             layeredImage = null
         }
+    }
+
+    fun getCenterPoint(): Point {
+        return centerPoint
+    }
+
+    fun getArea(): Float {
+        return pixelCount.toFloat() / (width * height)
     }
 }

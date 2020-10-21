@@ -22,8 +22,7 @@ Java_com_gomson_tryangle_ImageAnalyzer_MatchFeature(JNIEnv *env, jobject thiz, j
     jclass cls = env->FindClass("com/gomson/tryangle/dto/MatchingResult");
     jmethodID constructor = env->GetMethodID(cls, "<init>", "(IFFFFFFFF)V");
 
-    struct timeval startTime, endTime;
-    double diffTime;
+    struct timeval startTime;
 
     Mat &inputImage1 = *(Mat *) mat_addr_input1;
     Mat &inputImage2 = *(Mat *) mat_addr_input2;
@@ -49,6 +48,9 @@ Java_com_gomson_tryangle_ImageAnalyzer_MatchFeature(JNIEnv *env, jobject thiz, j
 
     detector->detectAndCompute( resizedImage1, noArray(), keypoints1, descriptors1 );
     detector->detectAndCompute( resizedImage2, noArray(), keypoints2, descriptors2 );
+
+    if (keypoints1.size() < 2 || keypoints2.size() < 2)
+        return nullptr;
 
 //    detector->detect(image1, keypoints1);
 //    detector->detect(image2, keypoints2);
