@@ -68,7 +68,13 @@ class Layer(
 
     init {
         for (y in roi.top until roi.bottom) {
+            if (mask.size <= y || visit.size <= y)
+                break
+
             for (x in roi.left until roi.right) {
+                if (mask[y].size <= x || visit[y].size <= x)
+                    break
+
                 if (mask[y][x] == 1 && !visit[y][x]) {
                     bfs(y, x)
                 }
