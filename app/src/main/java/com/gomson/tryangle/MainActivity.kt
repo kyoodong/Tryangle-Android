@@ -1,6 +1,8 @@
 package com.gomson.tryangle
 
 import android.Manifest
+import android.animation.AnimatorInflater
+import android.animation.AnimatorSet
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.*
@@ -482,5 +484,19 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
     override fun onMatchGuide(guide: Guide, newMainGuide: Guide?) {
         Log.i(TAG, "가이드에 맞음!")
+        if (guide.targetComponent is ObjectComponent) {
+            val component = guide.targetComponent as ObjectComponent
+            val layoutParams = thumbUp.layoutParams as ConstraintLayout.LayoutParams
+            layoutParams.leftMargin = component.centerPoint.x
+            layoutParams.topMargin = component.centerPoint.y
+            thumbUp.visibility = View.VISIBLE
+
+            // 좋아요 아이콘 잠깐 보여주기
+            AnimatorInflater.loadAnimator(baseContext, R.animator.thumb_up)
+                .apply {
+                    setTarget(thumbUp)
+                    start()
+                }
+        }
     }
 }
