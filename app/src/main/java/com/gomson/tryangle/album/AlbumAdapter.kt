@@ -1,7 +1,7 @@
 package com.gomson.tryangle.album
 
 import android.content.Context
-import android.net.Uri
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,18 +9,18 @@ import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.gomson.tryangle.R
-import kotlinx.android.synthetic.main.item_guide_image.view.*
+import com.gomson.tryangle.photo.PhotoActivity
 
 class AlbumAdapter(private val context: Context) :
     RecyclerView.Adapter<AlbumAdapter.ViewHolder>() {
 
     private val items = arrayListOf<DeviceAlbum>()
 
-    public fun clear(){
+    fun clear() {
         items.clear()
     }
 
-    public fun addAll(list:MutableList<DeviceAlbum>){
+    fun addAll(list: MutableList<DeviceAlbum>) {
         items.addAll(list)
     }
 
@@ -40,13 +40,19 @@ class AlbumAdapter(private val context: Context) :
         return ViewHolder(view)
     }
 
-    class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+    inner class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
         val imageView = itemView.findViewById<ImageView>(R.id.photo)
 
         fun bind(item: DeviceAlbum) {
             Glide.with(itemView)
                 .load(item.contentUri)
                 .into(imageView)
+
+            itemView.setOnClickListener {
+                val nextIntent = Intent(context, PhotoActivity::class.java)
+                nextIntent.data = item.contentUri
+                context.startActivity(nextIntent)
+            }
         }
     }
 }

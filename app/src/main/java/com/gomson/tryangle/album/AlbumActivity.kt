@@ -4,6 +4,9 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.database.Cursor
+import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -19,21 +22,23 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.gomson.tryangle.OnItemClickListener
 import com.gomson.tryangle.R
 import kotlinx.android.synthetic.main.activity_album.*
 import java.util.*
 import kotlin.collections.HashMap
 
+
 class AlbumActivity : AppCompatActivity() {
 
     val uriList: MutableList<DeviceAlbum> = arrayListOf()
-    val bucketHashMap =  HashMap<String, Bucket>()
+    val bucketHashMap = HashMap<String, Bucket>()
     lateinit var pathAdapter: BucketAdapter
     lateinit var albumAdapter: AlbumAdapter
     private val REQUEST_CODE_PERMISSIONS = 10
     private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
     private var selectedItem = 0
-    lateinit var bucketPopupWindow:PopupWindow
+    lateinit var bucketPopupWindow: PopupWindow
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,7 +64,9 @@ class AlbumActivity : AppCompatActivity() {
         albumRecyclerView.setHasFixedSize(true)
 
         bucketPopupWindow = getBucketPopup()
-        bucketView.setOnClickListener { bucketPopupWindow.showAsDropDown(actionBarLayout, 0, 0) }
+        bucketView.setOnClickListener {
+            bucketPopupWindow.showAsDropDown(actionBarLayout, 0, 0)
+        }
     }
 
     /* 디바이스의 이미지와 폴더리스트를 가져옴 */
@@ -101,7 +108,7 @@ class AlbumActivity : AppCompatActivity() {
                 )
                 val bucket = cursor.getString(bucketColumn)
                 val image = DeviceAlbum(id, displayName, dateTaken, uriImage)
-                if(bucketHashMap.containsKey(bucket)){
+                if (bucketHashMap.containsKey(bucket)) {
                     bucketHashMap.get(bucket)?.images?.add(image)
                 } else {
                     bucketHashMap.put(bucket, Bucket(bucket, image))
@@ -123,7 +130,7 @@ class AlbumActivity : AppCompatActivity() {
                 DividerItemDecoration.VERTICAL
             )
         )
-        val popupWindow =  PopupWindow(
+        val popupWindow = PopupWindow(
             view,
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
@@ -145,7 +152,18 @@ class AlbumActivity : AppCompatActivity() {
                 }
             }
         )
+        popupWindow.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        popupWindow.isFocusable = true
+        popupWindow.isOutsideTouchable = true
+
         return popupWindow
+    }
+
+    override fun onResume() {
+        super.onResume()
+        bucketHashMap.clear()
+        uriList.clear()
+        getBucketImages()
     }
 
     private fun permissionsGranted() = REQUIRED_PERMISSIONS.all {
