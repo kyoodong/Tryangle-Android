@@ -24,6 +24,7 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.gomson.tryangle.domain.component.Component
+import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.LineGuide
 import com.gomson.tryangle.domain.guide.ObjectGuide
@@ -453,8 +454,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
         else if (guide is ObjectGuide) {
             val objectGuide = guide as ObjectGuide
-            val layerImage = objectGuide.component.layer.layeredImage ?: return
-            val roi = objectGuide.component.roi + objectGuide.diffPoint
+            val layerImage = objectGuide.targetComponent.layer.layeredImage ?: return
+            val roi = objectGuide.targetComponent.roi + objectGuide.diffPoint
             canvas.drawBitmap(layerImage, null, roi.toRect(), null)
         }
 

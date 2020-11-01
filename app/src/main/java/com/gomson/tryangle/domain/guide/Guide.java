@@ -4,11 +4,11 @@ import com.gomson.tryangle.domain.component.Component;
 
 public class Guide {
 
-    private Component component;
+    private Component targetComponent;
     private int guideId;
 
-    public Guide(Component component, int guideId) {
-        this.component = component;
+    public Guide(Component targetComponent, int guideId) {
+        this.targetComponent = targetComponent;
         this.guideId = guideId;
     }
 
@@ -20,7 +20,7 @@ public class Guide {
         this.guideId = guideId;
     }
 
-    public Component getComponent() {
-        return component;
+    public Component getTargetComponent() {
+        return targetComponent;
     }
 }

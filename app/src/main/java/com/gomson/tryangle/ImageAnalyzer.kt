@@ -258,11 +258,11 @@ class ImageAnalyzer(
                 canvas.drawBitmap(objectComponent.layer.layeredImage!!, null, rect, null)
 
                 if (mainGuide != null) {
-                    if (mainGuide is ObjectGuide && objectComponent.componentId == mainGuide!!.component.componentId) {
+                    if (mainGuide is ObjectGuide && objectComponent.componentId == mainGuide!!.targetComponent.componentId) {
                         val objGuide = mainGuide as ObjectGuide
 
                         // 가이드 내에서 도달해야하는 목표지점
-                        val targetPoint = objGuide.component.centerPoint + objGuide.diffPoint
+                        val targetPoint = objGuide.targetComponent.centerPoint + objGuide.diffPoint
                         if (targetPoint.isClose(center)) {
                             Log.i(TAG, "가이드 목표 도달!")
                             analyzeListener?.onMatchGuide(objGuide, null)

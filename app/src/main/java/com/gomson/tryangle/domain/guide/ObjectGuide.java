@@ -17,7 +17,7 @@ public class ObjectGuide extends Guide {
     }
 
     @Override
-    public ObjectComponent getComponent() {
-        return (ObjectComponent) super.getComponent();
+    public ObjectComponent getTargetComponent() {
+        return (ObjectComponent) super.getTargetComponent();
     }
 }

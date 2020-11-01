@@ -24,7 +24,7 @@ public class LineGuide extends Guide {
     }
 
     @Override
-    public LineComponent getComponent() {
-        return (LineComponent) super.getComponent();
+    public LineComponent getTargetComponent() {
+        return (LineComponent) super.getTargetComponent();
     }
 }
