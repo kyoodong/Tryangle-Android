@@ -13,28 +13,34 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.io.ByteArrayOutputStream
+import java.lang.Exception
 
 class ImageService(context: Context): BaseService(context) {
 
-    fun imageSegmentation(bitmap: Bitmap): Response<List<ObjectComponent>> {
-        issueToken(null)
+    fun imageSegmentation(bitmap: Bitmap): Response<List<ObjectComponent>>? {
+        try {
+            issueToken(null)
 
-        // RGB Bitmap -> ByteArray
-        val bos = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos)
-        val byteArray = bos.toByteArray()
-        val requestBody = RequestBody.create(
-            MediaType.parse("multipart/form-data"),
-            byteArray
-        )
-        val body = MultipartBody.Part.createFormData(
-            "image",
-            "${SystemClock.uptimeMillis()}.jpeg",
-            requestBody
-        )
+            // RGB Bitmap -> ByteArray
+            val bos = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos)
+            val byteArray = bos.toByteArray()
+            val requestBody = RequestBody.create(
+                MediaType.parse("multipart/form-data"),
+                byteArray
+            )
+            val body = MultipartBody.Part.createFormData(
+                "image",
+                "${SystemClock.uptimeMillis()}.jpeg",
+                requestBody
+            )
 
-        val call = NetworkManager.imageService.imageSegmentation(body, accessToken!!.token)
-        return call.execute()
+            val call = NetworkManager.imageService.imageSegmentation(body, accessToken!!.token)
+            return call.execute()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
     }
 
     fun recommendImage(bitmap: Bitmap, callback: Callback<GuideImageListDTO>) {

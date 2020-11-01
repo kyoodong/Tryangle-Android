@@ -4,18 +4,21 @@ import android.graphics.Bitmap;
 
 import com.gomson.tryangle.Layer;
 import com.gomson.tryangle.domain.Point;
+import com.gomson.tryangle.domain.guide.Guide;
 import com.gomson.tryangle.pose.PoseClass;
 
 import org.tensorflow.lite.examples.posenet.lib.Person;
+
+import java.util.ArrayList;
 
 public class PersonComponent extends ObjectComponent {
 
     private PoseClass pose;
     private Person person;
 
-    public PersonComponent(long id, long componentId, int clazz, Point centerPoint, float area,
+    public PersonComponent(long id, long componentId, ArrayList<Guide> guideList, int clazz, Point centerPoint, float area,
                            String mask, String roi, Bitmap roiImage, Layer layer, Person person, PoseClass pose) {
-        super(id, componentId, clazz, centerPoint, area, mask, roi);
+        super(id, componentId, guideList, clazz, centerPoint, area, mask, roi);
         setRoiImage(roiImage);
         setLayer(layer);
         this.person = person;

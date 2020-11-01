@@ -95,6 +95,8 @@ class ImageAnalyzer(
         if (needToRequestSegmentation) {
             Log.i(TAG, "Image Segmentation 요청")
             val segmentationResponse = imageService.imageSegmentation(bitmap)
+                ?: return
+
             if (segmentationResponse.isSuccessful) {
                 Log.i(TAG, "image Segmentation 성공")
                 if (segmentationResponse.body() == null) {
@@ -146,6 +148,7 @@ class ImageAnalyzer(
                                 PersonComponent(
                                     objectComponent.id,
                                     objectComponent.componentId,
+                                    objectComponent.guideList,
                                     objectComponent.clazz,
                                     objectComponent.centerPoint,
                                     objectComponent.area,

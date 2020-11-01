@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import com.gomson.tryangle.Layer;
 import com.gomson.tryangle.domain.Point;
 import com.gomson.tryangle.domain.Roi;
+import com.gomson.tryangle.domain.guide.Guide;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -26,9 +27,9 @@ public class ObjectComponent extends Component {
     private Bitmap roiImage;
     private Layer layer;
 
-    public ObjectComponent(long id, long componentId, int clazz, Point centerPoint, float area,
+    public ObjectComponent(long id, long componentId, ArrayList<Guide> guideList, int clazz, Point centerPoint, float area,
                            String maskStr, String roiStr) {
-        super(id, componentId);
+        super(id, componentId, guideList);
         this.clazz = clazz;
         this.centerPoint = centerPoint;
         this.area = area;

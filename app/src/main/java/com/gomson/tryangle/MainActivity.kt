@@ -14,9 +14,7 @@ import android.util.Log
 import android.util.Rational
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.PopupWindow
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.core.Camera
@@ -25,6 +23,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
@@ -41,6 +40,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.collections.ArrayList
 
 
 enum class RatioMode constructor(val width: Int, val height: Int) {
@@ -434,6 +434,36 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         this.components.addAll(components)
         this.components.sortByDescending {
             it.priority
+        }
+
+        val objectComponents = ArrayList<ObjectComponent>()
+        for (component in this.components) {
+            if (component is ObjectComponent) {
+                objectComponents.add(component)
+            }
+        }
+
+        // 여러 객체가 있을 때 객체를 선택하도록 함
+        if (objectComponents.size > 1) {
+            guideTextView.text = getString(R.string.select_main_object)
+
+            val layoutWidth = previewLayout.width
+            val layoutHeight = previewLayout.height
+
+            for (component in objectComponents) {
+                val imageView = ImageView(baseContext)
+                imageView.x = component.centerPoint.x.toFloat() * layoutWidth / 640
+                imageView.y = component.centerPoint.y.toFloat() * layoutHeight / 640
+                imageView.layoutParams = FrameLayout.LayoutParams(50, 50)
+                val bitmap = Bitmap.createBitmap(50, 50, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bitmap)
+                canvas.drawColor(Color.argb(255, 0, 0, 0))
+                imageView.setImageBitmap(bitmap)
+                imageView.setOnClickListener {
+//                        it.
+                }
+                previewLayout.addView(imageView)
+            }
         }
     }
 
