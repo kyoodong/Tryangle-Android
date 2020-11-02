@@ -75,6 +75,14 @@
             app:layout_constraintBottom_toTopOf="@id/bottomLayout"
             app:layout_constraintDimensionRatio="h, 3:4"/>
 
+        <ImageView
+            android:id="@+id/thumbUp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="invisible"
+            android:src="@drawable/baseline_thumb_up_24"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"/>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/topLayout"
@@ -173,6 +181,7 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

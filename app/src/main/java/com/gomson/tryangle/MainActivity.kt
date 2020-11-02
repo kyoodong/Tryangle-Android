@@ -3,7 +3,9 @@ package com.gomson.tryangle
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
@@ -13,21 +15,21 @@ import android.util.Log
 import android.util.Rational
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.PopupWindow
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
-import androidx.camera.core.Camera
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.databinding.DataBindingUtil
+import com.gomson.tryangle.album.AlbumActivity
+import com.gomson.tryangle.databinding.ActivityMainBinding
 import com.gomson.tryangle.domain.component.Component
+import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
-import com.gomson.tryangle.domain.guide.LineGuide
-import com.gomson.tryangle.domain.guide.ObjectGuide
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
 import org.opencv.android.BaseLoaderCallback
@@ -35,18 +37,8 @@ import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import androidx.databinding.DataBindingUtil
-import com.gomson.tryangle.album.AlbumActivity
-import com.gomson.tryangle.databinding.ActivityMainBinding
-import org.opencv.core.Mat
-import org.opencv.core.MatOfDMatch
-import org.opencv.core.MatOfKeyPoint
-import org.opencv.features2d.FastFeatureDetector
-import org.opencv.features2d.Feature2D
-import org.opencv.features2d.FlannBasedMatcher
 
 enum class RatioMode constructor(val width: Int, val height: Int) {
     RATIO_3_4(3, 4),
@@ -115,15 +107,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     var currentRatio = RatioMode.RATIO_3_4
     var isFlash = false
     var isGrid = false
+    private val recommendedImageUrlList = ArrayList<String>()
     var currentTimerModeIndex = 0
     private lateinit var binding: ActivityMainBinding
-//    val currentTimer ;
-
-    val timer = Timer()
-
-    // 마지막에 추천 이미지를 받은 시간
-    var last_time = 0
-
 
     init {
         System.loadLibrary("opencv_java4")
@@ -447,60 +433,121 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     }
 
     override fun onUpdateComponents(components: ArrayList<Component>) {
+        Log.i(TAG, "컴포넌트 업데이트")
         this.components.clear()
         this.components.addAll(components)
         this.components.sortByDescending {
             it.priority
         }
+
+        val objectComponents = ArrayList<ObjectComponent>()
+        for (component in this.components) {
+            if (component is ObjectComponent) {
+                objectComponents.add(component)
+            }
+        }
+
+        // 여러 객체가 있을 때 객체를 선택하도록 함
+        if (objectComponents.size > 1) {
+            guideTextView.text = getString(R.string.select_main_object)
+
+            val layoutWidth = previewLayout.width
+            val layoutHeight = previewLayout.height
+
+            for (component in objectComponents) {
+                val imageView = ImageView(baseContext)
+                imageView.x = component.centerPoint.x.toFloat() * layoutWidth / 640
+                imageView.y = component.centerPoint.y.toFloat() * layoutHeight / 640
+                imageView.layoutParams = FrameLayout.LayoutParams(50, 50)
+                val bitmap = Bitmap.createBitmap(50, 50, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bitmap)
+                canvas.drawColor(Color.argb(255, 0, 0, 0))
+                imageView.setImageBitmap(bitmap)
+                imageView.setOnClickListener {
+//                        it.
+                }
+                previewLayout.addView(imageView)
+            }
+            runOnUiThread {
+//                binding.guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
+//                binding.guideImageView.setImageBitmap(guideBitmap)
+            }
+        }
     }
 
-    private fun displayGuide() {
-        val guide = mainGuide ?: return
-        val canvas = Canvas(guideBitmap)
-        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
+//    private fun displayGuide() {
+//        val guide = mainGuide ?: return
+//        val canvas = Canvas(guideBitmap)
+//        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
+//
+//        if (guide is LineGuide) {
+//            val lineGuide = guide as LineGuide
+//            val paint = Paint()
+//            paint.color = Color.rgb(255, 0, 0)
+//            paint.isAntiAlias = true
+//            paint.strokeWidth = 5f
+//            canvas.drawLine(lineGuide.startPoint.x.toFloat(),
+//                lineGuide.startPoint.y.toFloat(),
+//                lineGuide.endPoint.x.toFloat(),
+//                lineGuide.endPoint.y.toFloat(), paint)
+//        }
+//
+//        else if (guide is ObjectGuide) {
+//            val objectGuide = guide as ObjectGuide
+//            val layerImage = objectGuide.targetComponent.layer.layeredImage ?: return
+//            val roi = objectGuide.targetComponent.roi + objectGuide.diffPoint
+//            canvas.drawBitmap(layerImage, null, roi.toRect(), null)
+//        }
+//
+//        runOnUiThread {
+//            guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
+//            guideImageView.setImageBitmap(guideBitmap)
+//        }
+//    }
 
-        if (guide is LineGuide) {
-            val lineGuide = guide as LineGuide
-            val paint = Paint()
-            paint.color = Color.rgb(255, 0, 0)
-            paint.isAntiAlias = true
-            paint.strokeWidth = 5f
-            canvas.drawLine(lineGuide.startPoint.x.toFloat(),
-                lineGuide.startPoint.y.toFloat(),
-                lineGuide.endPoint.x.toFloat(),
-                lineGuide.endPoint.y.toFloat(), paint)
-        }
+//    override fun onGuideUpdate(guides: Array<ArrayList<Guide>>, mainGuide: Guide) {
+//        this.guideClusters = guides
+//        this.mainGuide = mainGuide
+//
+//        if (!::guideBitmap.isInitialized) {
+//            guideBitmap = Bitmap.createBitmap(
+//                imageAnalyzer.width,
+//                imageAnalyzer.height,
+//                Bitmap.Config.ARGB_8888)
+//        }
+//
+//        displayGuide()
+//        Log.i(TAG, "가이드 업데이트")
+//    }
 
-        else if (guide is ObjectGuide) {
-            val objectGuide = guide as ObjectGuide
-            val layerImage = objectGuide.component.layer.layeredImage ?: return
-            val roi = objectGuide.component.roi + objectGuide.diffPoint
-            canvas.drawBitmap(layerImage, null, roi.toRect(), null)
-        }
+    override fun onUpdateRecommendedImage(imageList: List<String>) {
+        Log.i(TAG, "추천 이미지 ${imageList.size} 개 도착!")
+        this.recommendedImageUrlList.clear()
+        this.recommendedImageUrlList.addAll(imageList)
 
         runOnUiThread {
-            binding.guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
-            binding.guideImageView.setImageBitmap(guideBitmap)
+            val adapter = guideImageListView.getAdapter()
+            adapter.resetImageUrlList()
+            adapter.addImageUrlList(imageList)
         }
-    }
-
-    override fun onGuideUpdate(guides: Array<ArrayList<Guide>>, mainGuide: Guide) {
-        this.guideClusters = guides
-        this.mainGuide = mainGuide
-
-        if (!::guideBitmap.isInitialized) {
-            guideBitmap = Bitmap.createBitmap(
-                imageAnalyzer.width,
-                imageAnalyzer.height,
-                Bitmap.Config.ARGB_8888)
-        }
-
-        displayGuide()
-        Log.i(TAG, "가이드 업데이트")
     }
 
     override fun onMatchGuide(guide: Guide, newMainGuide: Guide?) {
         Log.i(TAG, "가이드에 맞음!")
+//        if (guide.targetComponent is ObjectComponent) {
+//            val component = guide.targetComponent as ObjectComponent
+//            val layoutParams = thumbUp.layoutParams as ConstraintLayout.LayoutParams
+//            layoutParams.leftMargin = component.centerPoint.x
+//            layoutParams.topMargin = component.centerPoint.y
+//            thumbUp.visibility = View.VISIBLE
+//
+//            // 좋아요 아이콘 잠깐 보여주기
+//            AnimatorInflater.loadAnimator(baseContext, R.animator.thumb_up)
+//                .apply {
+//                    setTarget(thumbUp)
+//                    start()
+//                }
+//        }
     }
 
     fun countDownTimer(timerMode: TimerMode) {

@@ -5,6 +5,9 @@ import android.graphics.Bitmap;
 import com.gomson.tryangle.Layer;
 import com.gomson.tryangle.domain.Point;
 import com.gomson.tryangle.domain.Roi;
+import com.gomson.tryangle.domain.guide.Guide;
+import com.gomson.tryangle.domain.guide.LineGuide;
+import com.gomson.tryangle.domain.guide.ObjectGuide;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -26,9 +29,9 @@ public class ObjectComponent extends Component {
     private Bitmap roiImage;
     private Layer layer;
 
-    public ObjectComponent(long id, long componentId, int clazz, Point centerPoint, float area,
+    public ObjectComponent(long id, long componentId, ArrayList<ObjectGuide> guideList, int clazz, Point centerPoint, float area,
                            String maskStr, String roiStr) {
-        super(id, componentId);
+        super(id, componentId, guideList);
         this.clazz = clazz;
         this.centerPoint = centerPoint;
         this.area = area;
@@ -158,5 +161,14 @@ public class ObjectComponent extends Component {
 
         // 오브젝트는 100점을 추가지급하여 100점부터 시작함
         return objectClassScore + score;
+    }
+
+    @Override
+    public ArrayList<ObjectGuide> getGuideList() {
+        ArrayList<ObjectGuide> guides = new ArrayList<>();
+        for (Guide guide : guideList) {
+            guides.add((ObjectGuide) guide);
+        }
+        return guides;
     }
 }

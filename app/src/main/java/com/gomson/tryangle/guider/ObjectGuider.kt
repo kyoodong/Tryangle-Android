@@ -13,14 +13,10 @@ open class ObjectGuider(
     private var imageHeight: Int
 ): Guider() {
 
-    override fun guide(component: Component): Array<ArrayList<Guide>> {
-        for (guide in guides) {
-            guide.clear()
-        }
-
+    override fun guide(component: Component) {
         val component = component as ObjectComponent
-        val imageHeight = this.imageHeight ?: return guides
-        val imageWidth = this.imageWidth ?: return guides
+        val imageHeight = this.imageHeight ?: return
+        val imageWidth = this.imageWidth ?: return
 
         val leftSide = imageWidth / 3
         val rightSide = imageWidth / 3 * 2
@@ -31,6 +27,7 @@ open class ObjectGuider(
         val leftDiff = abs(leftSide - component.centerPoint.x)
         val rightDiff = abs(rightSide - component.centerPoint.x)
         val middleDiff = abs(middleSide - component.centerPoint.x)
+        val guideList = component.guideList
 
         // @TODO 황금 비율 영역
 //        golden_ratio_area_list = self.get_golden_ratio_area()
@@ -41,9 +38,8 @@ open class ObjectGuider(
             if (leftDiff < middleDiff) {
                 // 왼쪽에 치우친 경우
                 if (leftDiff > error)
-                    guides[5].add(
+                    guideList.add(
                         ObjectGuide(
-                            component,
                             5,
                             Point(leftSide - component.centerPoint.x, 0)
                         )
@@ -51,9 +47,8 @@ open class ObjectGuider(
             } else {
                 // 중앙에 있는 경우
                 if (middleDiff > error)
-                    guides[4].add(
+                    guideList.add(
                         ObjectGuide(
-                            component,
                             4,
                             Point(middleSide - component.centerPoint.x, 0)
                         )
@@ -62,22 +57,23 @@ open class ObjectGuider(
         } else {
             if (rightDiff < middleDiff) {
                 if (rightDiff > error)
-                    guides[5].add(
+                    guideList.add(
                         ObjectGuide(
-                            component,
                             5,
                             Point(rightSide - component.centerPoint.x, 0)
                         )
                     )
             } else {
                 if (middleDiff > error)
-                    ObjectGuide(
-                        component,
-                        4,
-                        Point(middleSide - component.centerPoint.x, 0)
+                    guideList.add(
+                        ObjectGuide(
+                            4,
+                            Point(middleSide - component.centerPoint.x, 0)
+                        )
                     )
             }
         }
-        return guides
+
+        component.guideList = guideList
     }
 }

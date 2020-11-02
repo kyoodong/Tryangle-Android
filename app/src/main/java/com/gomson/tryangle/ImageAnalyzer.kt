@@ -9,7 +9,6 @@ import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.*
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.dto.MatchingResult
-import com.gomson.tryangle.domain.guide.Guides
 import com.gomson.tryangle.domain.guide.ObjectGuide
 import com.gomson.tryangle.guider.LineGuider
 import com.gomson.tryangle.guider.ObjectGuider
@@ -43,8 +42,7 @@ class ImageAnalyzer(
     private lateinit var poseGuider: PoseGuider
     private lateinit var objectGuider: ObjectGuider
     private lateinit var lineGuider: LineGuider
-    private val guideClusters = Array<ArrayList<Guide>>(20) { i -> ArrayList() }
-    private var mainGuide: Guide? = null
+    private var guidingComponent: Component? = null
 
     var width = 0
     var height = 0
@@ -76,13 +74,13 @@ class ImageAnalyzer(
 
 
         // 릴리즈용
-        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
-            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
+//        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
+//            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
 
         // 개발용
-//        val option = BitmapFactory.Options()
-//        option.inScaled = false
-//        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test, option)
+        val option = BitmapFactory.Options()
+        option.inScaled = false
+        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test2, option)
 
         width = bitmap.width
         height = bitmap.height
@@ -94,23 +92,27 @@ class ImageAnalyzer(
         // 세그멘테이션을 요청할 필요가 있다면
         if (needToRequestSegmentation) {
             Log.i(TAG, "Image Segmentation 요청")
-            val segmentationResponse = imageService.imageSegmentation(bitmap)
-            if (segmentationResponse.isSuccessful) {
+            val recommendImageResponse = imageService.recommendImage(bitmap)
+                ?: return
+
+            if (recommendImageResponse.isSuccessful) {
                 Log.i(TAG, "image Segmentation 성공")
-                if (segmentationResponse.body() == null) {
+                val body = recommendImageResponse.body()
+                if (body == null) {
                     imageProxy.close()
                     return
                 }
 
-                val objectComponents = segmentationResponse.body()!!
+                this.analyzeListener?.onUpdateRecommendedImage(body.guideImageList)
+
+                val objectComponents = ArrayList<ObjectComponent>()
+                for (component in body.guideDTO.objectComponentList) {
+                    objectComponents.add(component)
+                }
 
                 // 오브젝트 컴포넌트가 없는 경우 재요청
                 if (objectComponents.isEmpty()) {
                     Log.d(TAG, "Empty objectComponentList")
-                }
-
-                for (guide in guideClusters) {
-                    guide.clear()
                 }
 
                 this.components.clear()
@@ -130,22 +132,9 @@ class ImageAnalyzer(
 
                     if (layer.layeredImage != null) {
                         if (objectComponent.clazz == ObjectComponent.PERSON) {
-//                            val personImage = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-//                            for (y in 0 until bitmap.height) {
-//                                for (x in 0 until bitmap.width) {
-//                                    if (objectComponent.mask[y][x] == 0) {
-//                                        personImage.setPixel(x, y, Color.argb(0, 0, 0, 0))
-//                                        continue
-//                                    }
-//
-//                                    val pixel = bitmap.getPixel(x, y)
-//                                    personImage.setPixel(x, y, pixel)
-//                                }
-//                            }
-
                             val gamma = 30
-                            var roiX = max(objectComponent.roi.left - gamma, 0)
-                            var roiY = max(objectComponent.roi.top - gamma, 0)
+                            val roiX = max(objectComponent.roi.left - gamma, 0)
+                            val roiY = max(objectComponent.roi.top - gamma, 0)
                             val roiImage = Bitmap.createBitmap(bitmap,
                                 roiX,
                                 roiY,
@@ -159,6 +148,7 @@ class ImageAnalyzer(
                                 PersonComponent(
                                     objectComponent.id,
                                     objectComponent.componentId,
+                                    objectComponent.guideList,
                                     objectComponent.clazz,
                                     objectComponent.centerPoint,
                                     objectComponent.area,
@@ -171,12 +161,10 @@ class ImageAnalyzer(
                                 )
 
                             this.components.add(personComponent)
-                            Guides.compositeGuide(guideClusters, poseGuider.guide(personComponent))
                         } else {
                             this.components.add(objectComponent)
                         }
 
-                        Guides.compositeGuide(guideClusters, objectGuider.guide(objectComponent))
                         Log.d(TAG, "레이아웃 이미지 노출")
                     } else {
                         Log.d(TAG, "너무 작은 오브젝트")
@@ -196,29 +184,14 @@ class ImageAnalyzer(
                             }
 
                             val lineComponent = component as LineComponent
-                            Guides.compositeGuide(guideClusters, lineGuider.guide(lineComponent))
+                            this.components.add(lineComponent)
                         }
                     }
 
                     analyzeListener?.onUpdateComponents(components)
                 }
-
-                // @TODO: 가이드 지정방식 수정
-                for (guideCluster in guideClusters) {
-                    for (guide in guideCluster) {
-                        if (guide is ObjectGuide) {
-                            mainGuide = guide
-                            break
-                        }
-                    }
-                }
-
-                if (mainGuide != null)
-                    analyzeListener?.onGuideUpdate(guideClusters, mainGuide!!)
-                else
-                    Log.d(TAG, "가이드 없음")
             } else {
-                Log.i(TAG, "image Segmentation 서버 에러 ${segmentationResponse.code()}")
+                Log.i(TAG, "image Segmentation 서버 에러 ${recommendImageResponse.code()}")
             }
         }
 
@@ -258,10 +231,10 @@ class ImageAnalyzer(
                 val center = Point(minX + width / 2, minY + height / 2)
 
                 // 객체가 너무 많이 움직인 경우
-                if (center.isFar(objectComponent.centerPoint)) {
-                    needToRequestSegmentation = true
-                    Log.d(TAG, "객체가 많이 움직여서 reload")
-                }
+//                if (center.isFar(objectComponent.centerPoint)) {
+//                    needToRequestSegmentation = true
+//                    Log.d(TAG, "객체가 많이 움직여서 reload")
+//                }
 
                 if (!::layerBitmap.isInitialized) {
                     layerBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
@@ -270,18 +243,16 @@ class ImageAnalyzer(
                 canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
                 canvas.drawBitmap(objectComponent.layer.layeredImage!!, null, rect, null)
 
-                if (mainGuide != null) {
-                    if (mainGuide is ObjectGuide && objectComponent.componentId == mainGuide!!.component.componentId) {
-                        val objGuide = mainGuide as ObjectGuide
-
-                        // 가이드 내에서 도달해야하는 목표지점
-                        val targetPoint = objGuide.component.centerPoint + objGuide.diffPoint
-                        if (targetPoint.isClose(center)) {
-                            Log.i(TAG, "가이드 목표 도달!")
-                            analyzeListener?.onMatchGuide(objGuide, null)
-                        }
-                    }
-                }
+//                if (guidingComponent != null) {
+//                    if (guidingComponent is ObjectComponent && objectComponent.componentId == guidingComponent!!.componentId) {
+//                        // 가이드 내에서 도달해야하는 목표지점
+//                        val targetPoint = objGuide.targetComponent.centerPoint + objGuide.diffPoint
+//                        if (targetPoint.isClose(center)) {
+//                            Log.i(TAG, "가이드 목표 도달!")
+//                            analyzeListener?.onMatchGuide(objGuide, null)
+//                        }
+//                    }
+//                }
 
                 analyzeListener?.onUpdateLayerImage(layerBitmap)
             }
@@ -329,8 +300,8 @@ class ImageAnalyzer(
 
     interface OnAnalyzeListener {
         fun onUpdateLayerImage(layerBitmap: Bitmap)
-        fun onGuideUpdate(guides: Array<ArrayList<Guide>>, mainGuide: Guide)
         fun onUpdateComponents(components: ArrayList<Component>)
         fun onMatchGuide(guide: Guide, newMainGuide: Guide?)
+        fun onUpdateRecommendedImage(imageList: List<String>)
     }
 }

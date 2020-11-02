@@ -7,6 +7,9 @@ public class GuideImageListDTO {
     private GuideDTO guideDTO;
     private List<String> guideImageList;
 
+    public GuideImageListDTO() {
+    }
+
     public GuideImageListDTO(GuideDTO guideDTO, List<String> guideImageList) {
         this.guideDTO = guideDTO;
         this.guideImageList = guideImageList;
