@@ -1,14 +1,10 @@
 package com.gomson.tryangle.domain.guide;
 
-import com.gomson.tryangle.domain.component.Component;
-
 public class Guide {
 
-    private Component targetComponent;
     private int guideId;
 
-    public Guide(Component targetComponent, int guideId) {
-        this.targetComponent = targetComponent;
+    public Guide(int guideId) {
         this.guideId = guideId;
     }
 
@@ -18,9 +14,5 @@ public class Guide {
 
     public void setGuideId(int guideId) {
         this.guideId = guideId;
-    }
-
-    public Component getTargetComponent() {
-        return targetComponent;
     }
 }

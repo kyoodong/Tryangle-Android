@@ -1,15 +1,14 @@
 package com.gomson.tryangle.domain.guide;
 
 import com.gomson.tryangle.domain.Point;
-import com.gomson.tryangle.domain.component.LineComponent;
 
 public class LineGuide extends Guide {
 
     private Point startPoint;
     private Point endPoint;
 
-    public LineGuide(LineComponent component, int guideId, Point startPoint, Point endPoint) {
-        super(component, guideId);
+    public LineGuide(int guideId, Point startPoint, Point endPoint) {
+        super(guideId);
 
         this.startPoint = startPoint;
         this.endPoint = endPoint;
@@ -21,10 +20,5 @@ public class LineGuide extends Guide {
 
     public Point getEndPoint() {
         return endPoint;
-    }
-
-    @Override
-    public LineComponent getTargetComponent() {
-        return (LineComponent) super.getTargetComponent();
     }
 }

@@ -62,14 +62,12 @@ class PoseGuider(
     private var imageHeight: Int
 ) : ObjectGuider(imageWidth, imageHeight) {
 
-    override fun guide(component: Component): Array<ArrayList<Guide>> {
-        for (guide in guides) {
-            guide.clear()
-        }
-
+    override fun guide(component: Component) {
         val component = component as PersonComponent
-        val imageHeight = this.imageHeight ?: return guides
-        val imageWidth = this.imageWidth ?: return guides
+        val imageHeight = this.imageHeight ?: return
+        val imageWidth = this.imageWidth ?: return
+
+        val guideList = component.guideList
 
         // @TODO: 서 있는 케이스 추가해야함. 상반신만 있어도 서 있을 수 있음
         // 서 있는 경우
@@ -86,9 +84,8 @@ class PoseGuider(
                     !component.person.has(BodyPart.RIGHT_ANKLE)) {
                     val personHeight = component.roi.bottom - component.roi.top
                     val diff = -personHeight * 10 / 170
-                    guides[3].add(
+                    guideList.add(
                         ObjectGuide(
-                            component,
                             3,
                             Point(0, diff)
                         )
@@ -103,9 +100,8 @@ class PoseGuider(
                         !component.person.has(BodyPart.RIGHT_ANKLE)) {
                     val personHeight = component.roi.getHeight()
                     val diff = personHeight * 20 / 170
-                    guides[7].add(
+                    guideList.add(
                         ObjectGuide(
-                            component,
                             7,
                             Point(0, diff)
                         )
@@ -116,9 +112,8 @@ class PoseGuider(
                 if (component.person.hasHead() && !component.person.hasUpperBody() && !component.person.hasLowerBody()) {
                     val personHeight = component.roi.getHeight()
                     val diff = -personHeight * 20 / 170
-                    guides[8].add(
+                    guideList.add(
                         ObjectGuide(
-                            component,
                             8,
                             Point(0, diff)
                         )
@@ -130,9 +125,8 @@ class PoseGuider(
             if (component.person.hasFullBody() &&
                 imageHeight > component.roi.bottom + FOOT_LOWER_THRESHOLD) {
                 val diff = imageHeight - component.roi.bottom + FOOT_LOWER_THRESHOLD
-                guides[2].add(
+                guideList.add(
                     ObjectGuide(
-                        component,
                         2,
                         Point(0, diff)
                     )
@@ -144,9 +138,8 @@ class PoseGuider(
                 if (component.person.hasHead()) {
                     val top = imageHeight / 3
                     val diff = top - component.roi.top
-                    guides[9].add(
+                    guideList.add(
                         ObjectGuide(
-                            component,
                             9,
                             Point(0, diff)
                         )
@@ -155,6 +148,6 @@ class PoseGuider(
             }
         }
 
-        return guides
+        component.guideList = guideList
     }
 }

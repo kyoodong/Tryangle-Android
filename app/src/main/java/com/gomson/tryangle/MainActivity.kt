@@ -2,7 +2,6 @@ package com.gomson.tryangle
 
 import android.Manifest
 import android.animation.AnimatorInflater
-import android.animation.AnimatorSet
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.*
@@ -23,7 +22,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
@@ -102,12 +100,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     var currentRatio = RatioMode.RATIO_3_4
     var isFlash = false
     var isGrid = false
-//    val currentTimer ;
-
-    val timer = Timer()
-
-    // 마지막에 추천 이미지를 받은 시간
-    var last_time = 0
+    private val recommendedImageUrlList = ArrayList<String>()
 
 
     init {
@@ -430,6 +423,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     }
 
     override fun onUpdateComponents(components: ArrayList<Component>) {
+        Log.i(TAG, "컴포넌트 업데이트")
         this.components.clear()
         this.components.addAll(components)
         this.components.sortByDescending {
@@ -467,66 +461,72 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         }
     }
 
-    private fun displayGuide() {
-        val guide = mainGuide ?: return
-        val canvas = Canvas(guideBitmap)
-        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
+//    private fun displayGuide() {
+//        val guide = mainGuide ?: return
+//        val canvas = Canvas(guideBitmap)
+//        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
+//
+//        if (guide is LineGuide) {
+//            val lineGuide = guide as LineGuide
+//            val paint = Paint()
+//            paint.color = Color.rgb(255, 0, 0)
+//            paint.isAntiAlias = true
+//            paint.strokeWidth = 5f
+//            canvas.drawLine(lineGuide.startPoint.x.toFloat(),
+//                lineGuide.startPoint.y.toFloat(),
+//                lineGuide.endPoint.x.toFloat(),
+//                lineGuide.endPoint.y.toFloat(), paint)
+//        }
+//
+//        else if (guide is ObjectGuide) {
+//            val objectGuide = guide as ObjectGuide
+//            val layerImage = objectGuide.targetComponent.layer.layeredImage ?: return
+//            val roi = objectGuide.targetComponent.roi + objectGuide.diffPoint
+//            canvas.drawBitmap(layerImage, null, roi.toRect(), null)
+//        }
+//
+//        runOnUiThread {
+//            guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
+//            guideImageView.setImageBitmap(guideBitmap)
+//        }
+//    }
 
-        if (guide is LineGuide) {
-            val lineGuide = guide as LineGuide
-            val paint = Paint()
-            paint.color = Color.rgb(255, 0, 0)
-            paint.isAntiAlias = true
-            paint.strokeWidth = 5f
-            canvas.drawLine(lineGuide.startPoint.x.toFloat(),
-                lineGuide.startPoint.y.toFloat(),
-                lineGuide.endPoint.x.toFloat(),
-                lineGuide.endPoint.y.toFloat(), paint)
-        }
+//    override fun onGuideUpdate(guides: Array<ArrayList<Guide>>, mainGuide: Guide) {
+//        this.guideClusters = guides
+//        this.mainGuide = mainGuide
+//
+//        if (!::guideBitmap.isInitialized) {
+//            guideBitmap = Bitmap.createBitmap(
+//                imageAnalyzer.width,
+//                imageAnalyzer.height,
+//                Bitmap.Config.ARGB_8888)
+//        }
+//
+//        displayGuide()
+//        Log.i(TAG, "가이드 업데이트")
+//    }
 
-        else if (guide is ObjectGuide) {
-            val objectGuide = guide as ObjectGuide
-            val layerImage = objectGuide.targetComponent.layer.layeredImage ?: return
-            val roi = objectGuide.targetComponent.roi + objectGuide.diffPoint
-            canvas.drawBitmap(layerImage, null, roi.toRect(), null)
-        }
-
-        runOnUiThread {
-            guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
-            guideImageView.setImageBitmap(guideBitmap)
-        }
-    }
-
-    override fun onGuideUpdate(guides: Array<ArrayList<Guide>>, mainGuide: Guide) {
-        this.guideClusters = guides
-        this.mainGuide = mainGuide
-
-        if (!::guideBitmap.isInitialized) {
-            guideBitmap = Bitmap.createBitmap(
-                imageAnalyzer.width,
-                imageAnalyzer.height,
-                Bitmap.Config.ARGB_8888)
-        }
-
-        displayGuide()
-        Log.i(TAG, "가이드 업데이트")
+    override fun onUpdateRecommendedImage(imageList: List<String>) {
+        Log.i(TAG, "추천 이미지 ${imageList.size} 개 도착!")
+        this.recommendedImageUrlList.clear()
+        this.recommendedImageUrlList.addAll(imageList)
     }
 
     override fun onMatchGuide(guide: Guide, newMainGuide: Guide?) {
         Log.i(TAG, "가이드에 맞음!")
-        if (guide.targetComponent is ObjectComponent) {
-            val component = guide.targetComponent as ObjectComponent
-            val layoutParams = thumbUp.layoutParams as ConstraintLayout.LayoutParams
-            layoutParams.leftMargin = component.centerPoint.x
-            layoutParams.topMargin = component.centerPoint.y
-            thumbUp.visibility = View.VISIBLE
-
-            // 좋아요 아이콘 잠깐 보여주기
-            AnimatorInflater.loadAnimator(baseContext, R.animator.thumb_up)
-                .apply {
-                    setTarget(thumbUp)
-                    start()
-                }
-        }
+//        if (guide.targetComponent is ObjectComponent) {
+//            val component = guide.targetComponent as ObjectComponent
+//            val layoutParams = thumbUp.layoutParams as ConstraintLayout.LayoutParams
+//            layoutParams.leftMargin = component.centerPoint.x
+//            layoutParams.topMargin = component.centerPoint.y
+//            thumbUp.visibility = View.VISIBLE
+//
+//            // 좋아요 아이콘 잠깐 보여주기
+//            AnimatorInflater.loadAnimator(baseContext, R.animator.thumb_up)
+//                .apply {
+//                    setTarget(thumbUp)
+//                    start()
+//                }
+//        }
     }
 }
