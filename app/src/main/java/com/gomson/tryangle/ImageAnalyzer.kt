@@ -110,6 +110,10 @@ class ImageAnalyzer(
                     objectComponents.add(component)
                 }
 
+                for (component in body.guideDTO.personComponentList) {
+                    objectComponents.add(component)
+                }
+
                 // 오브젝트 컴포넌트가 없는 경우 재요청
                 if (objectComponents.isEmpty()) {
                     Log.d(TAG, "Empty objectComponentList")
@@ -236,12 +240,12 @@ class ImageAnalyzer(
 //                    Log.d(TAG, "객체가 많이 움직여서 reload")
 //                }
 
-                if (!::layerBitmap.isInitialized) {
-                    layerBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-                }
-                val canvas = Canvas(layerBitmap)
-                canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
-                canvas.drawBitmap(objectComponent.layer.layeredImage!!, null, rect, null)
+//                if (!::layerBitmap.isInitialized) {
+//                    layerBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+//                }
+//                val canvas = Canvas(layerBitmap)
+//                canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
+//                canvas.drawBitmap(objectComponent.layer.layeredImage!!, null, rect, null)
 
 //                if (guidingComponent != null) {
 //                    if (guidingComponent is ObjectComponent && objectComponent.componentId == guidingComponent!!.componentId) {
@@ -254,7 +258,7 @@ class ImageAnalyzer(
 //                    }
 //                }
 
-                analyzeListener?.onUpdateLayerImage(layerBitmap)
+//                analyzeListener?.onUpdateLayerImage(layerBitmap)
             }
         }
 

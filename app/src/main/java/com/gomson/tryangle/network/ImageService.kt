@@ -47,4 +47,14 @@ class ImageService(context: Context): BaseService(context) {
             return null
         }
     }
+
+    fun getObjectComponentByUrl(url: String, callback: Callback<ArrayList<ObjectComponent>>) {
+        try {
+            issueToken(null)
+            val call = NetworkManager.imageService.getObjectComponentByUrl(url, accessToken!!.token)
+            call.enqueue(callback)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 }
