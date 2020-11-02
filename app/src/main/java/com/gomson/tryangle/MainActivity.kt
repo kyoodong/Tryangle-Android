@@ -524,6 +524,12 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         Log.i(TAG, "추천 이미지 ${imageList.size} 개 도착!")
         this.recommendedImageUrlList.clear()
         this.recommendedImageUrlList.addAll(imageList)
+
+        runOnUiThread {
+            val adapter = guideImageListView.getAdapter()
+            adapter.resetImageUrlList()
+            adapter.addImageUrlList(imageList)
+        }
     }
 
     override fun onMatchGuide(guide: Guide, newMainGuide: Guide?) {
