@@ -1,13 +1,15 @@
 package com.gomson.tryangle
 
 import android.Manifest
-import android.animation.AnimatorInflater
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.os.Handler
 import android.util.Log
 import android.util.Rational
@@ -16,17 +18,17 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
-import androidx.camera.core.Camera
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.databinding.DataBindingUtil
+import com.gomson.tryangle.album.AlbumActivity
+import com.gomson.tryangle.databinding.ActivityMainBinding
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
-import com.gomson.tryangle.domain.guide.LineGuide
-import com.gomson.tryangle.domain.guide.ObjectGuide
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
@@ -35,11 +37,8 @@ import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import kotlin.collections.ArrayList
-
 
 enum class RatioMode constructor(val width: Int, val height: Int) {
     RATIO_3_4(3, 4),
@@ -48,8 +47,16 @@ enum class RatioMode constructor(val width: Int, val height: Int) {
 //    RATIO_FULL(0,0)
 }
 
-enum class TimerMode constructor(val milliseconds: Int, val btnImg: Int) {
-    TIMER_OFF(0, R.id.off)
+enum class TimerMode constructor(
+    val milliseconds: Long,
+    val btnImg: Int,
+    val info: String,
+    val text: String
+) {
+    TIMER_OFF(0, R.drawable.timer, "타이머 꺼짐", ""),
+    TIMER_3S(3000, R.drawable.timer3s, "3초", "3"),
+    TIMER_7S(7000, R.drawable.timer7s, "7초", "7"),
+    TIMER_10S(10000, R.drawable.timer10s, "10초", "10"),
 }
 
 class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
@@ -101,7 +108,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     var isFlash = false
     var isGrid = false
     private val recommendedImageUrlList = ArrayList<String>()
-
+    var currentTimerModeIndex = 0
+    private lateinit var binding: ActivityMainBinding
 
     init {
         System.loadLibrary("opencv_java4")
@@ -110,28 +118,28 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
     val ratioPopupViewClickListener = View.OnClickListener { view ->
         var clickRatio = RatioMode.RATIO_3_4
-        previewLayout.layoutParams =
-            (previewLayout.layoutParams as ConstraintLayout.LayoutParams).apply {
+        binding.previewLayout.layoutParams =
+            (binding.previewLayout.layoutParams as ConstraintLayout.LayoutParams).apply {
                 when (view.id) {
                     R.id.ratio3_4 -> {
                         clickRatio = RatioMode.RATIO_3_4
                         topToTop = ConstraintSet.PARENT_ID
                         height = 0
-                        ratioBtn.setBackgroundResource(R.drawable.ratio3_4)
-                        previewLayout.requestLayout()
+                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio3_4)
+                        binding.previewLayout.requestLayout()
                     }
                     R.id.ratio1_1 -> {
                         clickRatio = RatioMode.RATIO_1_1
-                        height = previewLayout.width
-                        topToTop = topLayout.id
-                        ratioBtn.setBackgroundResource(R.drawable.ratio1_1)
-                        previewLayout.requestLayout()
+                        height = binding.previewLayout.width
+                        topToTop = binding.topLayout.id
+                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio1_1)
+                        binding.previewLayout.requestLayout()
                     }
                     R.id.ratio9_16 -> {
                         clickRatio = RatioMode.RATIO_9_16
                         height = ViewGroup.LayoutParams.MATCH_PARENT
-                        ratioBtn.setBackgroundResource(R.drawable.ratio9_16)
-                        previewLayout.requestLayout()
+                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio9_16)
+                        binding.previewLayout.requestLayout()
                     }
                 }
             }
@@ -145,8 +153,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
         converter = YuvToRgbConverter(this)
 
         // 카메라 권한 체크
@@ -179,15 +186,17 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
                 }
             }
             it.timerLayout.setOnClickListener {
+                currentTimerModeIndex++
+                currentTimerModeIndex %= TimerMode.values().size
+                val currentTimer = TimerMode.values()[currentTimerModeIndex]
+                it.timer.setImageResource(currentTimer.btnImg)
+                it.timerTextView.text = currentTimer.info
 
+                binding.timerTextView.text = currentTimer.text
             }
             it.gridLayout.setOnClickListener {
                 isGrid = !isGrid
-                gridLinesView.visibility = if (isGrid) {
-                    View.VISIBLE
-                } else {
-                    View.INVISIBLE
-                }
+                binding.gridLinesView.visibility = isGrid.visibleIf()
                 popupMoreView.contentView.grid.isSelected = isGrid
             }
             it.settingLayout.setOnClickListener {
@@ -205,8 +214,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
             }
         }
 
-//        captureButton.setOnClickListener { takePhoto() }
-
         outputDirectory = getOutputDirectory()
         cameraExecutor = Executors.newSingleThreadExecutor()
 
@@ -222,14 +229,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
             )
         }
 
-        captureButton.setOnClickListener {
-            takePhoto()
+        binding.captureButton.setOnClickListener {
+            countDownTimer(TimerMode.values()[currentTimerModeIndex])
         }
 
         outputDirectory = getOutputDirectory()
         cameraExecutor = Executors.newSingleThreadExecutor()
 
-        ratioBtn.setOnClickListener {
+        binding.ratioBtn.setOnClickListener {
             popupRatioView.contentView.ratio9_16.setColorFilter(
                 if (currentRatio == RatioMode.RATIO_9_16) COLOR_LIGHTMINT else COLOR_WHITE,
                 android.graphics.PorterDuff.Mode.MULTIPLY
@@ -243,17 +250,21 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
                 android.graphics.PorterDuff.Mode.MULTIPLY
             )
 
-
             popupRatioView.animationStyle = -1
-            popupRatioView.showAsDropDown(topLayout, 0, 0)
+            popupRatioView.showAsDropDown(binding.topLayout, 0, 0)
         }
-        moreBtn.setOnClickListener {
-            popupMoreView.showAsDropDown(topLayout, 0, 0)
+        binding.moreBtn.setOnClickListener {
+            popupMoreView.showAsDropDown(binding.topLayout, 0, 0)
         }
-        reverseBtn.setOnClickListener {
+        binding.reverseBtn.setOnClickListener {
             cameraSelector = if (CameraSelector.DEFAULT_BACK_CAMERA == cameraSelector)
                 CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
             bindCameraConfiguration()
+        }
+
+        binding.albumBtn.setOnClickListener {
+            val intent = Intent(this, AlbumActivity::class.java)
+            startActivity(intent)
         }
     }
 
@@ -305,6 +316,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
                 setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                 setTargetAspectRatioCustom(Rational(widthRatio, heightRatio))
             }
+
             .build()
         preview = Preview.Builder()
             .setTargetAspectRatioCustom(Rational(widthRatio, heightRatio))
@@ -329,9 +341,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         val preview = Preview.Builder()
             .build()
 
-        // 카메라 뒷면 선택
-        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
         // 기본 카메라 비율을 16:9로 설정
         if (imageCapture == null)
             imageCapture = getImageCapture(16, 9)
@@ -348,10 +357,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
         try {
             cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(
+            camera = cameraProvider.bindToLifecycle(
                 this, cameraSelector, preview, imageCapture, imageAnalysis
             )
-            preview.setSurfaceProvider(previewView.createSurfaceProvider())
+            preview.setSurfaceProvider(binding.previewView.createSurfaceProvider())
         } catch (exc: Exception) {
             Log.e(TAG, "Use case binding failed", exc)
         }
@@ -417,8 +426,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         this.layerBitmap = layerBitmap
 
         runOnUiThread {
+            binding.layerImageView.setImageBitmap(layerBitmap)
             this.layerBitmap = layerBitmap
-            layerImageView.setImageBitmap(layerBitmap)
+            binding.layerImageView.setImageBitmap(layerBitmap)
         }
     }
 
@@ -457,6 +467,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 //                        it.
                 }
                 previewLayout.addView(imageView)
+            }
+            runOnUiThread {
+//                binding.guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
+//                binding.guideImageView.setImageBitmap(guideBitmap)
             }
         }
     }
@@ -528,5 +542,18 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 //                    start()
 //                }
 //        }
+    }
+
+    fun countDownTimer(timerMode: TimerMode) {
+        object : CountDownTimer(timerMode.milliseconds, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                binding.timerTextView.text = (millisUntilFinished / 1000).toString()
+            }
+
+            override fun onFinish() {
+                binding.timerTextView.text = timerMode.text
+                takePhoto()
+            }
+        }.start()
     }
 }

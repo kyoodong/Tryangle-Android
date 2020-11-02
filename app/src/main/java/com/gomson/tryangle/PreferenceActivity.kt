@@ -9,9 +9,9 @@ class PreferenceActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_preference)
 
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportFragmentManager.beginTransaction()
             .replace(R.id.preferenceLayout, PreferenceFragment())
             .commit()
     }
-
 }

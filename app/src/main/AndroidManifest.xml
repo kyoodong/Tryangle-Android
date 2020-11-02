@@ -14,6 +14,7 @@
 
     <!-- 스토리지 권한 -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <!-- 카메라가 없는 기기에는 설치할 수 없음 -->
     <uses-feature android:name="android.hardware.camera2.full" />
@@ -40,7 +41,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".PreferenceActivity"/>
+        <activity android:name=".PreferenceActivity"  android:theme="@style/PreferencesTheme"/>
+        <activity android:name=".album.AlbumActivity"/>
+        <activity android:name=".photo.PhotoActivity"/>
     </application>
 
 </manifest>

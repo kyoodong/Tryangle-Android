@@ -7,4 +7,10 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <style name="PreferencesTheme" parent="Theme.AppCompat">
+<!--        <item name="android:windowBackground">@drawable/background_image</item>-->
+        <item name="android:background">@color/colorDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+
+    </style>
 </resources>
