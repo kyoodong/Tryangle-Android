@@ -28,6 +28,7 @@ open class ObjectGuider(
         val rightDiff = abs(rightSide - component.centerPoint.x)
         val middleDiff = abs(middleSide - component.centerPoint.x)
         val guideList = component.guideList
+        guideList.clear()
 
         // @TODO 황금 비율 영역
 //        golden_ratio_area_list = self.get_golden_ratio_area()

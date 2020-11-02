@@ -28,6 +28,7 @@ import com.gomson.tryangle.databinding.ActivityMainBinding
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
+import com.gomson.tryangle.guider.GuideImageObjectGuider
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.view.guide_image_view.GuideImageAdapter
 import kotlinx.android.synthetic.main.activity_main.*
@@ -628,14 +629,24 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
      * 컴포넌트와 가이드 이미지 컴포넌트를 매칭, 가이드 해주는 메소드
      */
     private fun match(component: ObjectComponent) {
-        val matchedComponent = componentMatcher.match(component, guideComponentList)
+        val guideComponent = componentMatcher.match(component, guideComponentList)
             ?: return
 
-        val guideList = matchedComponent.guideList
+        val guideList = guideComponent.guideList
             ?: return
 
-        if (guideList.size == 0)
-            return
+        if (guideList.size == 0) {
+            if (guideComponent.mask.isEmpty() || guideComponent.mask[0].isEmpty())
+                return
+
+            // @TODO 테스트 필요!!
+            val guider = GuideImageObjectGuider(guideComponent.mask[0].size, guideComponent.mask.size)
+            guider.guide(guideComponent)
+            guideList.addAll(guideComponent.guideList)
+
+            if (guideList.size == 0)
+                return
+        }
 
         binding.guideTextView.text = GUIDE_MSG_LIST[guideList[0].guideId]
     }
