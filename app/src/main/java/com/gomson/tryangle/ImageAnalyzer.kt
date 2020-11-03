@@ -1,7 +1,10 @@
 package com.gomson.tryangle
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.graphics.Rect
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
@@ -9,7 +12,6 @@ import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.*
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.dto.MatchingResult
-import com.gomson.tryangle.domain.guide.ObjectGuide
 import com.gomson.tryangle.guider.LineGuider
 import com.gomson.tryangle.guider.ObjectGuider
 import com.gomson.tryangle.guider.PoseGuider
@@ -17,9 +19,19 @@ import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.pose.PoseClassifier
 import org.opencv.android.Utils
 import org.opencv.core.Mat
+import org.tensorflow.lite.DataType
+import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.examples.posenet.lib.Posenet
+import org.tensorflow.lite.support.common.FileUtil
+import org.tensorflow.lite.support.image.ImageOperator
+import org.tensorflow.lite.support.image.ImageProcessor
+import org.tensorflow.lite.support.image.TensorImage
+import org.tensorflow.lite.support.image.ops.ResizeOp
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import java.io.IOException
 import kotlin.math.max
 import kotlin.math.min
+
 
 private const val TAG = "ImageAnalyzer"
 
@@ -82,6 +94,28 @@ class ImageAnalyzer(
         option.inScaled = false
         bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test2, option)
 
+        val imageProcessor = ImageProcessor.Builder()
+            .add(ResizeOp(224, 224, ResizeOp.ResizeMethod.BILINEAR))
+            .build()
+
+        var tImage = TensorImage(DataType.UINT8)
+        tImage.load(bitmap)
+        tImage = imageProcessor.process(tImage)
+
+        // Initialise the model
+        try {
+            val probabilityBuffer =
+                TensorBuffer.createFixedSize(intArrayOf(1, 1280), DataType.UINT8)
+            val tfliteModel = FileUtil.loadMappedFile(
+                context,
+                "model.tflite"
+            );
+            val tflite = Interpreter(tfliteModel)
+            tflite.run(tImage.getBuffer(), probabilityBuffer.getBuffer())
+        } catch (e: IOException) {
+            Log.e("tfliteSupport", "Error reading model", e);
+        }
+
         width = bitmap.width
         height = bitmap.height
 
@@ -126,10 +160,12 @@ class ImageAnalyzer(
                     objectComponent.centerPoint = layer.getCenterPoint()
                     objectComponent.area = layer.getArea()
 
-                    val roiImage = Bitmap.createBitmap(bitmap,
+                    val roiImage = Bitmap.createBitmap(
+                        bitmap,
                         objectComponent.roi.left, objectComponent.roi.top,
                         objectComponent.roi.getWidth(),
-                        objectComponent.roi.getHeight())
+                        objectComponent.roi.getHeight()
+                    )
 
                     objectComponent.layer = layer
                     objectComponent.roiImage = roiImage
@@ -139,13 +175,26 @@ class ImageAnalyzer(
                             val gamma = 30
                             val roiX = max(objectComponent.roi.left - gamma, 0)
                             val roiY = max(objectComponent.roi.top - gamma, 0)
-                            val roiImage = Bitmap.createBitmap(bitmap,
+                            val roiImage = Bitmap.createBitmap(
+                                bitmap,
                                 roiX,
                                 roiY,
-                                min(objectComponent.roi.getWidth() + gamma * 2, bitmap.width - roiX),
-                                min(objectComponent.roi.getHeight() + gamma * 2, bitmap.height - roiY))
+                                min(
+                                    objectComponent.roi.getWidth() + gamma * 2,
+                                    bitmap.width - roiX
+                                ),
+                                min(
+                                    objectComponent.roi.getHeight() + gamma * 2,
+                                    bitmap.height - roiY
+                                )
+                            )
 
-                            val scaledBitmap = Bitmap.createScaledBitmap(roiImage, MODEL_WIDTH, MODEL_HEIGHT, true)
+                            val scaledBitmap = Bitmap.createScaledBitmap(
+                                roiImage,
+                                MODEL_WIDTH,
+                                MODEL_HEIGHT,
+                                true
+                            )
                             val person = posenet.estimateSinglePose(scaledBitmap)
                             val poseClass = poseClassifier.classify(person.keyPoints.toTypedArray())
                             val personComponent =
@@ -216,22 +265,57 @@ class ImageAnalyzer(
             val objectImage = Mat()
             Utils.bitmapToMat(objectComponent.roiImage, objectImage)
 
-            val matchingResult = MatchFeature(objectImage.nativeObjAddr, originalImage.nativeObjAddr,
-                objectComponent.layer.ratioInRoi) ?: continue
+            val matchingResult = MatchFeature(
+                objectImage.nativeObjAddr, originalImage.nativeObjAddr,
+                objectComponent.layer.ratioInRoi
+            ) ?: continue
 
             totalCount += matchingResult.matchRatio
             num++
 
             if (matchingResult.matchRatio > 30) {
-                val maxX = maxOf(matchingResult.pointX1, maxOf(matchingResult.pointX2, maxOf(matchingResult.pointX3, matchingResult.pointX4))).toInt()
-                val minX = minOf(matchingResult.pointX1, minOf(matchingResult.pointX2, minOf(matchingResult.pointX3, matchingResult.pointX4))).toInt()
-                val maxY = maxOf(matchingResult.pointY1, maxOf(matchingResult.pointY2, maxOf(matchingResult.pointY3, matchingResult.pointY4))).toInt()
-                val minY = minOf(matchingResult.pointY1, minOf(matchingResult.pointY2, minOf(matchingResult.pointY3, matchingResult.pointY4))).toInt()
+                val maxX = maxOf(
+                    matchingResult.pointX1, maxOf(
+                        matchingResult.pointX2, maxOf(
+                            matchingResult.pointX3,
+                            matchingResult.pointX4
+                        )
+                    )
+                ).toInt()
+                val minX = minOf(
+                    matchingResult.pointX1, minOf(
+                        matchingResult.pointX2, minOf(
+                            matchingResult.pointX3,
+                            matchingResult.pointX4
+                        )
+                    )
+                ).toInt()
+                val maxY = maxOf(
+                    matchingResult.pointY1, maxOf(
+                        matchingResult.pointY2, maxOf(
+                            matchingResult.pointY3,
+                            matchingResult.pointY4
+                        )
+                    )
+                ).toInt()
+                val minY = minOf(
+                    matchingResult.pointY1, minOf(
+                        matchingResult.pointY2, minOf(
+                            matchingResult.pointY3,
+                            matchingResult.pointY4
+                        )
+                    )
+                ).toInt()
 
                 val width = (maxX - minX).toInt()
                 val height = (maxY - minY).toInt()
 
-                val rect = Rect(matchingResult.pointX1.toInt(), matchingResult.pointY1.toInt(), matchingResult.pointX1.toInt() + width, matchingResult.pointY1.toInt() + height)
+                val rect = Rect(
+                    matchingResult.pointX1.toInt(),
+                    matchingResult.pointY1.toInt(),
+                    matchingResult.pointX1.toInt() + width,
+                    matchingResult.pointY1.toInt() + height
+                )
                 val center = Point(minX + width / 2, minY + height / 2)
 
                 // 객체가 너무 많이 움직인 경우
