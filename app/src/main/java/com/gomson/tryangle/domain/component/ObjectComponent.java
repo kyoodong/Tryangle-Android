@@ -171,4 +171,14 @@ public class ObjectComponent extends Component {
         }
         return guides;
     }
+
+    public void refreshLayer(Bitmap bitmap) {
+        layer = new Layer(mask, roi);
+        centerPoint = layer.getCenterPoint();
+        area = layer.getArea();
+        roiImage = Bitmap.createBitmap(bitmap,
+                roi.getLeft(), roi.getTop(),
+                roi.getWidth(),
+                roi.getHeight());
+    }
 }

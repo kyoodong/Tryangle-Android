@@ -122,19 +122,9 @@ class ImageAnalyzer(
                 this.components.clear()
 
                 for (objectComponent in objectComponents) {
-                    val layer = Layer(objectComponent.mask, objectComponent.roi)
-                    objectComponent.centerPoint = layer.getCenterPoint()
-                    objectComponent.area = layer.getArea()
+                    objectComponent.refreshLayer(bitmap)
 
-                    val roiImage = Bitmap.createBitmap(bitmap,
-                        objectComponent.roi.left, objectComponent.roi.top,
-                        objectComponent.roi.getWidth(),
-                        objectComponent.roi.getHeight())
-
-                    objectComponent.layer = layer
-                    objectComponent.roiImage = roiImage
-
-                    if (layer.layeredImage != null) {
+                    if (objectComponent.layer.layeredImage != null) {
                         if (objectComponent.clazz == ObjectComponent.PERSON) {
                             val gamma = 30
                             val roiX = max(objectComponent.roi.left - gamma, 0)

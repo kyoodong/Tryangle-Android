@@ -4,6 +4,7 @@ import com.gomson.tryangle.domain.component.LineComponent;
 import com.gomson.tryangle.domain.component.ObjectComponent;
 import com.gomson.tryangle.domain.component.PersonComponent;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class GuideDTO {
@@ -12,6 +13,7 @@ public class GuideDTO {
     private List<ObjectComponent> objectComponentList;
     private List<PersonComponent> personComponentList;
     private List<Integer> dominantColorList;
+    private MaskList mask;
 
     public List<LineComponent> getLineComponentList() {
         return lineComponentList;

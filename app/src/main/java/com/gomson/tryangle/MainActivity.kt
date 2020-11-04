@@ -23,6 +23,11 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import com.gomson.tryangle.album.AlbumActivity
 import com.gomson.tryangle.databinding.ActivityMainBinding
 import com.gomson.tryangle.domain.component.Component
@@ -30,6 +35,7 @@ import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.guider.GuideImageObjectGuider
 import com.gomson.tryangle.network.ImageService
+import com.gomson.tryangle.network.NetworkManager
 import com.gomson.tryangle.view.guide_image_view.GuideImageAdapter
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.popup_more.view.*
@@ -545,64 +551,102 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
      */
     override fun onClick(url: String) {
         Log.d(TAG, "가이드 이미지 클릭 ${url}")
-        imageService.getObjectComponentByUrl(url, object : Callback<ArrayList<ObjectComponent>> {
-            override fun onResponse(
-                call: Call<ArrayList<ObjectComponent>>,
-                response: Response<ArrayList<ObjectComponent>>
-            ) {
-                if (response.isSuccessful) {
-                    Log.i(TAG, "가이드 이미지 컴포넌트 로딩 성공")
-                    val objectComponentList = response.body()
-                        ?: return
 
-                    if (objectComponentList.size == 0)
-                        return
+        var startTime = System.currentTimeMillis()
+        var endTime = System.currentTimeMillis()
+        Glide.with(baseContext).asBitmap().load("${NetworkManager.URL}/${url}").listener(object: RequestListener<Bitmap> {
+            override fun onLoadFailed(
+                e: GlideException?,
+                model: Any?,
+                target: Target<Bitmap>?,
+                isFirstResource: Boolean
+            ): Boolean {
+                Log.i(TAG, "비트맵 로딩 실패 ${NetworkManager.URL}/${url}")
+                return false
+            }
 
-                    guideComponentList.clear()
-                    guideComponentList.addAll(objectComponentList)
-                    layerLayout.removeAllViewsInLayout()
+            override fun onResourceReady(
+                resource: Bitmap?,
+                model: Any?,
+                target: Target<Bitmap>?,
+                dataSource: DataSource?,
+                isFirstResource: Boolean
+            ): Boolean {
+                endTime = System.currentTimeMillis()
+                Log.d(TAG, "비트맵 로딩 타임 ${endTime - startTime}")
+                startTime = System.currentTimeMillis()
+                imageService.getObjectComponentByUrl(url, object : Callback<ArrayList<ObjectComponent>> {
+                    override fun onResponse(
+                        call: Call<ArrayList<ObjectComponent>>,
+                        response: Response<ArrayList<ObjectComponent>>
+                    ) {
+                        endTime = System.currentTimeMillis()
+                        Log.d(TAG, "컴포넌트 로딩 타임 ${endTime - startTime}")
+                        startTime = System.currentTimeMillis()
+                        if (response.isSuccessful) {
+                            Log.i(TAG, "가이드 이미지 컴포넌트 로딩 성공")
+                            val objectComponentList = response.body()
+                                ?: return
 
-                    // 카메라 오브젝트
-                    val cameraObjectComponentList = ArrayList<ObjectComponent>()
-                    for (component in componentList) {
-                        if (component is ObjectComponent) {
-                            cameraObjectComponentList.add(component)
-                        }
-                    }
+                            if (objectComponentList.size == 0)
+                                return
 
-                    // 카메라 이미지에 여러 객체가 있을 때 가이드를 받을 객체를 선택하도록 함
-                    if (cameraObjectComponentList.size > 1) {
-                        Log.i(TAG, "카메라 오브젝트가 여러개라 선택해야함")
-                        guideTextView.text = getString(R.string.select_main_object)
+                            guideComponentList.clear()
+                            guideComponentList.addAll(objectComponentList)
 
-                        // 메인객체 고르기 메시지 노출
-                        binding.guideTextView.text = getString(R.string.select_main_object)
-                        for (component in cameraObjectComponentList) {
-                            val imageView = createImageView(component, binding.layerLayout)
-                            imageView.setOnClickListener {
-                                Log.i(TAG, "메인 객체 선택")
-                                binding.layerLayout.removeAllViewsWithout(imageView)
-                                match(component)
+                            for (c in guideComponentList) {
+                                c.refreshLayer(resource)
                             }
-                            binding.layerLayout.addView(imageView)
+                            layerLayout.removeAllViewsInLayout()
+
+                            // 카메라 오브젝트
+                            val cameraObjectComponentList = ArrayList<ObjectComponent>()
+                            for (component in componentList) {
+                                if (component is ObjectComponent) {
+                                    cameraObjectComponentList.add(component)
+                                }
+                            }
+
+                            endTime = System.currentTimeMillis()
+                            Log.d(TAG, "컴포넌트 준비 타임 ${endTime - startTime}")
+                            startTime = System.currentTimeMillis()
+
+                            // 카메라 이미지에 여러 객체가 있을 때 가이드를 받을 객체를 선택하도록 함
+                            if (cameraObjectComponentList.size > 1) {
+                                Log.i(TAG, "카메라 오브젝트가 여러개라 선택해야함")
+                                guideTextView.text = getString(R.string.select_main_object)
+
+                                // 메인객체 고르기 메시지 노출
+                                binding.guideTextView.text = getString(R.string.select_main_object)
+                                for (component in cameraObjectComponentList) {
+                                    val imageView = createImageView(component, binding.layerLayout)
+                                    imageView.setOnClickListener {
+                                        Log.i(TAG, "메인 객체 선택")
+                                        binding.layerLayout.removeAllViewsWithout(imageView)
+                                        match(component)
+                                    }
+                                    binding.layerLayout.addView(imageView)
+                                }
+                            }
+                            // 카메라 오브젝트 컴포넌트가 하나 뿐인 경우
+                            // 가이드 할 객체가 하나 뿐이라 간단함
+                            else if (cameraObjectComponentList.size == 1) {
+                                Log.i(TAG, "카메라 오브젝트가 하나뿐임")
+                                match(cameraObjectComponentList[0])
+                            }
+                        } else {
+                            Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패 ${response.code()}")
                         }
                     }
-                    // 카메라 오브젝트 컴포넌트가 하나 뿐인 경우
-                    // 가이드 할 객체가 하나 뿐이라 간단함
-                    else if (cameraObjectComponentList.size == 1) {
-                        Log.i(TAG, "카메라 오브젝트가 하나뿐임")
-                        match(cameraObjectComponentList[0])
-                    }
-                } else {
-                    Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패 ${response.code()}")
-                }
-            }
 
-            override fun onFailure(call: Call<ArrayList<ObjectComponent>>, t: Throwable) {
-                t.printStackTrace()
-                Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패")
+                    override fun onFailure(call: Call<ArrayList<ObjectComponent>>, t: Throwable) {
+                        t.printStackTrace()
+                        Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패")
+                    }
+                })
+                return false
             }
-        })
+        }).submit()
     }
 
     private fun createImageView(component: ObjectComponent, viewGroup: ViewGroup): ImageView {
@@ -649,5 +693,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
         }
 
         binding.guideTextView.text = GUIDE_MSG_LIST[guideList[0].guideId]
+        val imageView = createImageView(guideComponent, binding.layerLayout)
+        binding.layerLayout.addView(imageView)
     }
 }
