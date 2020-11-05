@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
+import android.util.Base64
 import android.util.Log
 import android.util.Rational
 import android.view.View
@@ -33,6 +34,8 @@ import com.gomson.tryangle.databinding.ActivityMainBinding
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
+import com.gomson.tryangle.dto.MaskList
+import com.gomson.tryangle.dto.ObjectComponentListDTO
 import com.gomson.tryangle.guider.GuideImageObjectGuider
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.network.NetworkManager
@@ -40,6 +43,7 @@ import com.gomson.tryangle.view.guide_image_view.GuideImageAdapter
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
+import okhttp3.ResponseBody
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
@@ -575,20 +579,34 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                 endTime = System.currentTimeMillis()
                 Log.d(TAG, "비트맵 로딩 타임 ${endTime - startTime}")
                 startTime = System.currentTimeMillis()
-                imageService.getObjectComponentByUrl(url, object : Callback<ArrayList<ObjectComponent>> {
+                imageService.getObjectComponentByUrl(url, object : Callback<ObjectComponentListDTO> {
                     override fun onResponse(
-                        call: Call<ArrayList<ObjectComponent>>,
-                        response: Response<ArrayList<ObjectComponent>>
+                        call: Call<ObjectComponentListDTO>,
+                        response: Response<ObjectComponentListDTO>
                     ) {
                         endTime = System.currentTimeMillis()
                         Log.d(TAG, "컴포넌트 로딩 타임 ${endTime - startTime}")
                         startTime = System.currentTimeMillis()
                         if (response.isSuccessful) {
                             Log.i(TAG, "가이드 이미지 컴포넌트 로딩 성공")
-                            val objectComponentList = response.body()
+                            val objectComponentListDTO = response.body()
                                 ?: return
 
-                            if (objectComponentList.size == 0)
+                            val base64String = objectComponentListDTO.maskStr
+                            var base64StringList = base64String.split("==")
+                            base64StringList = base64StringList.subList(0, base64StringList.size - 1)
+
+                            val maskList = MaskList()
+                            for (str in base64StringList) {
+                                val base64 = str.plus("==")
+                                maskList.add(Base64.decode(base64, Base64.DEFAULT))
+                            }
+                            objectComponentListDTO.deployMask(maskList)
+                            val objectComponentList = objectComponentListDTO.objectComponentList
+
+                            Log.d(TAG, "dd")
+
+                            if (objectComponentList.isEmpty())
                                 return
 
                             guideComponentList.clear()
@@ -639,7 +657,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                         }
                     }
 
-                    override fun onFailure(call: Call<ArrayList<ObjectComponent>>, t: Throwable) {
+                    override fun onFailure(call: Call<ObjectComponentListDTO>, t: Throwable) {
                         t.printStackTrace()
                         Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패")
                     }

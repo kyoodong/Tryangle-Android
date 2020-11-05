@@ -6,6 +6,7 @@ import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.ObjectGuide
+import com.gomson.tryangle.dto.MaskList
 import kotlin.math.abs
 
 open class GuideImageObjectGuider(
@@ -87,7 +88,7 @@ open class GuideImageObjectGuider(
         return areaList
     }
 
-    private fun getIou(area: Pair<Point, Point>, mask: ArrayList<ArrayList<Int>>): Float {
+    private fun getIou(area: Pair<Point, Point>, mask: MaskList): Float {
         val width = area.second.x - area.first.x
         val height = area.second.y - area.first.y
         var count = 0

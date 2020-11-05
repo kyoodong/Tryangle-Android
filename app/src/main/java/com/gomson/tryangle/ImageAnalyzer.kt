@@ -103,6 +103,7 @@ class ImageAnalyzer(
                     return
                 }
 
+                body.guideDTO.deployMask()
                 this.analyzeListener?.onUpdateRecommendedImage(body.guideImageList)
 
                 val objectComponents = ArrayList<ObjectComponent>()
