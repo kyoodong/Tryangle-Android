@@ -103,10 +103,15 @@ class ImageAnalyzer(
                     return
                 }
 
+                body.guideDTO.deployMask()
                 this.analyzeListener?.onUpdateRecommendedImage(body.guideImageList)
 
                 val objectComponents = ArrayList<ObjectComponent>()
                 for (component in body.guideDTO.objectComponentList) {
+                    objectComponents.add(component)
+                }
+
+                for (component in body.guideDTO.personComponentList) {
                     objectComponents.add(component)
                 }
 
@@ -118,19 +123,9 @@ class ImageAnalyzer(
                 this.components.clear()
 
                 for (objectComponent in objectComponents) {
-                    val layer = Layer(objectComponent.mask, objectComponent.roi)
-                    objectComponent.centerPoint = layer.getCenterPoint()
-                    objectComponent.area = layer.getArea()
+                    objectComponent.refreshLayer(bitmap)
 
-                    val roiImage = Bitmap.createBitmap(bitmap,
-                        objectComponent.roi.left, objectComponent.roi.top,
-                        objectComponent.roi.getWidth(),
-                        objectComponent.roi.getHeight())
-
-                    objectComponent.layer = layer
-                    objectComponent.roiImage = roiImage
-
-                    if (layer.layeredImage != null) {
+                    if (objectComponent.layer.layeredImage != null) {
                         if (objectComponent.clazz == ObjectComponent.PERSON) {
                             val gamma = 30
                             val roiX = max(objectComponent.roi.left - gamma, 0)
@@ -236,12 +231,12 @@ class ImageAnalyzer(
 //                    Log.d(TAG, "객체가 많이 움직여서 reload")
 //                }
 
-                if (!::layerBitmap.isInitialized) {
-                    layerBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-                }
-                val canvas = Canvas(layerBitmap)
-                canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
-                canvas.drawBitmap(objectComponent.layer.layeredImage!!, null, rect, null)
+//                if (!::layerBitmap.isInitialized) {
+//                    layerBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+//                }
+//                val canvas = Canvas(layerBitmap)
+//                canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
+//                canvas.drawBitmap(objectComponent.layer.layeredImage!!, null, rect, null)
 
 //                if (guidingComponent != null) {
 //                    if (guidingComponent is ObjectComponent && objectComponent.componentId == guidingComponent!!.componentId) {
@@ -254,7 +249,7 @@ class ImageAnalyzer(
 //                    }
 //                }
 
-                analyzeListener?.onUpdateLayerImage(layerBitmap)
+//                analyzeListener?.onUpdateLayerImage(layerBitmap)
             }
         }
 

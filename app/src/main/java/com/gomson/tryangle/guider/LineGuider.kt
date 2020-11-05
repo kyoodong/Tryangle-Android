@@ -13,6 +13,7 @@ class LineGuider: Guider() {
 
         val diff = component.start.diff(component.end)
         val guideList = component.guideList
+        guideList.clear()
 
         //@TODO start, end 그대로 넣으면 안되긴함
         // 수평선 양 끝 점의 차이가 lower_threshold 초과이면 가이드 멘트

@@ -31,4 +31,8 @@ data class Roi(
     fun toRect(): Rect {
         return Rect(left, top, right, bottom)
     }
+
+    fun getCenterPoint(): Point {
+        return Point(getWidth() / 2 + left, getHeight() / 2 + top)
+    }
 }

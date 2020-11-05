@@ -68,6 +68,7 @@ class PoseGuider(
         val imageWidth = this.imageWidth ?: return
 
         val guideList = component.guideList
+        guideList.clear()
 
         // @TODO: 서 있는 케이스 추가해야함. 상반신만 있어도 서 있을 수 있음
         // 서 있는 경우

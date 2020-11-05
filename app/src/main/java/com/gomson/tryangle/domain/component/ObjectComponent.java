@@ -8,6 +8,7 @@ import com.gomson.tryangle.domain.Roi;
 import com.gomson.tryangle.domain.guide.Guide;
 import com.gomson.tryangle.domain.guide.LineGuide;
 import com.gomson.tryangle.domain.guide.ObjectGuide;
+import com.gomson.tryangle.dto.MaskList;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -23,11 +24,16 @@ public class ObjectComponent extends Component {
     private float area;
     private String maskStr;
     private String roiStr;
-    private ArrayList<ArrayList<Integer>> mask;
+    private MaskList mask;
     private Roi roi;
 
     private Bitmap roiImage;
     private Layer layer;
+
+    public ObjectComponent() {
+        guideList = new ArrayList<>();
+        mask = new MaskList();
+    }
 
     public ObjectComponent(long id, long componentId, ArrayList<ObjectGuide> guideList, int clazz, Point centerPoint, float area,
                            String maskStr, String roiStr) {
@@ -41,21 +47,19 @@ public class ObjectComponent extends Component {
 
     public void setMaskStr(String maskStr) {
         this.maskStr = maskStr;
+        this.mask = new MaskList();
+
+        if (maskStr == null)
+            return;
 
         try {
-            this.mask = new ArrayList<>();
             JSONArray array = new JSONArray(maskStr);
             for (int i = 0; i < array.length(); i++) {
                 JSONArray arr = array.getJSONArray(i);
-                this.mask.add(new ArrayList<>());
+                this.mask.set(i, new byte[arr.length()]);
                 for (int j = 0; j < arr.length(); j++) {
-                    Object obj = arr.get(j);
-                    if (obj instanceof Integer) {
-                        this.mask.get(i).add((Integer) obj);
-                    } else {
-                        Boolean b = (Boolean) obj;
-                        this.mask.get(i).add(b ? 1 : 0);
-                    }
+                    int value = arr.getInt(j);
+                    this.mask.get(i)[j] = (byte) value;
                 }
             }
         } catch (JSONException e) {
@@ -63,8 +67,15 @@ public class ObjectComponent extends Component {
         }
     }
 
+    public void setMask(MaskList mask) {
+        this.mask = mask;
+    }
+
     public void setRoiStr(String roiStr) {
         this.roiStr = roiStr;
+
+        if (roiStr == null)
+            return;
 
         try {
             JSONArray array = new JSONArray(roiStr);
@@ -94,7 +105,7 @@ public class ObjectComponent extends Component {
         return roiStr;
     }
 
-    public ArrayList<ArrayList<Integer>> getMask() {
+    public MaskList getMask() {
         return mask;
     }
 
@@ -124,7 +135,7 @@ public class ObjectComponent extends Component {
 
     public double getRoiArea() {
         int height = mask.size();
-        int width = mask.get(0).size();
+        int width = mask.get(0).length;
 
         return (double) (roi.getHeight() * roi.getWidth()) / (height * width);
     }
@@ -140,7 +151,7 @@ public class ObjectComponent extends Component {
     @Override
     public double getPriority() {
         int height = mask.size();
-        int width = mask.get(0).size();
+        int width = mask.get(0).length;
         int centerX = width / 2;
         int centerY = height / 2;
 
@@ -170,5 +181,15 @@ public class ObjectComponent extends Component {
             guides.add((ObjectGuide) guide);
         }
         return guides;
+    }
+
+    public void refreshLayer(Bitmap bitmap) {
+        layer = new Layer(mask, roi);
+        centerPoint = layer.getCenterPoint();
+        area = layer.getArea();
+        roiImage = Bitmap.createBitmap(bitmap,
+                roi.getLeft(), roi.getTop(),
+                roi.getWidth(),
+                roi.getHeight());
     }
 }

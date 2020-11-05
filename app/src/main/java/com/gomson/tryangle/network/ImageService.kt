@@ -6,9 +6,11 @@ import android.os.SystemClock
 import com.gomson.tryangle.domain.AccessToken
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.dto.GuideImageListDTO
+import com.gomson.tryangle.dto.ObjectComponentListDTO
 import okhttp3.MediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -45,6 +47,16 @@ class ImageService(context: Context): BaseService(context) {
         } catch (e: Exception) {
             e.printStackTrace()
             return null
+        }
+    }
+
+    fun getObjectComponentByUrl(url: String, callback: Callback<ObjectComponentListDTO>) {
+        try {
+            issueToken(null)
+            val call = NetworkManager.imageService.getObjectComponentByUrl(url, accessToken!!.token)
+            call.enqueue(callback)
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }

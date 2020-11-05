@@ -14,7 +14,7 @@ class GuideImageAdapter(val context: Context)
     : RecyclerView.Adapter<GuideImageAdapter.ViewHolder>() {
 
     private var guideImageUrlList: List<String> = ArrayList()
-
+    private var onClickGuideImageListener: OnClickGuideImage? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val layoutInflator = context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
@@ -23,7 +23,7 @@ class GuideImageAdapter(val context: Context)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.setItem(guideImageUrlList[position])
+        holder.setItem(guideImageUrlList[position], onClickGuideImageListener)
     }
 
     override fun getItemCount(): Int {
@@ -32,11 +32,13 @@ class GuideImageAdapter(val context: Context)
 
     class ViewHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
 
-        fun setItem(url: String) {
+        fun setItem(url: String, onClickGuideImageListener: OnClickGuideImage?) {
             Glide.with(itemView)
                 .load("${NetworkManager.URL}/${url}")
                 .into(itemView.imageView)
-            itemView.imageView
+            itemView.setOnClickListener {
+                onClickGuideImageListener?.onClick(url)
+            }
         }
     }
 
@@ -49,5 +51,13 @@ class GuideImageAdapter(val context: Context)
     fun resetImageUrlList() {
         guideImageUrlList = ArrayList()
         notifyDataSetChanged()
+    }
+
+    fun setOnClickGuideImageListener(listener: OnClickGuideImage) {
+        this.onClickGuideImageListener = listener
+    }
+
+    interface OnClickGuideImage {
+        fun onClick(url: String)
     }
 }
