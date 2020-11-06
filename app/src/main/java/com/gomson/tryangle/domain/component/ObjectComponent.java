@@ -1,6 +1,7 @@
 package com.gomson.tryangle.domain.component;
 
 import android.graphics.Bitmap;
+import android.util.Log;
 
 import com.gomson.tryangle.Layer;
 import com.gomson.tryangle.domain.Point;
@@ -22,7 +23,6 @@ public class ObjectComponent extends Component {
     private int clazz;
     private Point centerPoint;
     private float area;
-    private String maskStr;
     private String roiStr;
     private MaskList mask;
     private Roi roi;
@@ -35,36 +35,15 @@ public class ObjectComponent extends Component {
         mask = new MaskList();
     }
 
-    public ObjectComponent(long id, long componentId, ArrayList<ObjectGuide> guideList, int clazz, Point centerPoint, float area,
-                           String maskStr, String roiStr) {
+    public ObjectComponent(long id, long componentId, ArrayList<ObjectGuide> guideList, int clazz,
+                           Point centerPoint, float area,
+                           MaskList mask, String roiStr) {
         super(id, componentId, guideList);
         this.clazz = clazz;
         this.centerPoint = centerPoint;
         this.area = area;
-        setMaskStr(maskStr);
+        setMask(mask);
         setRoiStr(roiStr);
-    }
-
-    public void setMaskStr(String maskStr) {
-        this.maskStr = maskStr;
-        this.mask = new MaskList();
-
-        if (maskStr == null)
-            return;
-
-        try {
-            JSONArray array = new JSONArray(maskStr);
-            for (int i = 0; i < array.length(); i++) {
-                JSONArray arr = array.getJSONArray(i);
-                this.mask.set(i, new byte[arr.length()]);
-                for (int j = 0; j < arr.length(); j++) {
-                    int value = arr.getInt(j);
-                    this.mask.get(i)[j] = (byte) value;
-                }
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
     }
 
     public void setMask(MaskList mask) {
@@ -95,10 +74,6 @@ public class ObjectComponent extends Component {
 
     public float getArea() {
         return area;
-    }
-
-    public String getMaskStr() {
-        return maskStr;
     }
 
     public String getRoiStr() {
@@ -178,7 +153,11 @@ public class ObjectComponent extends Component {
     public ArrayList<ObjectGuide> getGuideList() {
         ArrayList<ObjectGuide> guides = new ArrayList<>();
         for (Guide guide : guideList) {
-            guides.add((ObjectGuide) guide);
+            if (guide instanceof ObjectGuide) {
+                guides.add((ObjectGuide) guide);
+            } else {
+                Log.d("dd", "dd");
+            }
         }
         return guides;
     }

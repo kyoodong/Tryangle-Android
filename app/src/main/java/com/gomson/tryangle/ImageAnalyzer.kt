@@ -2,6 +2,8 @@ package com.gomson.tryangle
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Matrix
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
@@ -23,7 +25,6 @@ import org.opencv.android.Utils
 import org.opencv.core.Mat
 import org.tensorflow.lite.examples.posenet.lib.Posenet
 import retrofit2.Call
-import retrofit2.Callback
 import retrofit2.Response
 import kotlin.math.max
 import kotlin.math.min
@@ -94,6 +95,10 @@ class ImageAnalyzer(
         height = (bitmap.width * ratio).toInt()
         bitmap = Bitmap.createBitmap(bitmap, 0, (bitmap.height - height) / 2, width, height)
 
+        width = 640
+        height = (width * ratio).toInt()
+        bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true)
+
         // 개발용
 //        val option = BitmapFactory.Options()
 //        option.inScaled = false
@@ -108,18 +113,17 @@ class ImageAnalyzer(
             requestSegmentation()
         } else {
             // 오브젝트별 이미지
-            if (guidingComponent != null && targetComponent != null && guidingComponent !is ObjectComponent) {
+            if (guidingComponent != null && targetComponent != null && guidingComponent is ObjectComponent) {
                 traceGuidingObjectComponent()
-            } else {
-                traceImage()
             }
+
+            traceImage()
         }
 
         imageProxy.close()
     }
 
     private fun traceImage() {
-        Log.d(TAG, "타겟 객체 없음")
         val curImage = Mat()
         val prevImage = Mat()
         Utils.bitmapToMat(bitmap, curImage)
@@ -150,7 +154,6 @@ class ImageAnalyzer(
 
         val matchingResult = MatchFeature(objectImage.nativeObjAddr, originalImage.nativeObjAddr,
             guidingComponent.layer.ratioInRoi)
-
         if (matchingResult != null) {
             if (matchingResult.matchRatio > 30) {
                 val maxX = maxOf(matchingResult.pointX1, maxOf(matchingResult.pointX2, maxOf(matchingResult.pointX3, matchingResult.pointX4))).toInt()
@@ -164,11 +167,6 @@ class ImageAnalyzer(
                 val center = Point(minX + width / 2, minY + height / 2)
                 val leftTop = Point(minX, minY)
 
-                // 객체가 너무 많이 움직인 경우
-//                if (center.isFar(objectComponent.centerPoint)) {
-//                    needToRequestSegmentation = true
-//                    Log.d(TAG, "객체가 많이 움직여서 reload")
-//                }
                 // 가이드 내에서 도달해야하는 목표지점
                 val targetPoint = targetComponent.centerPoint
                 if (targetPoint.isClose(center)) {
@@ -177,21 +175,12 @@ class ImageAnalyzer(
                 }
 
                 analyzeListener?.onUpdateGuidingComponentPosition(width, height, leftTop)
-                return
             }
-        }
-
-        if (failToDetectObjectStartTime == 0L) {
-            failToDetectObjectStartTime = System.currentTimeMillis()
-        } else if (System.currentTimeMillis() - failToDetectObjectStartTime < WAIT_SEGMENT_TIME) {
-            needToRequestSegmentation = true
-            failToDetectObjectStartTime = 0L
         }
     }
 
     private fun requestSegmentation() {
         if (waitSegmentStartTime == 0L) {
-            Log.d(TAG, "세그멘테이션 시간 카운팅 시작")
             waitSegmentStartTime = System.currentTimeMillis()
             prevBitmap = bitmap.copy(bitmap.config, true)
             return
@@ -223,7 +212,6 @@ class ImageAnalyzer(
 
             // 이 전에 요청했던 이미지와 50% 이상 싱크가 일치한다면 요청하지 않음
             if (matchingResult != null && matchingResult.matchRatio > 30) {
-                Log.d(TAG, "이전 요청 이미지와 비슷함")
                 waitSegmentStartTime = 0
                 return
             }
@@ -231,7 +219,9 @@ class ImageAnalyzer(
 
         lastCapturedBitmap = bitmap.copy(bitmap.config, true)
         Log.i(TAG, "Image Segmentation 요청")
-        imageService.recommendImage(bitmap, object: Callback<GuideImageListDTO> {
+        imageService.recommendImage(bitmap, object: retrofit2.Callback<GuideImageListDTO> {
+            val bitmap = lastCapturedBitmap.copy(lastCapturedBitmap.config, true)
+
             override fun onResponse(
                 call: Call<GuideImageListDTO>,
                 response: Response<GuideImageListDTO>
@@ -244,6 +234,15 @@ class ImageAnalyzer(
                     if (body.guideDTO.objectComponentList.isEmpty()
                         && body.guideDTO.personComponentList.isEmpty()) {
                         Log.d(TAG, "Empty objectComponentList")
+                        val canvas = Canvas(lastCapturedBitmap)
+                        canvas.drawColor(Color.rgb(255, 255, 255))
+                        return
+                    }
+
+                    if (body.guideImageList.isEmpty()) {
+                        Log.d(TAG, "Empty guideImageList")
+                        val canvas = Canvas(lastCapturedBitmap)
+                        canvas.drawColor(Color.rgb(255, 255, 255))
                         return
                     }
 
@@ -306,7 +305,8 @@ class ImageAnalyzer(
                         }
                     }
 
-                    needToRequestSegmentation = this@ImageAnalyzer.components.isEmpty()
+                    needToRequestSegmentation = false
+                    lastCapturedBitmap = bitmap.copy(bitmap.config, true)
 
                     if (this@ImageAnalyzer.components.isNotEmpty()) {
                         val newLines = hough.findHoughLine(bitmap)
@@ -322,7 +322,8 @@ class ImageAnalyzer(
             }
 
             override fun onFailure(call: Call<GuideImageListDTO>, t: Throwable) {
-                TODO("Not yet implemented")
+                Log.i(TAG, "image Segmentation 서버 에러 ${t.message}")
+                t.printStackTrace()
             }
         })
 

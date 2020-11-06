@@ -3,6 +3,7 @@ package com.gomson.tryangle.network
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.SystemClock
+import android.util.Log
 import com.gomson.tryangle.domain.AccessToken
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.dto.GuideImageListDTO
@@ -15,39 +16,46 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.io.ByteArrayOutputStream
+import java.io.EOFException
 import java.lang.Exception
+
+private const val TAG = "ImageService"
 
 class ImageService(context: Context): BaseService(context) {
 
-    fun recommendImage(bitmap: Bitmap): Response<GuideImageListDTO>? {
-        try {
-            // TODO: 개발용
+    fun recommendImage(bitmap: Bitmap, callback: Callback<GuideImageListDTO>) {
+        // TODO: 개발용
+        issueToken(null)
+
+        // RGB Bitmap -> ByteArray
+        val bos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos)
+        val byteArray = bos.toByteArray()
+        val requestBody = RequestBody.create(
+            MediaType.parse("multipart/form-data"),
+            byteArray
+        )
+        val body = MultipartBody.Part.createFormData(
+            "image",
+            "${SystemClock.uptimeMillis()}.jpeg",
+            requestBody
+        )
+
+        if (!hasValidToken()) {
             issueToken(null)
-
-            // RGB Bitmap -> ByteArray
-            val bos = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos)
-            val byteArray = bos.toByteArray()
-            val requestBody = RequestBody.create(
-                MediaType.parse("multipart/form-data"),
-                byteArray
-            )
-            val body = MultipartBody.Part.createFormData(
-                "image",
-                "${SystemClock.uptimeMillis()}.jpeg",
-                requestBody
-            )
-
-            if (!hasValidToken()) {
-                issueToken(null)
-            }
-
-            val call = NetworkManager.imageService.recommendImage(body, accessToken!!.token)
-            return call.execute()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return null
         }
+
+        val call = NetworkManager.imageService.recommendImage(body, accessToken!!.token)
+        call.enqueue(callback)
+
+//        try {
+//
+//            call.enqueue(callback)
+//        } catch (e: EOFException) {
+//            Log.e(TAG, "객체가 없어 추천 이미지를 받지 못함")
+//        } catch (e: Exception) {
+//            e.printStackTrace()
+//        }
     }
 
     fun getObjectComponentByUrl(url: String, callback: Callback<ObjectComponentListDTO>) {

@@ -11,15 +11,7 @@ class LayerLayout @JvmOverloads constructor(
 
 
     fun removeAllViewsWithout(view: View) {
-        var index = -1
-        for (i in 0 until childCount) {
-            if (getChildAt(i) == view) {
-                index = i
-                break
-            }
-        }
-
-        removeViews(0, index)
-        removeViews(1, childCount - index - 1)
+        removeAllViews()
+        addView(view)
     }
 }

@@ -25,7 +25,7 @@ public class PersonComponent extends ObjectComponent {
     }
 
     public PersonComponent(long id, long componentId, ArrayList<ObjectGuide> guideList, int clazz, Point centerPoint, float area,
-                           String mask, String roi, Bitmap roiImage, Layer layer, Person person, PoseClass pose) {
+                           MaskList mask, String roi, Bitmap roiImage, Layer layer, Person person, PoseClass pose) {
         super(id, componentId, guideList, clazz, centerPoint, area, mask, roi);
         setRoiImage(roiImage);
         setLayer(layer);

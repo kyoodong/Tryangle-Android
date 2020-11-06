@@ -31,6 +31,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.gomson.tryangle.album.AlbumActivity
 import com.gomson.tryangle.databinding.ActivityMainBinding
+import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
@@ -43,7 +44,6 @@ import com.gomson.tryangle.view.guide_image_view.GuideImageAdapter
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
-import okhttp3.ResponseBody
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
@@ -127,6 +127,11 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
     private lateinit var binding: ActivityMainBinding
     private lateinit var imageService: ImageService
     private val componentMatcher = ComponentMatcher()
+
+    private var guidingComponentImageView: ImageView? = null
+    private var guidingComponent: Component? = null
+    private var targetComponent: Component? = null
+    private var guidingGuide: Guide? = null
 
     init {
         System.loadLibrary("opencv_java4")
@@ -443,14 +448,46 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
         }
     }
 
-    override fun onUpdateLayerImage(layerBitmap: Bitmap) {
-        this.layerBitmap = layerBitmap
+    override fun onUpdateGuidingComponentPosition(width: Int, height: Int, leftTopPoint: Point) {
+        val guidingComponentImageView = this.guidingComponentImageView
+            ?: return
+
+        val layoutWidth = binding.layerLayout.width
+        val layoutHeight = binding.layerLayout.height
+
+        val oldWidth = guidingComponentImageView.layoutParams.width
+        val oldHeight = guidingComponentImageView.layoutParams.height
+        val oldX = guidingComponentImageView.x
+        val oldY = guidingComponentImageView.y
+
+        val newWidth = width * layoutWidth / imageAnalyzer.width
+        val newHeight = height * layoutHeight / imageAnalyzer.height
+        val newX = leftTopPoint.x.toFloat() * layoutWidth / imageAnalyzer.width
+        val newY = leftTopPoint.y.toFloat() * layoutHeight / imageAnalyzer.height
+
+        for (i in 1 .. 10) {
+            handler.postDelayed(Runnable {
+                val newWeight = i / 10f
+                val oldWeight = 1 - newWeight
+
+                val resultX = oldX * oldWeight + newX * newWeight
+                val resultY = oldY * oldWeight + newY * newWeight
+
+                guidingComponentImageView.x = resultX
+                guidingComponentImageView.y = resultY
+                guidingComponentImageView.invalidate()
+            }, i * 5L)
+        }
 
         runOnUiThread {
-            binding.layerImageView.setImageBitmap(layerBitmap)
-            this.layerBitmap = layerBitmap
-            binding.layerImageView.setImageBitmap(layerBitmap)
+            guidingComponentImageView.layoutParams.width = newWidth
+            guidingComponentImageView.layoutParams.height = newHeight
         }
+
+//        guidingComponentImageView.layoutParams.width = newWidth
+//        guidingComponentImageView.layoutParams.height = newHeight
+//        guidingComponentImageView.x = newX
+//        guidingComponentImageView.y = newY
     }
 
     override fun onUpdateComponents(components: ArrayList<Component>) {
@@ -518,10 +555,11 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
         }
     }
 
-    override fun onMatchGuide(guide: Guide, newMainGuide: Guide?) {
+    override fun onMatchGuide() {
         Log.i(TAG, "가이드에 맞음!")
-//        if (guide.targetComponent is ObjectComponent) {
-//            val component = guide.targetComponent as ObjectComponent
+//        guiding
+//        if (guidingGuide.targetComponent is ObjectComponent) {
+//            val component = guidingGuide.targetComponent as ObjectComponent
 //            val layoutParams = thumbUp.layoutParams as ConstraintLayout.LayoutParams
 //            layoutParams.leftMargin = component.centerPoint.x
 //            layoutParams.topMargin = component.centerPoint.y
@@ -593,6 +631,11 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
 
                             val base64String = objectComponentListDTO.maskStr
                             var base64StringList = base64String.split("==")
+                            if (base64StringList.size <= 1) {
+                                Toast.makeText(baseContext, "마스크 이미지 없음", Toast.LENGTH_SHORT).show()
+                                return
+                            }
+
                             base64StringList = base64StringList.subList(0, base64StringList.size - 1)
 
                             val maskList = MaskList()
@@ -638,6 +681,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                                     imageView.setOnClickListener {
                                         Log.i(TAG, "메인 객체 선택")
                                         binding.layerLayout.removeAllViewsWithout(imageView)
+                                        guidingComponentImageView = imageView
                                         match(component)
                                     }
                                     binding.layerLayout.addView(imageView)
@@ -647,6 +691,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                             // 가이드 할 객체가 하나 뿐이라 간단함
                             else if (cameraObjectComponentList.size == 1) {
                                 Log.i(TAG, "카메라 오브젝트가 하나뿐임")
+                                val component = cameraObjectComponentList[0]
+                                guidingComponentImageView = createImageView(component, binding.layerLayout)
+                                binding.layerLayout.addView(guidingComponentImageView)
                                 match(cameraObjectComponentList[0])
                             }
                         } else {
@@ -698,7 +745,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
             if (guideComponent.mask.isEmpty() || guideComponent.mask[0].isEmpty())
                 return
 
-            // @TODO 테스트 필요!!
             val guider = GuideImageObjectGuider(guideComponent.mask[0].size, guideComponent.mask.size)
             guider.guide(guideComponent)
             guideList.addAll(guideComponent.guideList)
@@ -707,7 +753,12 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                 return
         }
 
-        binding.guideTextView.text = GUIDE_MSG_LIST[guideList[0].guideId]
+        guidingComponent = component
+        targetComponent = guideComponent
+        guidingGuide = guideList[0]
+        imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
+
+        binding.guideTextView.text = GUIDE_MSG_LIST[guidingGuide!!.guideId]
         val imageView = createImageView(guideComponent, binding.layerLayout)
         binding.layerLayout.addView(imageView)
     }
