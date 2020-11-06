@@ -98,7 +98,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
 
     private lateinit var camera: Camera
     private lateinit var converter: YuvToRgbConverter
-    private lateinit var layerBitmap: Bitmap
     private lateinit var guideBitmap: Bitmap
     private var guideClusters: Array<ArrayList<Guide>>? = null
 

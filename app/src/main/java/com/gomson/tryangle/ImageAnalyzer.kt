@@ -1,15 +1,18 @@
 package com.gomson.tryangle
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.gomson.tryangle.domain.Point
-import com.gomson.tryangle.domain.component.*
+import com.gomson.tryangle.domain.component.Component
+import com.gomson.tryangle.domain.component.ComponentList
+import com.gomson.tryangle.domain.component.ObjectComponent
+import com.gomson.tryangle.domain.component.PersonComponent
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.dto.MatchingResult
-import com.gomson.tryangle.domain.guide.ObjectGuide
 import com.gomson.tryangle.guider.LineGuider
 import com.gomson.tryangle.guider.ObjectGuider
 import com.gomson.tryangle.guider.PoseGuider
@@ -34,7 +37,7 @@ class ImageAnalyzer(
     private val hough = Hough()
     private lateinit var bitmapBuffer: Bitmap
     private lateinit var bitmap: Bitmap
-    private lateinit var layerBitmap: Bitmap
+    private lateinit var lastCapturedBitmap: Bitmap
     private val converter: YuvToRgbConverter = YuvToRgbConverter(context)
     private val imageService = ImageService(context)
     private val posenet = Posenet(context)
@@ -43,6 +46,9 @@ class ImageAnalyzer(
     private lateinit var objectGuider: ObjectGuider
     private lateinit var lineGuider: LineGuider
     private var guidingComponent: Component? = null
+    private var targetComponent: Component? = null
+    private var guidingGuide: Guide? = null
+    private var countFailToDetectObject = 0
 
     var width = 0
     var height = 0
@@ -71,7 +77,6 @@ class ImageAnalyzer(
 
         val matrix = Matrix()
         matrix.postRotate(rotation.toFloat())
-
 
         // 릴리즈용
         bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
@@ -102,6 +107,8 @@ class ImageAnalyzer(
                     imageProxy.close()
                     return
                 }
+
+                lastCapturedBitmap = bitmap.copy(bitmap.config, true)
 
                 body.guideDTO.deployMask()
                 this.analyzeListener?.onUpdateRecommendedImage(body.guideImageList)
@@ -185,75 +192,71 @@ class ImageAnalyzer(
         val originalImage = Mat()
         Utils.bitmapToMat(bitmap, originalImage)
 
-        var totalCount = 0
-        var num = 0
-        var averageCount = 0
+        var isDetectedObject = false
 
         // 오브젝트별 이미지
-        for (component in components) {
-            if (component !is ObjectComponent)
-                continue
-
-            val objectComponent = component as ObjectComponent
+        if (guidingComponent != null && targetComponent != null && guidingComponent is ObjectComponent) {
+            val guidingComponent = guidingComponent as ObjectComponent
+            val targetComponent = targetComponent as ObjectComponent
             val objectImage = Mat()
-            Utils.bitmapToMat(objectComponent.roiImage, objectImage)
+            Utils.bitmapToMat(guidingComponent.roiImage, objectImage)
 
             val matchingResult = MatchFeature(objectImage.nativeObjAddr, originalImage.nativeObjAddr,
-                objectComponent.layer.ratioInRoi) ?: continue
+                guidingComponent.layer.ratioInRoi)
 
-            totalCount += matchingResult.matchRatio
-            num++
+            if (matchingResult != null) {
+                if (matchingResult.matchRatio > 30) {
+                    isDetectedObject = true
+                    val maxX = maxOf(matchingResult.pointX1, maxOf(matchingResult.pointX2, maxOf(matchingResult.pointX3, matchingResult.pointX4))).toInt()
+                    val minX = minOf(matchingResult.pointX1, minOf(matchingResult.pointX2, minOf(matchingResult.pointX3, matchingResult.pointX4))).toInt()
+                    val maxY = maxOf(matchingResult.pointY1, maxOf(matchingResult.pointY2, maxOf(matchingResult.pointY3, matchingResult.pointY4))).toInt()
+                    val minY = minOf(matchingResult.pointY1, minOf(matchingResult.pointY2, minOf(matchingResult.pointY3, matchingResult.pointY4))).toInt()
 
-            if (matchingResult.matchRatio > 30) {
-                val maxX = maxOf(matchingResult.pointX1, maxOf(matchingResult.pointX2, maxOf(matchingResult.pointX3, matchingResult.pointX4))).toInt()
-                val minX = minOf(matchingResult.pointX1, minOf(matchingResult.pointX2, minOf(matchingResult.pointX3, matchingResult.pointX4))).toInt()
-                val maxY = maxOf(matchingResult.pointY1, maxOf(matchingResult.pointY2, maxOf(matchingResult.pointY3, matchingResult.pointY4))).toInt()
-                val minY = minOf(matchingResult.pointY1, minOf(matchingResult.pointY2, minOf(matchingResult.pointY3, matchingResult.pointY4))).toInt()
+                    val width = (maxX - minX)
+                    val height = (maxY - minY)
 
-                val width = (maxX - minX).toInt()
-                val height = (maxY - minY).toInt()
+                    val center = Point(minX + width / 2, minY + height / 2)
+                    val leftTop = Point(minX, minY)
 
-                val rect = Rect(matchingResult.pointX1.toInt(), matchingResult.pointY1.toInt(), matchingResult.pointX1.toInt() + width, matchingResult.pointY1.toInt() + height)
-                val center = Point(minX + width / 2, minY + height / 2)
-
-                // 객체가 너무 많이 움직인 경우
+                    // 객체가 너무 많이 움직인 경우
 //                if (center.isFar(objectComponent.centerPoint)) {
 //                    needToRequestSegmentation = true
 //                    Log.d(TAG, "객체가 많이 움직여서 reload")
 //                }
+                    // 가이드 내에서 도달해야하는 목표지점
+                    val targetPoint = targetComponent.centerPoint
+                    if (targetPoint.isClose(center)) {
+                        Log.i(TAG, "가이드 목표 도달!")
+                        analyzeListener?.onMatchGuide()
+                    }
 
-//                if (!::layerBitmap.isInitialized) {
-//                    layerBitmap = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-//                }
-//                val canvas = Canvas(layerBitmap)
-//                canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
-//                canvas.drawBitmap(objectComponent.layer.layeredImage!!, null, rect, null)
+                    analyzeListener?.onUpdateGuidingComponentPosition(width, height, leftTop)
+                }
+            }
+        } else {
+            val curImage = Mat()
+            val prevImage = Mat()
+            Utils.bitmapToMat(bitmap, curImage)
+            Utils.bitmapToMat(lastCapturedBitmap, prevImage)
 
-//                if (guidingComponent != null) {
-//                    if (guidingComponent is ObjectComponent && objectComponent.componentId == guidingComponent!!.componentId) {
-//                        // 가이드 내에서 도달해야하는 목표지점
-//                        val targetPoint = objGuide.targetComponent.centerPoint + objGuide.diffPoint
-//                        if (targetPoint.isClose(center)) {
-//                            Log.i(TAG, "가이드 목표 도달!")
-//                            analyzeListener?.onMatchGuide(objGuide, null)
-//                        }
-//                    }
-//                }
-
-//                analyzeListener?.onUpdateLayerImage(layerBitmap)
+            val matchingResult = MatchFeature(curImage.nativeObjAddr, prevImage.nativeObjAddr, 100)
+            if (matchingResult != null) {
+                if (matchingResult.matchRatio > 30) {
+                    isDetectedObject = true
+                }
             }
         }
 
-        if (num > 0) {
-            averageCount = totalCount / num
+        if (!isDetectedObject) {
+            countFailToDetectObject++
 
-            if (averageCount < 20) {
+            if (countFailToDetectObject >= 5) {
                 needToRequestSegmentation = true
+                countFailToDetectObject = 0
                 Log.d(TAG, "객체 발견하지 못하여 Reload")
             }
         } else {
-            needToRequestSegmentation = true
-            Log.d(TAG, "num == 0")
+            countFailToDetectObject = 0
         }
 
 //                // 추천 이미지 요청
