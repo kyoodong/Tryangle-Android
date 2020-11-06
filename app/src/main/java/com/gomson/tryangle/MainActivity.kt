@@ -144,6 +144,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                         height = 0
                         binding.ratioBtn.setBackgroundResource(R.drawable.ratio3_4)
                         binding.previewLayout.requestLayout()
+                        imageAnalyzer.setRatio(4f / 3f)
                     }
                     R.id.ratio1_1 -> {
                         clickRatio = RatioMode.RATIO_1_1
@@ -151,12 +152,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                         topToTop = binding.topLayout.id
                         binding.ratioBtn.setBackgroundResource(R.drawable.ratio1_1)
                         binding.previewLayout.requestLayout()
+                        imageAnalyzer.setRatio(1f)
                     }
                     R.id.ratio9_16 -> {
                         clickRatio = RatioMode.RATIO_9_16
                         height = ViewGroup.LayoutParams.MATCH_PARENT
                         binding.ratioBtn.setBackgroundResource(R.drawable.ratio9_16)
                         binding.previewLayout.requestLayout()
+                        imageAnalyzer.setRatio(16f / 9f)
                     }
                 }
             }
@@ -358,22 +361,20 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
      * 카메라 서비스 설정값을 지정하는 함수
      */
     private fun bindCameraConfiguration() {
-        val preview = Preview.Builder()
-            .build()
-
         // 기본 카메라 비율을 16:9로 설정
         if (imageCapture == null)
             imageCapture = getImageCapture(16, 9)
 
-        // 이미지 분석 모듈
-        if (imageAnalysis == null) {
-            imageAnalysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
+        val preview = preview
+            ?: return
 
-            imageAnalyzer = ImageAnalyzer(baseContext, this)
-            imageAnalysis!!.setAnalyzer(cameraExecutor, imageAnalyzer)
-        }
+        // 이미지 분석 모듈
+        imageAnalysis = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+
+        imageAnalyzer = ImageAnalyzer(baseContext, this)
+        imageAnalysis!!.setAnalyzer(cameraExecutor, imageAnalyzer)
 
         try {
             cameraProvider.unbindAll()

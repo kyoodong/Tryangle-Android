@@ -49,6 +49,7 @@ class ImageAnalyzer(
     private var targetComponent: Component? = null
     private var guidingGuide: Guide? = null
     private var countFailToDetectObject = 0
+    private var ratio: Float = 1f
 
     var width = 0
     var height = 0
@@ -82,13 +83,14 @@ class ImageAnalyzer(
         bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
             bitmapBuffer.width, bitmapBuffer.height, matrix, true)
 
+        width = bitmap.width
+        height = (bitmap.width * ratio).toInt()
+        bitmap = Bitmap.createBitmap(bitmap, 0, (bitmap.height - height) / 2, width, height)
+
         // 개발용
 //        val option = BitmapFactory.Options()
 //        option.inScaled = false
 //        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test3, option)
-
-        width = bitmap.width
-        height = bitmap.height
 
         poseGuider = PoseGuider(bitmap.width, bitmap.height)
         objectGuider = ObjectGuider(bitmap.width, bitmap.height)
