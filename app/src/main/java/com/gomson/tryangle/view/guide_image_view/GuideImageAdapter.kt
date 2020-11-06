@@ -13,7 +13,7 @@ import kotlinx.android.synthetic.main.item_guide_image.view.*
 class GuideImageAdapter(val context: Context)
     : RecyclerView.Adapter<GuideImageAdapter.ViewHolder>() {
 
-    private var guideImageUrlList: List<String> = ArrayList()
+    private var guideImageUrlList = ArrayList<String>()
     private var onClickGuideImageListener: OnClickGuideImage? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -42,14 +42,15 @@ class GuideImageAdapter(val context: Context)
         }
     }
 
-    fun addImageUrlList(list: List<String>) {
+    fun addImageUrlList(list: ArrayList<String>) {
         val count = guideImageUrlList.size
-        guideImageUrlList += list
+        guideImageUrlList.addAll(list)
         notifyItemInserted(count)
     }
 
-    fun resetImageUrlList() {
-        guideImageUrlList = ArrayList()
+    fun setImageUrlList(list: ArrayList<String>) {
+        guideImageUrlList.clear()
+        guideImageUrlList.addAll(list)
         notifyDataSetChanged()
     }
 

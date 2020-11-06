@@ -74,13 +74,13 @@ class ImageAnalyzer(
 
 
         // 릴리즈용
-//        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
-//            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
+        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
+            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
 
         // 개발용
-        val option = BitmapFactory.Options()
-        option.inScaled = false
-        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test2, option)
+//        val option = BitmapFactory.Options()
+//        option.inScaled = false
+//        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test3, option)
 
         width = bitmap.width
         height = bitmap.height
@@ -172,15 +172,6 @@ class ImageAnalyzer(
                     val newLines = hough.findHoughLine(bitmap)
                     if (newLines != null) {
                         components.addAll(newLines)
-
-                        for (component in components) {
-                            if (component !is LineComponent) {
-                                continue
-                            }
-
-                            val lineComponent = component as LineComponent
-                            this.components.add(lineComponent)
-                        }
                     }
 
                     analyzeListener?.onUpdateComponents(components)
@@ -297,6 +288,6 @@ class ImageAnalyzer(
         fun onUpdateLayerImage(layerBitmap: Bitmap)
         fun onUpdateComponents(components: ArrayList<Component>)
         fun onMatchGuide(guide: Guide, newMainGuide: Guide?)
-        fun onUpdateRecommendedImage(imageList: List<String>)
+        fun onUpdateRecommendedImage(imageList: ArrayList<String>)
     }
 }

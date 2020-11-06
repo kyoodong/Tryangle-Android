@@ -507,15 +507,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
 //        Log.i(TAG, "가이드 업데이트")
 //    }
 
-    override fun onUpdateRecommendedImage(imageList: List<String>) {
+    override fun onUpdateRecommendedImage(imageList: ArrayList<String>) {
         Log.i(TAG, "추천 이미지 ${imageList.size} 개 도착!")
         this.recommendedImageUrlList.clear()
         this.recommendedImageUrlList.addAll(imageList)
 
         runOnUiThread {
             val adapter = guideImageListView.getAdapter()
-            adapter.resetImageUrlList()
-            adapter.addImageUrlList(imageList)
+            adapter.setImageUrlList(imageList)
         }
     }
 
@@ -603,8 +602,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                             }
                             objectComponentListDTO.deployMask(maskList)
                             val objectComponentList = objectComponentListDTO.objectComponentList
-
-                            Log.d(TAG, "dd")
 
                             if (objectComponentList.isEmpty())
                                 return
