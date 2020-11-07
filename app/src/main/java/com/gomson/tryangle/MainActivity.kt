@@ -670,7 +670,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                                 // 메인객체 고르기 메시지 노출
                                 binding.guideTextView.text = getString(R.string.select_main_object)
                                 for (component in cameraObjectComponentList) {
-                                    val imageView = createImageView(component, binding.layerLayout)
+                                    val imageView = binding.layerLayout.createImageView(component)
                                     imageView.setOnClickListener {
                                         Log.i(TAG, "메인 객체 선택")
                                         binding.layerLayout.removeAllViewsWithout(imageView)
@@ -685,7 +685,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                             else if (cameraObjectComponentList.size == 1) {
                                 Log.i(TAG, "카메라 오브젝트가 하나뿐임")
                                 val component = cameraObjectComponentList[0]
-                                guidingComponentImageView = createImageView(component, binding.layerLayout)
+                                guidingComponentImageView = binding.layerLayout.createImageView(component)
                                 binding.layerLayout.addView(guidingComponentImageView)
                                 match(cameraObjectComponentList[0])
                             }
@@ -702,26 +702,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                 return false
             }
         }).submit()
-    }
-
-    private fun createImageView(component: ObjectComponent, viewGroup: ViewGroup): ImageView {
-        val imageView = ImageView(baseContext)
-        val layoutWidth = viewGroup.width
-        val layoutHeight = viewGroup.height
-        val width = component.roi.getWidth() * layoutWidth / 640
-        val height = component.roi.getHeight() * layoutHeight / 640
-
-        imageView.x = (component.roi.getCenterPoint().x.toFloat() * layoutWidth / 640) - width / 2
-        imageView.y = (component.roi.getCenterPoint().y.toFloat() * layoutHeight / 640) - height / 2
-        imageView.layoutParams = ViewGroup.LayoutParams(width, height)
-        val bitmap = Bitmap.createBitmap(component.roi.getWidth(), component.roi.getHeight(), Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        val layerImage = component.layer.layeredImage
-            ?: return imageView
-
-        canvas.drawBitmap(layerImage, null, Rect(0, 0, bitmap.width, bitmap.height), Paint())
-        imageView.setImageBitmap(bitmap)
-        return imageView
     }
 
     /**
@@ -751,7 +731,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
         guidingGuide = guideList[0]
         imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
 
-        val imageView = createImageView(guideComponent, binding.layerLayout)
+        val imageView = binding.layerLayout.createImageView(guideComponent)
         binding.layerLayout.addView(imageView)
 
         displayGuide(guidingGuide!!)
@@ -759,6 +739,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
 
     private fun displayGuide(guide: Guide) {
         binding.guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
-        guide.guide()
+        guide.guide(binding.layerLayout)
     }
 }

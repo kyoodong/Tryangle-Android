@@ -1,6 +1,9 @@
 package com.gomson.tryangle.domain.guide;
 
 import com.gomson.tryangle.domain.component.Component;
+import com.gomson.tryangle.view.LayerLayout;
+
+import org.jetbrains.annotations.NotNull;
 
 abstract public class Guide {
 
@@ -38,5 +41,11 @@ abstract public class Guide {
         this.component = component;
     }
 
-    public abstract void guide();
+    public void guide(@NotNull LayerLayout layerLayout) {
+        layerLayout.invalidate();
+    }
+
+    public void clearGuide(@NotNull LayerLayout layerLayout) {
+        layerLayout.invalidate();
+    }
 }
