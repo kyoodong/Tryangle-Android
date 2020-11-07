@@ -455,8 +455,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
         val layoutWidth = binding.layerLayout.width
         val layoutHeight = binding.layerLayout.height
 
-        val oldWidth = guidingComponentImageView.layoutParams.width
-        val oldHeight = guidingComponentImageView.layoutParams.height
         val oldX = guidingComponentImageView.x
         val oldY = guidingComponentImageView.y
 
@@ -753,8 +751,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
         guidingGuide = guideList[0]
         imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
 
-        binding.guideTextView.text = GUIDE_MSG_LIST[guidingGuide!!.guideId]
         val imageView = createImageView(guideComponent, binding.layerLayout)
         binding.layerLayout.addView(imageView)
+
+        displayGuide(guidingGuide!!)
+    }
+
+    private fun displayGuide(guide: Guide) {
+        binding.guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
+        when (guide.)
     }
 }

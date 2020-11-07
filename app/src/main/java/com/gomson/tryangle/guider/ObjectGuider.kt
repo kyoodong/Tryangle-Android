@@ -1,11 +1,10 @@
 package com.gomson.tryangle.guider
 
 import com.gomson.tryangle.domain.Point
-import com.gomson.tryangle.domain.Roi
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
-import com.gomson.tryangle.domain.guide.Guide
-import com.gomson.tryangle.domain.guide.ObjectGuide
+import com.gomson.tryangle.domain.guide.action.GoldenAreaGuide
+import com.gomson.tryangle.domain.guide.action.MiddleAreaGuide
 import kotlin.math.abs
 
 open class ObjectGuider(
@@ -40,36 +39,42 @@ open class ObjectGuider(
                 // 왼쪽에 치우친 경우
                 if (leftDiff > error)
                     guideList.add(
-                        ObjectGuide(
-                            5,
-                            Point(leftSide - component.centerPoint.x, 0)
+                        GoldenAreaGuide(
+                            Pair(
+                                Point(leftSide - 10, 0),
+                                Point(leftSide + 10, imageHeight)
+                            )
                         )
                     )
             } else {
                 // 중앙에 있는 경우
                 if (middleDiff > error)
                     guideList.add(
-                        ObjectGuide(
-                            4,
-                            Point(middleSide - component.centerPoint.x, 0)
+                        MiddleAreaGuide(
+                            Pair(
+                                Point(middleSide - 10, 0),
+                                Point(middleSide + 10, imageHeight)
+                            )
                         )
                     )
             }
         } else {
             if (rightDiff < middleDiff) {
                 if (rightDiff > error)
-                    guideList.add(
-                        ObjectGuide(
-                            5,
-                            Point(rightSide - component.centerPoint.x, 0)
+                    GoldenAreaGuide(
+                        Pair(
+                            Point(rightSide - 10, 0),
+                            Point(rightSide + 10, imageHeight)
                         )
                     )
             } else {
                 if (middleDiff > error)
                     guideList.add(
-                        ObjectGuide(
-                            4,
-                            Point(middleSide - component.centerPoint.x, 0)
+                        MiddleAreaGuide(
+                            Pair(
+                                Point(middleSide - 10, 0),
+                                Point(middleSide + 10, imageHeight)
+                            )
                         )
                     )
             }

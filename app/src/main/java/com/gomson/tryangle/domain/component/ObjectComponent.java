@@ -7,8 +7,6 @@ import com.gomson.tryangle.Layer;
 import com.gomson.tryangle.domain.Point;
 import com.gomson.tryangle.domain.Roi;
 import com.gomson.tryangle.domain.guide.Guide;
-import com.gomson.tryangle.domain.guide.LineGuide;
-import com.gomson.tryangle.domain.guide.ObjectGuide;
 import com.gomson.tryangle.dto.MaskList;
 
 import org.json.JSONArray;
@@ -35,7 +33,7 @@ public class ObjectComponent extends Component {
         mask = new MaskList();
     }
 
-    public ObjectComponent(long id, long componentId, ArrayList<ObjectGuide> guideList, int clazz,
+    public ObjectComponent(long id, long componentId, ArrayList<Guide> guideList, int clazz,
                            Point centerPoint, float area,
                            MaskList mask, String roiStr) {
         super(id, componentId, guideList);
@@ -147,19 +145,6 @@ public class ObjectComponent extends Component {
 
         // 오브젝트는 100점을 추가지급하여 100점부터 시작함
         return objectClassScore + score;
-    }
-
-    @Override
-    public ArrayList<ObjectGuide> getGuideList() {
-        ArrayList<ObjectGuide> guides = new ArrayList<>();
-        for (Guide guide : guideList) {
-            if (guide instanceof ObjectGuide) {
-                guides.add((ObjectGuide) guide);
-            } else {
-                Log.d("dd", "dd");
-            }
-        }
-        return guides;
     }
 
     public void refreshLayer(Bitmap bitmap) {

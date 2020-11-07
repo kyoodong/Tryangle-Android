@@ -35,7 +35,5 @@ class LineGuider: Guider() {
             )
             guideList.add(lineGuide)
         }
-
-        component.guideList = guideList
     }
 }

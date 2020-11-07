@@ -3,8 +3,6 @@ package com.gomson.tryangle.guider
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.pose.PoseClass
-import com.gomson.tryangle.domain.guide.Guide
-import com.gomson.tryangle.domain.guide.ObjectGuide
 import com.gomson.tryangle.domain.component.PersonComponent
 import org.tensorflow.lite.examples.posenet.lib.BodyPart
 import org.tensorflow.lite.examples.posenet.lib.KeyPoint

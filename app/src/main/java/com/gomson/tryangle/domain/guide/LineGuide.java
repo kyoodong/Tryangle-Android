@@ -21,4 +21,9 @@ public class LineGuide extends Guide {
     public Point getEndPoint() {
         return endPoint;
     }
+
+    @Override
+    public void act() {
+
+    }
 }
