@@ -138,6 +138,8 @@ class ImageAnalyzer(
         } else if (System.currentTimeMillis() - failToDetectObjectStartTime < WAIT_SEGMENT_TIME) {
             needToRequestSegmentation = true
             failToDetectObjectStartTime = 0
+            val canvas = Canvas(lastCapturedBitmap)
+            canvas.drawColor(Color.rgb(255, 255, 255))
             Log.d(TAG, "카메라에 큰 변화로 인한 세그멘테이션 재요청")
         }
     }
@@ -317,11 +319,15 @@ class ImageAnalyzer(
                         analyzeListener?.onUpdateComponents(components)
                     }
                 } else {
+                    val canvas = Canvas(lastCapturedBitmap)
+                    canvas.drawColor(Color.rgb(255, 255, 255))
                     Log.i(TAG, "image Segmentation 서버 에러 ${response.code()}")
                 }
             }
 
             override fun onFailure(call: Call<GuideImageListDTO>, t: Throwable) {
+                val canvas = Canvas(lastCapturedBitmap)
+                canvas.drawColor(Color.rgb(255, 255, 255))
                 Log.i(TAG, "image Segmentation 서버 에러 ${t.message}")
                 t.printStackTrace()
             }

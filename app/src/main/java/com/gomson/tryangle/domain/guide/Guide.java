@@ -41,11 +41,11 @@ abstract public class Guide {
         this.component = component;
     }
 
-    public void guide(@NotNull LayerLayout layerLayout) {
+    protected void guide(@NotNull LayerLayout layerLayout) {
         layerLayout.invalidate();
     }
 
-    public void clearGuide(@NotNull LayerLayout layerLayout) {
+    protected void clearGuide(@NotNull LayerLayout layerLayout) {
         layerLayout.invalidate();
     }
 }

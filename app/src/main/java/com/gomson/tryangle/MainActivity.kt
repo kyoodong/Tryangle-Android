@@ -35,6 +35,7 @@ import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
+import com.gomson.tryangle.domain.guide.LayerLayoutGuideManager
 import com.gomson.tryangle.dto.MaskList
 import com.gomson.tryangle.dto.ObjectComponentListDTO
 import com.gomson.tryangle.guider.GuideImageObjectGuider
@@ -132,6 +133,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
     private var guidingComponent: Component? = null
     private var targetComponent: Component? = null
     private var guidingGuide: Guide? = null
+    private lateinit var layerLayoutGuideManager: LayerLayoutGuideManager
 
     init {
         System.loadLibrary("opencv_java4")
@@ -294,6 +296,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
         }
 
         guideImageListView.getAdapter().setOnClickGuideImageListener(this)
+        layerLayoutGuideManager = LayerLayoutGuideManager(binding.layerLayout)
     }
 
     override fun onResume() {
@@ -739,6 +742,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
 
     private fun displayGuide(guide: Guide) {
         binding.guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
-        guide.guide(binding.layerLayout)
+        layerLayoutGuideManager.guide(guide)
     }
 }

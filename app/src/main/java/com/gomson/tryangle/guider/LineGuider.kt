@@ -20,6 +20,8 @@ class LineGuider: Guider() {
         if (diff.y in lowerThreshold until upperThreshold) {
             val lineGuide = LineGuide(
                 0,
+                "수평선을 맞추어 찍어 보세요",
+                component,
                 component.start,
                 component.end
             )
@@ -30,6 +32,8 @@ class LineGuider: Guider() {
         if (diff.x in lowerThreshold until upperThreshold) {
             val lineGuide = LineGuide(
                 1,
+                "수직선을 맞추어 찍어 보세요",
+                component,
                 component.start,
                 component.end
             )
