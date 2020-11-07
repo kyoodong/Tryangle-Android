@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
+import com.gomson.tryangle.domain.Area
 import com.gomson.tryangle.domain.Line
 import com.gomson.tryangle.domain.component.ObjectComponent
 
@@ -18,6 +19,7 @@ class LayerLayout @JvmOverloads constructor(
     :FrameLayout(context, attrs, defStyleAttr) {
 
     val lineList = ArrayList<Line>()
+    val areaList = ArrayList<Area>()
     val paint = Paint()
 
 
@@ -56,6 +58,16 @@ class LayerLayout @JvmOverloads constructor(
             paint.color = line.color
             canvas.drawLine(line.startPoint.x.toFloat(), line.startPoint.y.toFloat(),
                 line.endPoint.x.toFloat(), line.endPoint.y.toFloat(), paint)
+        }
+
+        for (area in areaList) {
+            paint.color = area.color
+            canvas.drawRect(
+                area.leftTop.x.toFloat(),
+                area.leftTop.y.toFloat(),
+                area.rightBottom.x.toFloat(),
+                area.rightBottom.y.toFloat(),
+                paint)
         }
     }
 }
