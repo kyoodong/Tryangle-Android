@@ -43,7 +43,8 @@ open class ObjectGuider(
                             Pair(
                                 Point(leftSide - 10, 0),
                                 Point(leftSide + 10, imageHeight)
-                            )
+                            ),
+                            component
                         )
                     )
             } else {
@@ -54,7 +55,8 @@ open class ObjectGuider(
                             Pair(
                                 Point(middleSide - 10, 0),
                                 Point(middleSide + 10, imageHeight)
-                            )
+                            ),
+                            component
                         )
                     )
             }
@@ -65,7 +67,7 @@ open class ObjectGuider(
                         Pair(
                             Point(rightSide - 10, 0),
                             Point(rightSide + 10, imageHeight)
-                        )
+                        ), component
                     )
             } else {
                 if (middleDiff > error)
@@ -74,7 +76,7 @@ open class ObjectGuider(
                             Pair(
                                 Point(middleSide - 10, 0),
                                 Point(middleSide + 10, imageHeight)
-                            )
+                            ), component
                         )
                     )
             }

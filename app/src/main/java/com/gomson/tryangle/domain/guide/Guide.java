@@ -1,13 +1,17 @@
 package com.gomson.tryangle.domain.guide;
 
+import com.gomson.tryangle.domain.component.Component;
+
 abstract public class Guide {
 
+    private Component component;
     private int guideId;
     private String message;
 
-    public Guide(int guideId, String message) {
+    public Guide(int guideId, String message, Component component) {
         this.guideId = guideId;
         this.message = message;
+        this.component = component;
     }
 
     public int getGuideId() {
@@ -26,5 +30,13 @@ abstract public class Guide {
         this.message = message;
     }
 
-    public abstract void act();
+    public Component getComponent() {
+        return component;
+    }
+
+    public void setComponent(Component component) {
+        this.component = component;
+    }
+
+    public abstract void guide();
 }

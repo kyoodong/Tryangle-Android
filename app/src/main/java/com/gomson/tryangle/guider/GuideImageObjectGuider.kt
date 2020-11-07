@@ -28,7 +28,7 @@ open class GuideImageObjectGuider(
             val iou = getIou(goldenAreaList[i], component.mask)
             if (iou > 0.7) {
                 // i번 황금영역에 배치하라는 가이드
-                guideList.add(GoldenAreaGuide(goldenAreaList[i]))
+                guideList.add(GoldenAreaGuide(goldenAreaList[i], component))
             }
         }
 
@@ -44,7 +44,7 @@ open class GuideImageObjectGuider(
                     imageHeight
                 )
             )
-            guideList.add(MiddleAreaGuide(middleArea))
+            guideList.add(MiddleAreaGuide(middleArea, component))
         }
     }
 

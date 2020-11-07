@@ -84,7 +84,7 @@ class PoseGuider(
                     !component.person.has(BodyPart.RIGHT_ANKLE)) {
                     val personHeight = component.roi.bottom - component.roi.top
                     val diff = -personHeight * 10 / 170
-                    guideList.add(CutAnkleGuide(diff))
+                    guideList.add(CutAnkleGuide(diff, component))
                 }
 
                 // 엉덩이는 있지만 무릎에서 잘린 경우
@@ -95,14 +95,14 @@ class PoseGuider(
                         !component.person.has(BodyPart.RIGHT_ANKLE)) {
                     val personHeight = component.roi.getHeight()
                     val diff = personHeight * 20 / 170
-                    guideList.add(CutKneeGuide(diff))
+                    guideList.add(CutKneeGuide(diff, component))
                 }
 
                 // 머리만 덜렁 있는 사진
                 if (component.person.hasHead() && !component.person.hasUpperBody() && !component.person.hasLowerBody()) {
                     val personHeight = component.roi.getHeight()
                     val diff = -personHeight * 20 / 170
-                    guideList.add(CutNeckGuide(diff))
+                    guideList.add(CutNeckGuide(diff, component))
                 }
             }
 
@@ -110,7 +110,7 @@ class PoseGuider(
             if (component.person.hasFullBody() &&
                 imageHeight > component.roi.bottom + FOOT_LOWER_THRESHOLD) {
                 val diff = imageHeight - component.roi.bottom + FOOT_LOWER_THRESHOLD
-                guideList.add(BottomToeGuide(diff))
+                guideList.add(BottomToeGuide(diff, component))
             }
 
             // 사람이 사진의 윗쪽에 위치한 경우
@@ -118,7 +118,7 @@ class PoseGuider(
                 if (component.person.hasHead()) {
                     val top = imageHeight / 3
                     val diff = top - component.roi.top
-                    guideList.add(FreeSpaceAboveHeadGuide(diff))
+                    guideList.add(FreeSpaceAboveHeadGuide(diff, component))
                 }
             }
         }

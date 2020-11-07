@@ -23,7 +23,7 @@ public class LineGuide extends Guide {
     }
 
     @Override
-    public void act() {
+    public void guide() {
 
     }
 }

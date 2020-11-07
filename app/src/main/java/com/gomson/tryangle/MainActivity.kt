@@ -759,6 +759,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
 
     private fun displayGuide(guide: Guide) {
         binding.guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
-        when (guide.)
+        guide.guide()
     }
 }
