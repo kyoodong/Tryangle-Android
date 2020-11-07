@@ -465,9 +465,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
         val newX = leftTopPoint.x.toFloat() * layoutWidth / imageAnalyzer.width
         val newY = leftTopPoint.y.toFloat() * layoutHeight / imageAnalyzer.height
 
-        for (i in 1 .. 10) {
+        for (i in 1 .. 20) {
             handler.postDelayed(Runnable {
-                val newWeight = i / 10f
+                val newWeight = i / 20f
                 val oldWeight = 1 - newWeight
 
                 val resultX = oldX * oldWeight + newX * newWeight
@@ -483,11 +483,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
             guidingComponentImageView.layoutParams.width = newWidth
             guidingComponentImageView.layoutParams.height = newHeight
         }
-
-//        guidingComponentImageView.layoutParams.width = newWidth
-//        guidingComponentImageView.layoutParams.height = newHeight
-//        guidingComponentImageView.x = newX
-//        guidingComponentImageView.y = newY
     }
 
     override fun onUpdateComponents(components: ArrayList<Component>) {
