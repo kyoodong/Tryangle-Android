@@ -1,6 +1,5 @@
 package com.gomson.tryangle
 
-import android.annotation.TargetApi
 import android.content.ContentValues
 import android.content.Context
 import android.media.MediaScannerConnection
@@ -16,34 +15,37 @@ import java.text.SimpleDateFormat
 
 class PhotoDownloadManager(val context: Context, val callback: PhotoSaveCallback) {
 
-    val outputDirectory = setOutputDirectory()
-    private val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
+    val outputDirectory = getDirectory(context)
+    companion object{
+        private val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
 
+        /**
+         * 사진을 저장할 위치를 리턴하는 함수
+         */
+        fun getDirectory(context: Context): File {
+            val mediaDir = File(
+                Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_PICTURES
+                ), context.resources.getString(R.string.app_name)
+            )
+            if (!mediaDir.exists()) {
+                mediaDir.mkdir()
+            }
 
-    /**
-     * 사진을 저장할 위치를 리턴하는 함수
-     */
-    private fun setOutputDirectory(): File {
-        val mediaDir = File(
-            Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES
-            ), context.resources.getString(R.string.app_name)
-        )
-        if (!mediaDir.exists()) {
-            mediaDir.mkdir()
+            return if (mediaDir != null && mediaDir.exists())
+                mediaDir else context.filesDir
         }
 
-        return if (mediaDir != null && mediaDir.exists())
-            mediaDir else context.filesDir
+        /**
+         * 파일 이름 생성
+         */
+        fun getFileName(): String {
+            return SimpleDateFormat(FILENAME_FORMAT)
+                .format(System.currentTimeMillis()) + ".jpg"
+        }
+
     }
 
-    /**
-     * 파일 이름 생성
-     */
-    fun getFileName(): String {
-        return SimpleDateFormat(FILENAME_FORMAT)
-            .format(System.currentTimeMillis()) + ".jpg"
-    }
 
     fun saveFileToAlbum(uri: Uri) {
         var savedUri:Uri? = null

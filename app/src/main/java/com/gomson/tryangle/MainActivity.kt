@@ -324,6 +324,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
             baseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
             isOpenCvLoaded = true;
         }
+
     }
 
     /**
@@ -341,17 +342,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
      */
     private fun getOutputDirectory(): File {
 
-        val mediaDir = File(
-            Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES
-            ), resources.getString(R.string.app_name))
+        val mediaDir = PhotoDownloadManager.getDirectory(this)
         if(!mediaDir.exists()){
             mediaDir.mkdir()
         }
-
-//        val mediaDir = externalMediaDirs.firstOrNull()?.let {
-//            File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
-//        }
         return if (mediaDir != null && mediaDir.exists())
             mediaDir else filesDir
     }
