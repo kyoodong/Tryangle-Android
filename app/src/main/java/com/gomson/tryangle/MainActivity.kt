@@ -1,17 +1,19 @@
 package com.gomson.tryangle
 
 import android.Manifest
+import android.app.DownloadManager
+import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.graphics.*
 import android.media.MediaScannerConnection
 import android.net.Uri
-import android.os.Bundle
-import android.os.CountDownTimer
-import android.os.Environment
-import android.os.Handler
+import android.os.*
+import android.provider.MediaStore
 import android.util.Log
 import android.util.Rational
+import android.util.Size
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -26,6 +28,7 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
+import com.bumptech.glide.Glide
 import com.gomson.tryangle.album.AlbumActivity
 import com.gomson.tryangle.databinding.ActivityMainBinding
 import com.gomson.tryangle.domain.component.Component
@@ -38,6 +41,7 @@ import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
 import java.io.File
+import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -111,6 +115,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     var isFlash = false
     var isGrid = false
     var currentTimerModeIndex = 0
+    private var recentImage : Uri? = null
     private lateinit var binding: ActivityMainBinding
 //    val currentTimer ;
 
@@ -291,6 +296,12 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
             startActivity(intent)
         }
 
+        recentImage = getRecentImage()
+        Glide.with(this)
+            .load(recentImage)
+            .dontAnimate()
+            .into(binding.albumBtn)
+
         setAspectRatioView(currentRatio)
         bindCameraConfiguration()
     }
@@ -409,8 +420,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
         val photoFile = File(
             outputDirectory,
-            SimpleDateFormat(FILENAME_FORMAT)
-            .format(System.currentTimeMillis()) + ".jpg"
+            PhotoDownloadManager.getFileName()
         )
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
@@ -538,5 +548,30 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
                 takePhoto()
             }
         }.start()
+    }
+
+    private fun getRecentImage() : Uri?{
+        val uriExternal: Uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val cursor: Cursor?
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Video.Media.DISPLAY_NAME,
+            MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME,
+            MediaStore.Video.Media.DATE_TAKEN
+        )
+        var selectionClause = null
+
+        /* 최신순 */
+        val sortOrder = MediaStore.Images.ImageColumns._ID + " DESC "
+        cursor = contentResolver.query(uriExternal, projection, selectionClause, null, sortOrder)
+
+        var result :Uri? = null
+        if (cursor?.moveToFirst()!!) {
+            val thumbColumn: Int = cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns._ID)
+            val thumpId: Int = cursor.getInt(thumbColumn)
+            result = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, thumpId.toLong())
+        }
+        cursor.close()
+        return result
     }
 }
