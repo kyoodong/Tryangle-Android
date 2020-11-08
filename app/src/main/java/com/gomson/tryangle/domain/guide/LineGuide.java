@@ -1,6 +1,7 @@
 package com.gomson.tryangle.domain.guide;
 
 import com.gomson.tryangle.domain.Point;
+import com.gomson.tryangle.domain.Roi;
 import com.gomson.tryangle.domain.component.Component;
 import com.gomson.tryangle.view.LayerLayout;
 
@@ -35,5 +36,10 @@ public class LineGuide extends Guide {
     @Override
     public void clearGuide(@NotNull LayerLayout layerLayout) {
         super.clearGuide(layerLayout);
+    }
+
+    @Override
+    public boolean isMatch(@NotNull Roi roi) {
+        return false;
     }
 }

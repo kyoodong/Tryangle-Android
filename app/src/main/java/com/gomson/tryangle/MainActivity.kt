@@ -744,4 +744,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
         binding.guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
         layerLayoutGuideManager.guide(guide)
     }
+
+    override fun onMatchComponent() {
+        Log.i(TAG, "컴포넌트 매칭 성공")
+    }
 }

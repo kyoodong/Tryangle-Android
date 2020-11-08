@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.gomson.tryangle.domain.Point
+import com.gomson.tryangle.domain.Roi
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ComponentList
 import com.gomson.tryangle.domain.component.ObjectComponent
@@ -170,10 +171,16 @@ class ImageAnalyzer(
                 val leftTop = Point(minX, minY)
 
                 // 가이드 내에서 도달해야하는 목표지점
-                val targetPoint = targetComponent.centerPoint
-                if (targetPoint.isClose(center)) {
+                if (guidingGuide!!.isMatch(Roi(minX, maxX, minY, maxY))) {
                     Log.i(TAG, "가이드 목표 도달!")
                     analyzeListener?.onMatchGuide()
+                }
+
+                // 객체간에 충분히 가까워 진 경우
+                val targetPoint = targetComponent.centerPoint
+                val curRoi = Roi(minX, maxX, minY, maxY)
+                if (targetPoint.isClose(center) && targetComponent.roi.getIou(curRoi) > 0.9) {
+                    analyzeListener?.onMatchComponent()
                 }
 
                 analyzeListener?.onUpdateGuidingComponentPosition(width, height, leftTop)
@@ -355,5 +362,6 @@ class ImageAnalyzer(
         fun onMatchGuide()
         fun onUpdateRecommendedImage(imageList: ArrayList<String>)
         fun onUpdateGuidingComponentPosition(width: Int, height: Int, leftTopPoint: Point)
+        fun onMatchComponent()
     }
 }

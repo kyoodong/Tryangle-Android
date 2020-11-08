@@ -48,12 +48,13 @@ class LayerLayout @JvmOverloads constructor(
         return imageView
     }
 
-    override fun onDraw(canvas: Canvas?) {
-        super.onDraw(canvas)
+    override fun dispatchDraw(canvas: Canvas?) {
+        super.dispatchDraw(canvas)
 
         val canvas = canvas
             ?: return
 
+        paint.strokeWidth = 6f
         for (line in lineList) {
             paint.color = line.color
             canvas.drawLine(line.startPoint.x.toFloat(), line.startPoint.y.toFloat(),

@@ -1,10 +1,12 @@
 package com.gomson.tryangle.guider
 
+import com.gomson.tryangle.domain.Line
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
+import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.action.GoldenAreaGuide
-import com.gomson.tryangle.domain.guide.action.MiddleAreaGuide
+import com.gomson.tryangle.domain.guide.action.MiddleObjectLineGuide
 import com.gomson.tryangle.dto.MaskList
 import kotlin.math.abs
 
@@ -34,17 +36,17 @@ open class GuideImageObjectGuider(
 
         // 중앙에 잘 위치한 경우
         if (middleDiff <= error) {
-            val middleArea = Pair<Point, Point>(
+            val middleLine = Line(
                 Point(
-                    imageWidth / 3,
+                    imageWidth / 2,
                     0
                 ),
                 Point(
-                    imageWidth / 3 * 2,
+                    imageWidth / 2,
                     imageHeight
                 )
             )
-            guideList.add(MiddleAreaGuide(middleArea, component))
+            guideList.add(MiddleObjectLineGuide(middleLine, component))
         }
     }
 

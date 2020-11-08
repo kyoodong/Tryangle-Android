@@ -1,6 +1,8 @@
 package com.gomson.tryangle.domain
 
 import android.graphics.Rect
+import kotlin.math.max
+import kotlin.math.min
 
 data class Roi(
     val left: Int,
@@ -34,5 +36,33 @@ data class Roi(
 
     fun getCenterPoint(): Point {
         return Point(getWidth() / 2 + left, getHeight() / 2 + top)
+    }
+
+    fun getIou(roi: Roi): Float {
+        var lft = this
+        var rht = roi
+
+        if (rht.left < lft.left) {
+            val tmp = lft
+            lft = rht
+            rht = tmp
+        }
+
+        if (lft.right <= rht.left)
+            return 0f
+
+        val minX = min(lft.right, rht.left)
+        val maxX = max(lft.right, rht.left)
+
+        if (lft.bottom <= rht.top)
+            return 0f
+
+        val minY = min(lft.bottom, rht.top)
+        val maxY = max(lft.bottom, rht.top)
+        val intersectWidth = maxX - minX
+        val intersectHeight = maxY - minY
+        val intersectArea = intersectWidth * intersectHeight
+        val totalArea = getWidth() * getHeight() + roi.getWidth() * roi.getHeight() - intersectArea
+        return intersectArea / totalArea.toFloat()
     }
 }

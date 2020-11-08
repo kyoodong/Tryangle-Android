@@ -1,11 +1,16 @@
 package com.gomson.tryangle.domain.guide;
 
+import android.graphics.Color;
+
+import com.gomson.tryangle.domain.Roi;
 import com.gomson.tryangle.domain.component.Component;
 import com.gomson.tryangle.view.LayerLayout;
 
 import org.jetbrains.annotations.NotNull;
 
 abstract public class Guide {
+
+    public static final int GREEN = Color.argb(50, 50, 200, 50);
 
     private Component component;
     private int guideId;
@@ -48,4 +53,6 @@ abstract public class Guide {
     protected void clearGuide(@NotNull LayerLayout layerLayout) {
         layerLayout.invalidate();
     }
+
+    public abstract boolean isMatch(@NotNull Roi roi);
 }
