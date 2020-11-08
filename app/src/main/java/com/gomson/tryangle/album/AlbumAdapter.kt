@@ -46,6 +46,7 @@ class AlbumAdapter(private val context: Context) :
         fun bind(item: DeviceAlbum) {
             Glide.with(itemView)
                 .load(item.contentUri)
+                .dontAnimate()
                 .into(imageView)
 
             itemView.setOnClickListener {
