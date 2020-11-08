@@ -8,6 +8,7 @@ import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.os.Environment
 import android.os.Handler
 import android.util.Log
 import android.util.Rational
@@ -24,6 +25,9 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.databinding.DataBindingUtil
+import com.gomson.tryangle.album.AlbumActivity
+import com.gomson.tryangle.databinding.ActivityMainBinding
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.LineGuide
@@ -38,19 +42,10 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import androidx.databinding.DataBindingUtil
-import com.gomson.tryangle.album.AlbumActivity
-import com.gomson.tryangle.databinding.ActivityMainBinding
-import org.opencv.core.Mat
-import org.opencv.core.MatOfDMatch
-import org.opencv.core.MatOfKeyPoint
-import org.opencv.features2d.FastFeatureDetector
-import org.opencv.features2d.Feature2D
-import org.opencv.features2d.FlannBasedMatcher
 
 enum class RatioMode constructor(val width: Int, val height: Int) {
-    RATIO_3_4(3, 4),
     RATIO_1_1(1, 1),
+    RATIO_3_4(3, 4),
     RATIO_9_16(9, 16),
 //    RATIO_FULL(0,0)
 }
@@ -112,7 +107,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     lateinit var popupMoreView: PopupWindow
     lateinit var popupRatioView: PopupWindow
 
-    var currentRatio = RatioMode.RATIO_3_4
+    var currentRatio = RatioMode.RATIO_1_1
     var isFlash = false
     var isGrid = false
     var currentTimerModeIndex = 0
@@ -137,32 +132,47 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
                 when (view.id) {
                     R.id.ratio3_4 -> {
                         clickRatio = RatioMode.RATIO_3_4
-                        topToTop = ConstraintSet.PARENT_ID
-                        height = 0
-                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio3_4)
-                        binding.previewLayout.requestLayout()
                     }
                     R.id.ratio1_1 -> {
                         clickRatio = RatioMode.RATIO_1_1
-                        height = binding.previewLayout.width
-                        topToTop = binding.topLayout.id
-                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio1_1)
-                        binding.previewLayout.requestLayout()
                     }
                     R.id.ratio9_16 -> {
                         clickRatio = RatioMode.RATIO_9_16
-                        height = ViewGroup.LayoutParams.MATCH_PARENT
-                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio9_16)
-                        binding.previewLayout.requestLayout()
                     }
                 }
             }
         if (clickRatio != currentRatio) {
+            setAspectRatioView(clickRatio)
             currentRatio = clickRatio
             imageCapture = getImageCapture(clickRatio.height, clickRatio.width)
             bindCameraConfiguration()
         }
         popupRatioView.dismiss()
+    }
+
+    /* 비율에 따른 뷰 설정*/
+    private fun setAspectRatioView(ratio:RatioMode){
+        binding.previewLayout.post(Runnable {
+            (binding.previewLayout.layoutParams as ConstraintLayout.LayoutParams).apply {
+                when (ratio) {
+                    RatioMode.RATIO_1_1 -> {
+                        height = binding.previewLayout.width
+                        topToTop = binding.topLayout.id
+                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio1_1)
+                    }
+                    RatioMode.RATIO_3_4 -> {
+                        topToTop = ConstraintSet.PARENT_ID
+                        height = 0
+                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio3_4)
+                    }
+                    RatioMode.RATIO_9_16 -> {
+                        height = ViewGroup.LayoutParams.MATCH_PARENT
+                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio9_16)
+                    }
+                }
+                binding.previewLayout.postInvalidate()
+            }
+        })
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -280,6 +290,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
             val intent = Intent(this, AlbumActivity::class.java)
             startActivity(intent)
         }
+
+        setAspectRatioView(currentRatio)
+        bindCameraConfiguration()
     }
 
     override fun onResume() {
@@ -316,9 +329,18 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
      * 사진을 저장할 위치를 리턴하는 함수
      */
     private fun getOutputDirectory(): File {
-        val mediaDir = externalMediaDirs.firstOrNull()?.let {
-            File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
+
+        val mediaDir = File(
+            Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES
+            ), resources.getString(R.string.app_name))
+        if(!mediaDir.exists()){
+            mediaDir.mkdir()
         }
+
+//        val mediaDir = externalMediaDirs.firstOrNull()?.let {
+//            File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
+//        }
         return if (mediaDir != null && mediaDir.exists())
             mediaDir else filesDir
     }
@@ -327,7 +349,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     private fun getImageCapture(heightRatio: Int, widthRatio: Int): ImageCapture {
         val imageCapture = ImageCapture.Builder()
             .apply {
-                setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+//                todo
+//                setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+                setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 setTargetAspectRatioCustom(Rational(widthRatio, heightRatio))
             }
 
@@ -357,7 +381,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
         // 기본 카메라 비율을 16:9로 설정
         if (imageCapture == null)
-            imageCapture = getImageCapture(16, 9)
+            imageCapture = getImageCapture(currentRatio.height, currentRatio.width)
 
         // 이미지 분석 모듈
         if (imageAnalysis == null) {
@@ -366,7 +390,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
                 .build()
 
             imageAnalyzer = ImageAnalyzer(baseContext, this)
-            imageAnalysis!!.setAnalyzer(cameraExecutor, imageAnalyzer)
+//            imageAnalysis!!.setAnalyzer(cameraExecutor, imageAnalyzer)
         }
 
         try {
@@ -386,7 +410,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         val photoFile = File(
             outputDirectory,
             SimpleDateFormat(FILENAME_FORMAT)
-                .format(System.currentTimeMillis()) + ".jpg"
+            .format(System.currentTimeMillis()) + ".jpg"
         )
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
