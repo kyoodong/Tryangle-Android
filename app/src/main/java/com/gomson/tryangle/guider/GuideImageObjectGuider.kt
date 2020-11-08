@@ -20,7 +20,7 @@ open class GuideImageObjectGuider(
         val imageHeight = this.imageHeight ?: return
         val imageWidth = this.imageWidth ?: return
         val middleSide = imageWidth / 2
-        val error = imageWidth / 2
+        val error = 10
 
         val guideList = component.guideList
         guideList.clear()
@@ -35,7 +35,7 @@ open class GuideImageObjectGuider(
         }
 
         // 중앙에 잘 위치한 경우
-        if (middleDiff <= error) {
+        if (guideList.isEmpty() && middleDiff <= error) {
             val middleLine = Line(
                 Point(
                     imageWidth / 2,
