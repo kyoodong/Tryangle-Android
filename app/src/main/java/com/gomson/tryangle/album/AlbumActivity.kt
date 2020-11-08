@@ -88,11 +88,11 @@ class AlbumActivity : AppCompatActivity() {
         cursor = contentResolver.query(uriExternal, projection, selectionClause, null, sortOrder)
 
         cursor?.use {
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val dateTakenColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATE_TAKEN)
+                cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN)
             val displayNameColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
+                cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
             columnIndexID = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val bucketColumn: Int = cursor.getColumnIndex(
                 MediaStore.Images.Media.BUCKET_DISPLAY_NAME
