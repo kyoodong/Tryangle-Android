@@ -1,10 +1,9 @@
 package com.gomson.tryangle.guider
 
-import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.pose.PoseClass
 import com.gomson.tryangle.domain.component.PersonComponent
-import com.gomson.tryangle.domain.guide.action.*
+import com.gomson.tryangle.domain.guide.`object`.*
 import org.tensorflow.lite.examples.posenet.lib.BodyPart
 import org.tensorflow.lite.examples.posenet.lib.KeyPoint
 import org.tensorflow.lite.examples.posenet.lib.Person
@@ -61,7 +60,7 @@ class PoseGuider(
     private var imageHeight: Int
 ) : ObjectGuider(imageWidth, imageHeight) {
 
-    override fun guide(component: Component) {
+    override fun initGuideList(component: Component) {
         val component = component as PersonComponent
         val imageHeight = this.imageHeight ?: return
         val imageWidth = this.imageWidth ?: return

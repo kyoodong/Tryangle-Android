@@ -5,8 +5,8 @@ import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
-import com.gomson.tryangle.domain.guide.action.GoldenAreaGuide
-import com.gomson.tryangle.domain.guide.action.MiddleObjectLineGuide
+import com.gomson.tryangle.domain.guide.`object`.GoldenAreaGuide
+import com.gomson.tryangle.domain.guide.`object`.MiddleObjectLineGuide
 import kotlin.math.abs
 
 open class ObjectGuider(
@@ -14,7 +14,7 @@ open class ObjectGuider(
     private var imageHeight: Int
 ): Guider() {
 
-    override fun guide(component: Component) {
+    override fun initGuideList(component: Component) {
         val component = component as ObjectComponent
         val imageHeight = this.imageHeight ?: return
         val imageWidth = this.imageWidth ?: return

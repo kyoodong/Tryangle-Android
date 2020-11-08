@@ -5,5 +5,5 @@ import com.gomson.tryangle.domain.guide.Guide
 
 abstract class Guider {
 
-    abstract fun guide(component: Component)
+    abstract fun initGuideList(component: Component)
 }

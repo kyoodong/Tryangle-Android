@@ -1,10 +1,8 @@
-package com.gomson.tryangle.domain.guide.action
+package com.gomson.tryangle.domain.guide.`object`
 
-import android.graphics.Color
 import com.gomson.tryangle.domain.Area
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.Roi
-import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.view.LayerLayout
@@ -14,7 +12,7 @@ open class AreaGuide(
     message: String,
     val area: Pair<Point, Point>,
     component: ObjectComponent
-): Guide(guidId, message, component) {
+): ObjectGuide(guidId, message, component) {
 
     private var guideArea: Area? = null
 

@@ -1,4 +1,4 @@
-package com.gomson.tryangle.domain.guide.action
+package com.gomson.tryangle.domain.guide.`object`
 
 import com.gomson.tryangle.domain.Line
 import com.gomson.tryangle.domain.Roi
@@ -11,7 +11,7 @@ open class VerticalObjectLineGuide(
     message: String,
     val line: Line,
     component: ObjectComponent
-): Guide(guidId, message, component) {
+): ObjectGuide(guidId, message, component) {
 
     private var guideLine: Line? = null
 

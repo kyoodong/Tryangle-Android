@@ -33,6 +33,7 @@ import com.gomson.tryangle.album.AlbumActivity
 import com.gomson.tryangle.databinding.ActivityMainBinding
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
+import com.gomson.tryangle.domain.component.ComponentList
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.LayerLayoutGuideManager
@@ -102,7 +103,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
     private lateinit var guideBitmap: Bitmap
     private var guideClusters: Array<ArrayList<Guide>>? = null
 
-    private var componentList = ArrayList<Component>()
+    private var componentList = ComponentList()
     private var guideComponentList = ArrayList<ObjectComponent>()
     private var mainGuide: Guide? = null
     private lateinit var imageAnalyzer: ImageAnalyzer
@@ -553,21 +554,23 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
 
     override fun onMatchGuide() {
         Log.i(TAG, "가이드에 맞음!")
-//        guiding
-//        if (guidingGuide.targetComponent is ObjectComponent) {
-//            val component = guidingGuide.targetComponent as ObjectComponent
-//            val layoutParams = thumbUp.layoutParams as ConstraintLayout.LayoutParams
-//            layoutParams.leftMargin = component.centerPoint.x
-//            layoutParams.topMargin = component.centerPoint.y
-//            thumbUp.visibility = View.VISIBLE
-//
-//            // 좋아요 아이콘 잠깐 보여주기
-//            AnimatorInflater.loadAnimator(baseContext, R.animator.thumb_up)
-//                .apply {
-//                    setTarget(thumbUp)
-//                    start()
-//                }
-//        }
+        val component = guidingComponent
+            ?: return
+
+        val guideList = component.guideList
+            ?: return
+
+        guideList.remove(guidingGuide)
+        if (guideList.isEmpty()) {
+            componentList.remove(component)
+            guideComponentList.remove(targetComponent)
+            runOnUiThread {
+                showCameraObject(componentList.getObjectComponentList())
+            }
+        } else {
+            guidingGuide = guidingComponent?.guideList?.get(0)
+            imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
+        }
     }
 
     fun countDownTimer(timerMode: TimerMode) {
@@ -654,44 +657,13 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                             layerLayout.removeAllViewsInLayout()
 
                             // 카메라 오브젝트
-                            val cameraObjectComponentList = ArrayList<ObjectComponent>()
-                            for (component in componentList) {
-                                if (component is ObjectComponent) {
-                                    cameraObjectComponentList.add(component)
-                                }
-                            }
+                            val cameraObjectComponentList = componentList.getObjectComponentList()
 
                             endTime = System.currentTimeMillis()
                             Log.d(TAG, "컴포넌트 준비 타임 ${endTime - startTime}")
                             startTime = System.currentTimeMillis()
 
-                            // 카메라 이미지에 여러 객체가 있을 때 가이드를 받을 객체를 선택하도록 함
-                            if (cameraObjectComponentList.size > 1) {
-                                Log.i(TAG, "카메라 오브젝트가 여러개라 선택해야함")
-                                guideTextView.text = getString(R.string.select_main_object)
-
-                                // 메인객체 고르기 메시지 노출
-                                binding.guideTextView.text = getString(R.string.select_main_object)
-                                for (component in cameraObjectComponentList) {
-                                    val imageView = binding.layerLayout.createImageView(component)
-                                    imageView.setOnClickListener {
-                                        Log.i(TAG, "메인 객체 선택")
-                                        binding.layerLayout.removeAllViewsWithout(imageView)
-                                        guidingComponentImageView = imageView
-                                        match(component)
-                                    }
-                                    binding.layerLayout.addView(imageView)
-                                }
-                            }
-                            // 카메라 오브젝트 컴포넌트가 하나 뿐인 경우
-                            // 가이드 할 객체가 하나 뿐이라 간단함
-                            else if (cameraObjectComponentList.size == 1) {
-                                Log.i(TAG, "카메라 오브젝트가 하나뿐임")
-                                val component = cameraObjectComponentList[0]
-                                guidingComponentImageView = binding.layerLayout.createImageView(component)
-                                binding.layerLayout.addView(guidingComponentImageView)
-                                match(cameraObjectComponentList[0])
-                            }
+                            showCameraObject(cameraObjectComponentList)
                         } else {
                             Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패 ${response.code()}")
                         }
@@ -707,12 +679,50 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
         }).submit()
     }
 
+    private fun showCameraObject(cameraObjectComponentList: ArrayList<ObjectComponent>) {
+        // 카메라 이미지에 여러 객체가 있을 때 가이드를 받을 객체를 선택하도록 함
+        if (cameraObjectComponentList.size > 1) {
+            Log.i(TAG, "카메라 오브젝트가 여러개라 선택해야함")
+            guideTextView.text = getString(R.string.select_main_object)
+
+            // 메인객체 고르기 메시지 노출
+            binding.guideTextView.text = getString(R.string.select_main_object)
+            for (component in cameraObjectComponentList) {
+                val imageView = binding.layerLayout.createImageView(component)
+                imageView.setOnClickListener {
+                    Log.i(TAG, "메인 객체 선택")
+                    binding.layerLayout.removeAllViewsWithout(imageView)
+                    guidingComponentImageView = imageView
+                    match(component)
+                }
+                binding.layerLayout.addView(imageView)
+            }
+        }
+        // 카메라 오브젝트 컴포넌트가 하나 뿐인 경우
+        // 가이드 할 객체가 하나 뿐이라 간단함
+        else if (cameraObjectComponentList.size == 1) {
+            Log.i(TAG, "카메라 오브젝트가 하나뿐임")
+            val component = cameraObjectComponentList[0]
+            guidingComponentImageView = binding.layerLayout.createImageView(component)
+            binding.layerLayout.addView(guidingComponentImageView)
+            match(cameraObjectComponentList[0])
+        } else {
+            binding.layerLayout.removeAllViews()
+            if (!componentList.isEmpty()) {
+                layerLayoutGuideManager.guide(componentList[0].guideList[0])
+            }
+        }
+    }
+
     /**
      * 컴포넌트와 가이드 이미지 컴포넌트를 매칭, 가이드 해주는 메소드
      */
     private fun match(component: ObjectComponent) {
         val guideComponent = componentMatcher.match(component, guideComponentList)
-            ?: return
+        if (guideComponent == null) {
+            Toast.makeText(baseContext, "매칭할 오브젝트가 없습니다.", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         val guideList = guideComponent.guideList
             ?: return
@@ -722,7 +732,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                 return
 
             val guider = GuideImageObjectGuider(guideComponent.mask[0].size, guideComponent.mask.size)
-            guider.guide(guideComponent)
+            guider.initGuideList(guideComponent)
             guideList.addAll(guideComponent.guideList)
 
             if (guideList.size == 0)

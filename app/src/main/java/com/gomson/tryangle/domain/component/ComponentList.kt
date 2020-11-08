@@ -32,4 +32,14 @@ class ComponentList: ArrayList<Component>() {
         }
         return super.addAll(index, elements)
     }
+
+    fun getObjectComponentList(): ArrayList<ObjectComponent> {
+        val objectComponentList = ArrayList<ObjectComponent>()
+        for (component in this) {
+            if (component is ObjectComponent) {
+                objectComponentList.add(component)
+            }
+        }
+        return objectComponentList
+    }
 }

@@ -24,7 +24,7 @@ class Point(val x: Int, val y: Int) {
 
     fun isClose(point: Point): Boolean {
         val diff = distance(point)
-        return diff < 20
+        return diff < 5
     }
 
     fun isFar(point: Point): Boolean {

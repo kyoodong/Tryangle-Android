@@ -26,4 +26,8 @@ data class Line(
             color
         )
     }
+
+    fun isClose(line: Line): Boolean {
+        return startPoint.isClose(line.startPoint) && endPoint.isClose(line.endPoint)
+    }
 }

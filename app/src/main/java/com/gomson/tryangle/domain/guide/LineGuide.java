@@ -1,5 +1,6 @@
 package com.gomson.tryangle.domain.guide;
 
+import com.gomson.tryangle.domain.Line;
 import com.gomson.tryangle.domain.Point;
 import com.gomson.tryangle.domain.Roi;
 import com.gomson.tryangle.domain.component.Component;
@@ -11,6 +12,7 @@ public class LineGuide extends Guide {
 
     private Point startPoint;
     private Point endPoint;
+    private Line line;
 
     public LineGuide(int guideId, String message, Component component,
                      Point startPoint, Point endPoint) {
@@ -30,16 +32,23 @@ public class LineGuide extends Guide {
 
     @Override
     public void guide(@NotNull LayerLayout layerLayout) {
+        line = new Line(
+                startPoint,
+                endPoint,
+                Guide.GREEN
+        );
+        layerLayout.getLineList().add(line);
         super.guide(layerLayout);
     }
 
     @Override
     public void clearGuide(@NotNull LayerLayout layerLayout) {
+        layerLayout.getLineList().remove(line);
+        line = null;
         super.clearGuide(layerLayout);
     }
 
-    @Override
-    public boolean isMatch(@NotNull Roi roi) {
-        return false;
+    public boolean isMatch(@NotNull Line line) {
+        return line.isClose(line);
     }
 }

@@ -1,4 +1,4 @@
-package com.gomson.tryangle.domain.guide.action
+package com.gomson.tryangle.domain.guide.`object`
 
 import com.gomson.tryangle.domain.component.ObjectComponent
 

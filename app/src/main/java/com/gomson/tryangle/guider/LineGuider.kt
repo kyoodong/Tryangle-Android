@@ -6,7 +6,7 @@ import com.gomson.tryangle.domain.guide.LineGuide
 
 class LineGuider: Guider() {
 
-    override fun guide(component: Component) {
+    override fun initGuideList(component: Component) {
         val component = component as LineComponent
         val upperThreshold = 25
         val lowerThreshold = 5

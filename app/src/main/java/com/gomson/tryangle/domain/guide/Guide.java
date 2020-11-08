@@ -53,6 +53,4 @@ abstract public class Guide {
     protected void clearGuide(@NotNull LayerLayout layerLayout) {
         layerLayout.invalidate();
     }
-
-    public abstract boolean isMatch(@NotNull Roi roi);
 }

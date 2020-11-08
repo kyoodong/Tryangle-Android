@@ -1,17 +1,15 @@
-package com.gomson.tryangle.domain.guide.action
+package com.gomson.tryangle.domain.guide.`object`
 
 import android.graphics.Color
-import com.gomson.tryangle.domain.Area
 import com.gomson.tryangle.domain.Line
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.Roi
-import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.view.LayerLayout
 
 open class YDiffGuide(guideId: Int, message: String, val yDiff: Int, val component: ObjectComponent):
-    Guide(guideId, message, component) {
+    ObjectGuide(guideId, message, component) {
 
     private var originLine: Line? = null
     protected var guideLine: Line? = null
