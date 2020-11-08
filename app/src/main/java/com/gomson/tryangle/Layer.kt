@@ -4,11 +4,12 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.Roi
+import com.gomson.tryangle.dto.MaskList
 import java.util.*
 import kotlin.collections.ArrayList
 
 class Layer(
-    val mask: ArrayList<ArrayList<Int>>,
+    val mask: MaskList,
     roi: Roi) {
 
     private val width = mask[0].size
@@ -45,7 +46,7 @@ class Layer(
                     continue
 
                 when (mask[curY][curX]) {
-                    0 -> {
+                    0.toByte() -> {
                         for (j in directions8.indices) {
                             val ny = curY + directions8[j][0]
                             val nx = curX + directions8[j][1]
@@ -57,7 +58,7 @@ class Layer(
                         }
                         mask[curY][curX] = 2
                     }
-                    1 -> {
+                    1.toByte() -> {
                         visit[curY][curX] = true
                         queue.add(Pair(curY, curX))
                     }
@@ -68,8 +69,14 @@ class Layer(
 
     init {
         for (y in roi.top until roi.bottom) {
+            if (mask.size <= y || visit.size <= y)
+                break
+
             for (x in roi.left until roi.right) {
-                if (mask[y][x] == 1 && !visit[y][x]) {
+                if (mask[y].size <= x || visit[y].size <= x)
+                    break
+
+                if (mask[y][x] == 1.toByte() && !visit[y][x]) {
                     bfs(y, x)
                 }
             }
@@ -83,9 +90,9 @@ class Layer(
             var index = 0
             for (y in roi.top until roi.bottom) {
                 for (x in roi.left until roi.right) {
-                    if (mask[y][x] == 0) {
+                    if (mask[y][x] == 0.toByte()) {
                         pixels[index] = Color.argb(0, 0, 0, 0)
-                    } else if (mask[y][x] == 1) {
+                    } else if (mask[y][x] == 1.toByte()) {
                         pixels[index] = Color.argb(50, 127, 127, 127)
                     } else {
                         pixels[index] = Color.argb(255 ,127, 127, 127)

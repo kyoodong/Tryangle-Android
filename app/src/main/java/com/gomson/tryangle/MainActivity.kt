@@ -9,6 +9,10 @@ import android.database.Cursor
 import android.graphics.*
 import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Bundle
+import android.os.CountDownTimer
+import android.os.Handler
+import android.util.Base64
 import android.os.*
 import android.provider.MediaStore
 import android.util.Log
@@ -16,9 +20,7 @@ import android.util.Rational
 import android.util.Size
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.PopupWindow
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.core.Camera
@@ -29,21 +31,36 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import com.bumptech.glide.Glide
+
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
+
 import com.gomson.tryangle.album.AlbumActivity
 import com.gomson.tryangle.databinding.ActivityMainBinding
 import com.gomson.tryangle.domain.component.Component
+import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
-import com.gomson.tryangle.domain.guide.LineGuide
-import com.gomson.tryangle.domain.guide.ObjectGuide
+import com.gomson.tryangle.dto.MaskList
+import com.gomson.tryangle.dto.ObjectComponentListDTO
+import com.gomson.tryangle.guider.GuideImageObjectGuider
+import com.gomson.tryangle.network.ImageService
+import com.gomson.tryangle.network.NetworkManager
+import com.gomson.tryangle.view.guide_image_view.GuideImageAdapter
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
+import okhttp3.ResponseBody
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.io.File
 import java.net.URI
 import java.text.SimpleDateFormat
-import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -66,7 +83,8 @@ enum class TimerMode constructor(
     TIMER_10S(10000, R.drawable.timer10s, "10초", "10"),
 }
 
-class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
+class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
+    GuideImageAdapter.OnClickGuideImage {
 
     companion object {
         private const val TAG = "MainActivity"
@@ -94,7 +112,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     private lateinit var guideBitmap: Bitmap
     private var guideClusters: Array<ArrayList<Guide>>? = null
 
-    private var components = ArrayList<Component>()
+    private var componentList = ArrayList<Component>()
+    private var guideComponentList = ArrayList<ObjectComponent>()
     private var mainGuide: Guide? = null
     private lateinit var imageAnalyzer: ImageAnalyzer
 
@@ -114,16 +133,12 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     var currentRatio = RatioMode.RATIO_1_1
     var isFlash = false
     var isGrid = false
+    private val recommendedImageUrlList = ArrayList<String>()
     var currentTimerModeIndex = 0
-    private var recentImage : Uri? = null
+    private var recentImage: Uri? = null
     private lateinit var binding: ActivityMainBinding
-//    val currentTimer ;
-
-    val timer = Timer()
-
-    // 마지막에 추천 이미지를 받은 시간
-    var last_time = 0
-
+    private lateinit var imageService: ImageService
+    private val componentMatcher = ComponentMatcher()
 
     init {
         System.loadLibrary("opencv_java4")
@@ -156,7 +171,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     }
 
     /* 비율에 따른 뷰 설정*/
-    private fun setAspectRatioView(ratio:RatioMode){
+    private fun setAspectRatioView(ratio: RatioMode) {
         binding.previewLayout.post(Runnable {
             (binding.previewLayout.layoutParams as ConstraintLayout.LayoutParams).apply {
                 when (ratio) {
@@ -184,6 +199,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
         converter = YuvToRgbConverter(this)
+        imageService = ImageService(baseContext)
 
         // 카메라 권한 체크
         if (allPermissionsGranted()) {
@@ -296,6 +312,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
             startActivity(intent)
         }
 
+
+        guideImageListView.getAdapter().setOnClickGuideImageListener(this)
+
         recentImage = getRecentImage()
         Glide.with(this)
             .load(recentImage)
@@ -304,6 +323,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
         setAspectRatioView(currentRatio)
         bindCameraConfiguration()
+
     }
 
     override fun onResume() {
@@ -343,7 +363,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     private fun getOutputDirectory(): File {
 
         val mediaDir = PhotoDownloadManager.getDirectory(this)
-        if(!mediaDir.exists()){
+        if (!mediaDir.exists()) {
             mediaDir.mkdir()
         }
         return if (mediaDir != null && mediaDir.exists())
@@ -395,7 +415,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
                 .build()
 
             imageAnalyzer = ImageAnalyzer(baseContext, this)
-//            imageAnalysis!!.setAnalyzer(cameraExecutor, imageAnalyzer)
+            imageAnalysis!!.setAnalyzer(cameraExecutor, imageAnalyzer)
         }
 
         try {
@@ -475,60 +495,87 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
     }
 
     override fun onUpdateComponents(components: ArrayList<Component>) {
-        this.components.clear()
-        this.components.addAll(components)
-        this.components.sortByDescending {
+        Log.i(TAG, "컴포넌트 업데이트")
+        this.componentList.clear()
+        this.componentList.addAll(components)
+        this.componentList.sortByDescending {
             it.priority
         }
     }
 
-    private fun displayGuide() {
-        val guide = mainGuide ?: return
-        val canvas = Canvas(guideBitmap)
-        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
+//    private fun displayGuide() {
+//        val guide = mainGuide ?: return
+//        val canvas = Canvas(guideBitmap)
+//        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
+//
+//        if (guide is LineGuide) {
+//            val lineGuide = guide as LineGuide
+//            val paint = Paint()
+//            paint.color = Color.rgb(255, 0, 0)
+//            paint.isAntiAlias = true
+//            paint.strokeWidth = 5f
+//            canvas.drawLine(lineGuide.startPoint.x.toFloat(),
+//                lineGuide.startPoint.y.toFloat(),
+//                lineGuide.endPoint.x.toFloat(),
+//                lineGuide.endPoint.y.toFloat(), paint)
+//        }
+//
+//        else if (guide is ObjectGuide) {
+//            val objectGuide = guide as ObjectGuide
+//            val layerImage = objectGuide.targetComponent.layer.layeredImage ?: return
+//            val roi = objectGuide.targetComponent.roi + objectGuide.diffPoint
+//            canvas.drawBitmap(layerImage, null, roi.toRect(), null)
+//        }
+//
+//        runOnUiThread {
+//            guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
+//            guideImageView.setImageBitmap(guideBitmap)
+//        }
+//    }
 
-        if (guide is LineGuide) {
-            val lineGuide = guide as LineGuide
-            val paint = Paint()
-            paint.color = Color.rgb(255, 0, 0)
-            paint.isAntiAlias = true
-            paint.strokeWidth = 5f
-            canvas.drawLine(lineGuide.startPoint.x.toFloat(),
-                lineGuide.startPoint.y.toFloat(),
-                lineGuide.endPoint.x.toFloat(),
-                lineGuide.endPoint.y.toFloat(), paint)
-        }
+//    override fun onGuideUpdate(guides: Array<ArrayList<Guide>>, mainGuide: Guide) {
+//        this.guideClusters = guides
+//        this.mainGuide = mainGuide
+//
+//        if (!::guideBitmap.isInitialized) {
+//            guideBitmap = Bitmap.createBitmap(
+//                imageAnalyzer.width,
+//                imageAnalyzer.height,
+//                Bitmap.Config.ARGB_8888)
+//        }
+//
+//        displayGuide()
+//        Log.i(TAG, "가이드 업데이트")
+//    }
 
-        else if (guide is ObjectGuide) {
-            val objectGuide = guide as ObjectGuide
-            val layerImage = objectGuide.component.layer.layeredImage ?: return
-            val roi = objectGuide.component.roi + objectGuide.diffPoint
-            canvas.drawBitmap(layerImage, null, roi.toRect(), null)
-        }
+    override fun onUpdateRecommendedImage(imageList: List<String>) {
+        Log.i(TAG, "추천 이미지 ${imageList.size} 개 도착!")
+        this.recommendedImageUrlList.clear()
+        this.recommendedImageUrlList.addAll(imageList)
 
         runOnUiThread {
-            binding.guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
-            binding.guideImageView.setImageBitmap(guideBitmap)
+            val adapter = guideImageListView.getAdapter()
+            adapter.resetImageUrlList()
+            adapter.addImageUrlList(imageList)
         }
-    }
-
-    override fun onGuideUpdate(guides: Array<ArrayList<Guide>>, mainGuide: Guide) {
-        this.guideClusters = guides
-        this.mainGuide = mainGuide
-
-        if (!::guideBitmap.isInitialized) {
-            guideBitmap = Bitmap.createBitmap(
-                imageAnalyzer.width,
-                imageAnalyzer.height,
-                Bitmap.Config.ARGB_8888)
-        }
-
-        displayGuide()
-        Log.i(TAG, "가이드 업데이트")
     }
 
     override fun onMatchGuide(guide: Guide, newMainGuide: Guide?) {
         Log.i(TAG, "가이드에 맞음!")
+//        if (guide.targetComponent is ObjectComponent) {
+//            val component = guide.targetComponent as ObjectComponent
+//            val layoutParams = thumbUp.layoutParams as ConstraintLayout.LayoutParams
+//            layoutParams.leftMargin = component.centerPoint.x
+//            layoutParams.topMargin = component.centerPoint.y
+//            thumbUp.visibility = View.VISIBLE
+//
+//            // 좋아요 아이콘 잠깐 보여주기
+//            AnimatorInflater.loadAnimator(baseContext, R.animator.thumb_up)
+//                .apply {
+//                    setTarget(thumbUp)
+//                    start()
+//                }
+//        }
     }
 
     fun countDownTimer(timerMode: TimerMode) {
@@ -544,7 +591,188 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
         }.start()
     }
 
-    private fun getRecentImage() : Uri?{
+    /**
+     * 가이드 이미지 클릭 이벤트
+     */
+    override fun onClick(url: String) {
+        Log.d(TAG, "가이드 이미지 클릭 ${url}")
+
+        var startTime = System.currentTimeMillis()
+        var endTime = System.currentTimeMillis()
+        Glide.with(baseContext).asBitmap().load("${NetworkManager.URL}/${url}")
+            .listener(object : RequestListener<Bitmap> {
+                override fun onLoadFailed(
+                    e: GlideException?,
+                    model: Any?,
+                    target: Target<Bitmap>?,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    Log.i(TAG, "비트맵 로딩 실패 ${NetworkManager.URL}/${url}")
+                    return false
+                }
+
+                override fun onResourceReady(
+                    resource: Bitmap?,
+                    model: Any?,
+                    target: Target<Bitmap>?,
+                    dataSource: DataSource?,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    endTime = System.currentTimeMillis()
+                    Log.d(TAG, "비트맵 로딩 타임 ${endTime - startTime}")
+                    startTime = System.currentTimeMillis()
+                    imageService.getObjectComponentByUrl(
+                        url,
+                        object : Callback<ObjectComponentListDTO> {
+                            override fun onResponse(
+                                call: Call<ObjectComponentListDTO>,
+                                response: Response<ObjectComponentListDTO>
+                            ) {
+                                endTime = System.currentTimeMillis()
+                                Log.d(TAG, "컴포넌트 로딩 타임 ${endTime - startTime}")
+                                startTime = System.currentTimeMillis()
+                                if (response.isSuccessful) {
+                                    Log.i(TAG, "가이드 이미지 컴포넌트 로딩 성공")
+                                    val objectComponentListDTO = response.body()
+                                        ?: return
+
+                                    val base64String = objectComponentListDTO.maskStr
+                                    var base64StringList = base64String.split("==")
+                                    base64StringList =
+                                        base64StringList.subList(0, base64StringList.size - 1)
+
+                                    val maskList = MaskList()
+                                    for (str in base64StringList) {
+                                        val base64 = str.plus("==")
+                                        maskList.add(Base64.decode(base64, Base64.DEFAULT))
+                                    }
+                                    objectComponentListDTO.deployMask(maskList)
+                                    val objectComponentList =
+                                        objectComponentListDTO.objectComponentList
+
+                                    Log.d(TAG, "dd")
+
+                                    if (objectComponentList.isEmpty())
+                                        return
+
+                                    guideComponentList.clear()
+                                    guideComponentList.addAll(objectComponentList)
+
+                                    for (c in guideComponentList) {
+                                        c.refreshLayer(resource)
+                                    }
+                                    layerLayout.removeAllViewsInLayout()
+
+                                    // 카메라 오브젝트
+                                    val cameraObjectComponentList = ArrayList<ObjectComponent>()
+                                    for (component in componentList) {
+                                        if (component is ObjectComponent) {
+                                            cameraObjectComponentList.add(component)
+                                        }
+                                    }
+
+                                    endTime = System.currentTimeMillis()
+                                    Log.d(TAG, "컴포넌트 준비 타임 ${endTime - startTime}")
+                                    startTime = System.currentTimeMillis()
+
+                                    // 카메라 이미지에 여러 객체가 있을 때 가이드를 받을 객체를 선택하도록 함
+                                    if (cameraObjectComponentList.size > 1) {
+                                        Log.i(TAG, "카메라 오브젝트가 여러개라 선택해야함")
+                                        guideTextView.text = getString(R.string.select_main_object)
+
+                                        // 메인객체 고르기 메시지 노출
+                                        binding.guideTextView.text =
+                                            getString(R.string.select_main_object)
+                                        for (component in cameraObjectComponentList) {
+                                            val imageView =
+                                                createImageView(component, binding.layerLayout)
+                                            imageView.setOnClickListener {
+                                                Log.i(TAG, "메인 객체 선택")
+                                                binding.layerLayout.removeAllViewsWithout(imageView)
+                                                match(component)
+                                            }
+                                            binding.layerLayout.addView(imageView)
+                                        }
+                                    }
+                                    // 카메라 오브젝트 컴포넌트가 하나 뿐인 경우
+                                    // 가이드 할 객체가 하나 뿐이라 간단함
+                                    else if (cameraObjectComponentList.size == 1) {
+                                        Log.i(TAG, "카메라 오브젝트가 하나뿐임")
+                                        match(cameraObjectComponentList[0])
+                                    }
+                                } else {
+                                    Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패 ${response.code()}")
+                                }
+                            }
+
+                            override fun onFailure(
+                                call: Call<ObjectComponentListDTO>,
+                                t: Throwable
+                            ) {
+                                t.printStackTrace()
+                                Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패")
+                            }
+                        })
+                    return false
+                }
+            }).submit()
+    }
+
+    private fun createImageView(component: ObjectComponent, viewGroup: ViewGroup): ImageView {
+        val imageView = ImageView(baseContext)
+        val layoutWidth = viewGroup.width
+        val layoutHeight = viewGroup.height
+        val width = component.roi.getWidth() * layoutWidth / 640
+        val height = component.roi.getHeight() * layoutHeight / 640
+
+        imageView.x = (component.roi.getCenterPoint().x.toFloat() * layoutWidth / 640) - width / 2
+        imageView.y = (component.roi.getCenterPoint().y.toFloat() * layoutHeight / 640) - height / 2
+        imageView.layoutParams = ViewGroup.LayoutParams(width, height)
+        val bitmap = Bitmap.createBitmap(
+            component.roi.getWidth(),
+            component.roi.getHeight(),
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        val layerImage = component.layer.layeredImage
+            ?: return imageView
+
+        canvas.drawBitmap(layerImage, null, Rect(0, 0, bitmap.width, bitmap.height), Paint())
+        imageView.setImageBitmap(bitmap)
+        return imageView
+    }
+
+    /**
+     * 컴포넌트와 가이드 이미지 컴포넌트를 매칭, 가이드 해주는 메소드
+     */
+    private fun match(component: ObjectComponent) {
+        val guideComponent = componentMatcher.match(component, guideComponentList)
+            ?: return
+
+        val guideList = guideComponent.guideList
+            ?: return
+
+        if (guideList.size == 0) {
+            if (guideComponent.mask.isEmpty() || guideComponent.mask[0].isEmpty())
+                return
+
+            // @TODO 테스트 필요!!
+            val guider =
+                GuideImageObjectGuider(guideComponent.mask[0].size, guideComponent.mask.size)
+            guider.guide(guideComponent)
+            guideList.addAll(guideComponent.guideList)
+
+            if (guideList.size == 0)
+                return
+        }
+
+
+        binding.guideTextView.text = GUIDE_MSG_LIST[guideList[0].guideId]
+        val imageView = createImageView(guideComponent, binding.layerLayout)
+        binding.layerLayout.addView(imageView)
+    }
+
+    private fun getRecentImage(): Uri? {
         val uriExternal: Uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         val cursor: Cursor?
         val projection = arrayOf(
@@ -557,15 +785,21 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener {
 
         /* 최신순 */
         val sortOrder = MediaStore.Images.ImageColumns._ID + " DESC "
-        cursor = contentResolver.query(uriExternal, projection, selectionClause, null, sortOrder)
+        cursor =
+            contentResolver.query(uriExternal, projection, selectionClause, null, sortOrder)
 
-        var result :Uri? = null
+        var result: Uri? = null
         if (cursor?.moveToFirst()!!) {
-            val thumbColumn: Int = cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns._ID)
+            val thumbColumn: Int =
+                cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns._ID)
             val thumpId: Int = cursor.getInt(thumbColumn)
-            result = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, thumpId.toLong())
+            result = ContentUris.withAppendedId(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                thumpId.toLong()
+            )
         }
         cursor.close()
         return result
     }
 }
+

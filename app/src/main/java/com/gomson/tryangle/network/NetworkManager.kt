@@ -1,7 +1,10 @@
 package com.gomson.tryangle.network
 
 import com.gomson.tryangle.deserializer.AccessTokenDeserializer
+import com.gomson.tryangle.deserializer.MaskListDeserializer
 import com.gomson.tryangle.domain.AccessToken
+import com.gomson.tryangle.dto.GuideDTO
+import com.gomson.tryangle.dto.MaskList
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -13,7 +16,7 @@ private const val TIMEOUT = 3L
 internal class NetworkManager {
 
     companion object {
-//        private const val URL = "http://121.139.71.162:7778"
+//        const val URL = "http://121.139.71.162:7778"
         const val URL = "http://121.139.71.162:7776"
 
         private val client = OkHttpClient.Builder()
@@ -23,7 +26,9 @@ internal class NetworkManager {
             .callTimeout(TIMEOUT, TimeUnit.MINUTES)
             .build()
 
-        val gson = GsonBuilder().registerTypeAdapter(AccessToken::class.java, AccessTokenDeserializer())
+        val gson = GsonBuilder()
+            .registerTypeAdapter(AccessToken::class.java, AccessTokenDeserializer())
+            .registerTypeAdapter(MaskList::class.java, MaskListDeserializer())
             .create()
 
         private val retrofit: Retrofit = Retrofit.Builder()
