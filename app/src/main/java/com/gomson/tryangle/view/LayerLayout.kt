@@ -23,6 +23,13 @@ class LayerLayout @JvmOverloads constructor(
     val paint = Paint()
 
 
+    override fun removeAllViews() {
+        lineList.clear()
+        areaList.clear()
+
+        super.removeAllViews()
+    }
+
     fun removeAllViewsWithout(view: View) {
         removeAllViews()
         addView(view)

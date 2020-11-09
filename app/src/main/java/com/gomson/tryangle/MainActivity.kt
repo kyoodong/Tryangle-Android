@@ -622,6 +622,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     override fun onClick(url: String) {
         Log.d(TAG, "가이드 이미지 클릭 ${url}")
 
+        binding.layerLayout.removeAllViews()
         var startTime = System.currentTimeMillis()
         var endTime = System.currentTimeMillis()
         Glide.with(baseContext).asBitmap().load("${NetworkManager.URL}/${url}").listener(object: RequestListener<Bitmap> {
@@ -776,13 +777,16 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
         val imageView = binding.layerLayout.createImageView(guideComponent)
         binding.layerLayout.addView(imageView)
-
-        displayGuide(guidingGuide!!)
+        displayGuide(guidingGuide)
     }
 
-    private fun displayGuide(guide: Guide) {
-        binding.guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
-        layerLayoutGuideManager.guide(guide)
+    private fun displayGuide(guide: Guide?) {
+        if (guide == null) {
+            binding.guideTextView.text = getString(R.string.require_more_accurate_position_and_area)
+        } else {
+            binding.guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
+            layerLayoutGuideManager.guide(guide)
+        }
     }
 
     override fun onMatchComponent() {
