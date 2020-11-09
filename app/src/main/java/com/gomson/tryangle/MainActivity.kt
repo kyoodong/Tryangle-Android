@@ -1,23 +1,28 @@
 package com.gomson.tryangle
 
 import android.Manifest
+import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.*
+import android.database.Cursor
+import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
+import android.provider.MediaStore
 import android.util.Base64
 import android.util.Log
 import android.util.Rational
 import android.view.View
 import android.view.ViewGroup
-import android.widget.*
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.PopupWindow
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
-import androidx.camera.core.Camera
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
@@ -53,13 +58,12 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
-import java.text.SimpleDateFormat
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 enum class RatioMode constructor(val width: Int, val height: Int) {
-    RATIO_3_4(3, 4),
     RATIO_1_1(1, 1),
+    RATIO_3_4(3, 4),
     RATIO_9_16(9, 16),
 //    RATIO_FULL(0,0)
 }
@@ -76,7 +80,8 @@ enum class TimerMode constructor(
     TIMER_10S(10000, R.drawable.timer10s, "10초", "10"),
 }
 
-class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, GuideImageAdapter.OnClickGuideImage {
+class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
+    GuideImageAdapter.OnClickGuideImage {
 
     companion object {
         private const val TAG = "MainActivity"
@@ -121,11 +126,12 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
     lateinit var popupMoreView: PopupWindow
     lateinit var popupRatioView: PopupWindow
 
-    var currentRatio = RatioMode.RATIO_3_4
+    var currentRatio = RatioMode.RATIO_1_1
     var isFlash = false
     var isGrid = false
     private val recommendedImageUrlList = ArrayList<String>()
     var currentTimerModeIndex = 0
+    private var recentImage: Uri? = null
     private lateinit var binding: ActivityMainBinding
     private lateinit var imageService: ImageService
     private val componentMatcher = ComponentMatcher()
@@ -148,35 +154,50 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                 when (view.id) {
                     R.id.ratio3_4 -> {
                         clickRatio = RatioMode.RATIO_3_4
-                        topToTop = ConstraintSet.PARENT_ID
-                        height = 0
-                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio3_4)
-                        binding.previewLayout.requestLayout()
                         imageAnalyzer.setRatio(4f / 3f)
                     }
                     R.id.ratio1_1 -> {
                         clickRatio = RatioMode.RATIO_1_1
-                        height = binding.previewLayout.width
-                        topToTop = binding.topLayout.id
-                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio1_1)
-                        binding.previewLayout.requestLayout()
                         imageAnalyzer.setRatio(1f)
                     }
                     R.id.ratio9_16 -> {
                         clickRatio = RatioMode.RATIO_9_16
-                        height = ViewGroup.LayoutParams.MATCH_PARENT
-                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio9_16)
-                        binding.previewLayout.requestLayout()
                         imageAnalyzer.setRatio(16f / 9f)
                     }
                 }
             }
         if (clickRatio != currentRatio) {
+            setAspectRatioView(clickRatio)
             currentRatio = clickRatio
             imageCapture = getImageCapture(clickRatio.height, clickRatio.width)
             bindCameraConfiguration()
         }
         popupRatioView.dismiss()
+    }
+
+    /* 비율에 따른 뷰 설정*/
+    private fun setAspectRatioView(ratio: RatioMode) {
+        binding.previewLayout.post(Runnable {
+            (binding.previewLayout.layoutParams as ConstraintLayout.LayoutParams).apply {
+                when (ratio) {
+                    RatioMode.RATIO_1_1 -> {
+                        height = binding.previewLayout.width
+                        topToTop = binding.topLayout.id
+                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio1_1)
+                    }
+                    RatioMode.RATIO_3_4 -> {
+                        topToTop = ConstraintSet.PARENT_ID
+                        height = 0
+                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio3_4)
+                    }
+                    RatioMode.RATIO_9_16 -> {
+                        height = ViewGroup.LayoutParams.MATCH_PARENT
+                        binding.ratioBtn.setBackgroundResource(R.drawable.ratio9_16)
+                    }
+                }
+                binding.previewLayout.postInvalidate()
+            }
+        })
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -296,8 +317,17 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
             startActivity(intent)
         }
 
+
         guideImageListView.getAdapter().setOnClickGuideImageListener(this)
         layerLayoutGuideManager = LayerLayoutGuideManager(binding.layerLayout)
+        recentImage = getRecentImage()
+        Glide.with(this)
+            .load(recentImage)
+            .dontAnimate()
+            .into(binding.albumBtn)
+
+        setAspectRatioView(currentRatio)
+        bindCameraConfiguration()
     }
 
     override fun onResume() {
@@ -318,6 +348,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
             baseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
             isOpenCvLoaded = true;
         }
+
     }
 
     /**
@@ -334,8 +365,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
      * 사진을 저장할 위치를 리턴하는 함수
      */
     private fun getOutputDirectory(): File {
-        val mediaDir = externalMediaDirs.firstOrNull()?.let {
-            File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
+
+        val mediaDir = PhotoDownloadManager.getDirectory(this)
+        if (!mediaDir.exists()) {
+            mediaDir.mkdir()
         }
         return if (mediaDir != null && mediaDir.exists())
             mediaDir else filesDir
@@ -345,7 +378,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
     private fun getImageCapture(heightRatio: Int, widthRatio: Int): ImageCapture {
         val imageCapture = ImageCapture.Builder()
             .apply {
-                setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+//                todo
+//                setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+                setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 setTargetAspectRatioCustom(Rational(widthRatio, heightRatio))
             }
 
@@ -372,7 +407,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
     private fun bindCameraConfiguration() {
         // 기본 카메라 비율을 16:9로 설정
         if (imageCapture == null)
-            imageCapture = getImageCapture(16, 9)
+            imageCapture = getImageCapture(currentRatio.height, currentRatio.width)
 
         val preview = preview
             ?: return
@@ -401,8 +436,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
 
         val photoFile = File(
             outputDirectory,
-            SimpleDateFormat(FILENAME_FORMAT)
-                .format(System.currentTimeMillis()) + ".jpg"
+            PhotoDownloadManager.getFileName()
         )
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
@@ -648,13 +682,11 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                             if (objectComponentList.isEmpty())
                                 return
 
+                            if (objectComponentList.isEmpty())
+                                return
+
                             guideComponentList.clear()
                             guideComponentList.addAll(objectComponentList)
-
-                            for (c in guideComponentList) {
-                                c.refreshLayer(resource)
-                            }
-                            layerLayout.removeAllViewsInLayout()
 
                             // 카메라 오브젝트
                             val cameraObjectComponentList = componentList.getObjectComponentList()
@@ -668,8 +700,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
                             Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패 ${response.code()}")
                         }
                     }
-
-                    override fun onFailure(call: Call<ObjectComponentListDTO>, t: Throwable) {
+                    override fun onFailure(
+                        call: Call<ObjectComponentListDTO>,
+                        t: Throwable
+                    ) {
                         t.printStackTrace()
                         Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패")
                     }
@@ -758,4 +792,35 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener, Guide
     override fun onMatchComponent() {
         Log.i(TAG, "컴포넌트 매칭 성공")
     }
+
+    private fun getRecentImage(): Uri? {
+        val uriExternal: Uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val cursor: Cursor?
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Video.Media.DISPLAY_NAME,
+            MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME,
+            MediaStore.Video.Media.DATE_TAKEN
+        )
+        var selectionClause = null
+
+        /* 최신순 */
+        val sortOrder = MediaStore.Images.ImageColumns._ID + " DESC "
+        cursor =
+            contentResolver.query(uriExternal, projection, selectionClause, null, sortOrder)
+
+        var result: Uri? = null
+        if (cursor?.moveToFirst()!!) {
+            val thumbColumn: Int =
+                cursor.getColumnIndexOrThrow(MediaStore.Images.ImageColumns._ID)
+            val thumpId: Int = cursor.getInt(thumbColumn)
+            result = ContentUris.withAppendedId(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                thumpId.toLong()
+            )
+        }
+        cursor.close()
+        return result
+    }
 }
+

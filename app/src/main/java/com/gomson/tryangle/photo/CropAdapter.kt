@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.gomson.tryangle.OnItemClickListener
 import com.gomson.tryangle.R
@@ -13,9 +14,18 @@ import com.gomson.tryangle.R
 class CropAdapter(private val context: Context, private val items: Array<CropRatio>) :
     RecyclerView.Adapter<CropAdapter.ViewHolder>() {
 
-    var callback: OnItemClickListener<CropRatio>? = null
+    val whiteColor = ContextCompat.getColor(context, R.color.colorWhite)
+    val whiteColorAlpha = ContextCompat.getColor(context, R.color.colorWhiteAlpha)
 
-    public fun setOnItemClickListener(callback: OnItemClickListener<CropRatio>) {
+    var callback: OnItemClickListener<CropRatio>? = null
+    var currentRatio = CropRatio.RATIO_1_1
+    set(value){
+        field = value
+        notifyDataSetChanged()
+    }
+
+
+    fun setOnItemClickListener(callback: OnItemClickListener<CropRatio>) {
         this.callback = callback
     }
 
@@ -45,6 +55,8 @@ class CropAdapter(private val context: Context, private val items: Array<CropRat
             itemView.setOnClickListener {
                 callback?.onItemClick(itemView, position, item)
             }
+            textView.setTextColor(if (currentRatio != item)  whiteColorAlpha else whiteColor)
+            imageView.alpha = if (currentRatio != item)  0.5f else 1f
         }
     }
 }
