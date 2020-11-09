@@ -53,6 +53,7 @@ class AlbumActivity : AppCompatActivity() {
                 REQUIRED_PERMISSIONS,
                 REQUEST_CODE_PERMISSIONS
             )
+            return
         }
         pathAdapter = BucketAdapter(this, ArrayList(bucketHashMap.values))
         albumAdapter = AlbumAdapter(this)
@@ -87,11 +88,11 @@ class AlbumActivity : AppCompatActivity() {
         cursor = contentResolver.query(uriExternal, projection, selectionClause, null, sortOrder)
 
         cursor?.use {
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val dateTakenColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATE_TAKEN)
+                cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN)
             val displayNameColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
+                cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
             columnIndexID = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val bucketColumn: Int = cursor.getColumnIndex(
                 MediaStore.Images.Media.BUCKET_DISPLAY_NAME
@@ -119,7 +120,7 @@ class AlbumActivity : AppCompatActivity() {
         }
     }
 
-    /* 이미지 저장된 경로 선택하는 팝업flxjs */
+    /* 이미지 저장된 경로 선택하는 팝업 */
     private fun getBucketPopup(): PopupWindow {
         val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val view = inflater.inflate(R.layout.view_recyclerview, null)
@@ -149,6 +150,7 @@ class AlbumActivity : AppCompatActivity() {
                     albumAdapter.notifyDataSetChanged()
                     selectedItem = position
                     popupWindow.dismiss()
+                    bucketView.text = item.name
                 }
             }
         )
@@ -159,12 +161,6 @@ class AlbumActivity : AppCompatActivity() {
         return popupWindow
     }
 
-    override fun onResume() {
-        super.onResume()
-        bucketHashMap.clear()
-        uriList.clear()
-        getBucketImages()
-    }
 
     private fun permissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
@@ -190,5 +186,4 @@ class AlbumActivity : AppCompatActivity() {
             }
         }
     }
-
 }

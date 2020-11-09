@@ -11,13 +11,20 @@
 
         <FrameLayout
             android:id="@+id/imageLayout"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="0dp"
             app:layout_constraintBottom_toTopOf="@+id/cropLayout"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_weight="1" />
+            app:layout_constraintTop_toBottomOf="@id/topLayout"
+            app:layout_constraintVertical_weight="1">
+
+            <com.yalantis.ucrop.view.UCropView
+                android:id="@+id/ucrop"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:alpha="0" />
+        </FrameLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/topLayout"
@@ -31,6 +38,7 @@
                 android:id="@+id/back"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
+                android:padding="2dp"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:src="@drawable/back"
@@ -55,10 +63,13 @@
 
 
         <androidx.constraintlayout.widget.ConstraintLayout
+
             android:id="@+id/menuLayout"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintTop_toBottomOf="parent">
 
             <ImageView
@@ -111,16 +122,36 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/cropLayout"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:background="@color/colorBlackAlpha"
             app:layout_constraintBottom_toBottomOf="parent">
 
-            <SeekBar
-                android:id="@+id/rotateSeekBar"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+            <!--            <FrameLayout-->
+            <!--                android:layout_width="match_parent"-->
+            <!--                android:layout_height="64dp"-->
+            <!--                app:layout_constraintBottom_toTopOf="@id/cropRecyclerView"-->
+            <!--                app:layout_constraintStart_toStartOf="parent">-->
+
+            <TextView
+                android:id="@+id/degreeView"
+                android:textColor="@color/colorWhite"
+                android:padding="4dp"
+                android:textSize="20sp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/rotateWheelView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <com.gomson.tryangle.photo.ProgressWheelView
+                android:id="@+id/rotateWheelView"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                app:layout_constraintBottom_toTopOf="@+id/cropRecyclerView"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+            <!--            app:layout_constraintHorizontal_weight="1"-->
+            <!--                        </FrameLayout>-->
 
             <ImageView
                 android:id="@+id/rotateImageView"
@@ -128,7 +159,7 @@
                 android:layout_height="wrap_content"
                 app:layout_constraintBottom_toTopOf="@+id/cropRecyclerView"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintLeft_toRightOf="@id/rotateSeekBar" />
+                app:layout_constraintLeft_toRightOf="@id/rotateWheelView" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/cropRecyclerView"
@@ -137,7 +168,7 @@
                 android:background="@color/colorBlackAlpha"
                 android:paddingBottom="18dp"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/rotateSeekBar" />
+                app:layout_constraintTop_toBottomOf="@id/rotateWheelView" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

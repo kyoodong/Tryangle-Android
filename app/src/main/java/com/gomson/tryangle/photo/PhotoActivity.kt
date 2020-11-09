@@ -3,13 +3,13 @@ package com.gomson.tryangle.photo
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.media.MediaScannerConnection
+import android.graphics.Bitmap.CompressFormat
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.transition.ChangeBounds
 import android.transition.TransitionManager
-import android.util.Log
+import android.view.MotionEvent
 import android.view.View
 import android.view.animation.AccelerateInterpolator
 import android.widget.Toast
@@ -21,18 +21,17 @@ import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.gomson.tryangle.MainActivity
+import com.gomson.tryangle.OnItemClickListener
+import com.gomson.tryangle.PhotoDownloadManager
 import com.gomson.tryangle.R
 import com.gomson.tryangle.databinding.ActivityPhotoBinding
-import com.gomson.tryangle.visibleIf
 import com.yalantis.ucrop.UCrop
-import com.yalantis.ucrop.UCropFragment
-import com.yalantis.ucrop.UCropFragmentCallback
+import com.yalantis.ucrop.callback.BitmapCropCallback
+import com.yalantis.ucrop.view.CropImageView
+import com.yalantis.ucrop.view.GestureCropImageView
+import com.yalantis.ucrop.view.OverlayView
+import com.yalantis.ucrop.view.TransformImageView.TransformImageListener
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
-import java.text.SimpleDateFormat
-import java.util.*
 
 enum class CropRatio constructor(
     val text: String,
@@ -40,6 +39,7 @@ enum class CropRatio constructor(
     var x: Int,
     var y: Int
 ) {
+
     RATIO_ORIGINAL("원본", R.drawable.crop_original, 0, 0),
     RATIO_FREE("자유", R.drawable.crop_free, 0, 0),
     RATIO_1_1("1:1", R.drawable.crop_1_1, 1, 1),
@@ -54,56 +54,205 @@ enum class PhotoEditMode constructor(@LayoutRes val layoutId: Int) {
 //    FILTER(R.layout.activity_photo_filter),
 }
 
-class PhotoActivity : AppCompatActivity(), UCropFragmentCallback {
+class PhotoActivity : AppCompatActivity(), PhotoDownloadManager.PhotoSaveCallback {
 
     companion object {
-        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
+        val DEFAULT_COMPRESS_FORMAT = CompressFormat.JPEG
+        const val DEFAULT_COMPRESS_QUALITY = 90
+        private const val ROTATE_WIDGET_SENSITIVITY_COEFFICIENT = 42
     }
 
     private var contentUri: Uri? = null
     private lateinit var binding: ActivityPhotoBinding
-    private lateinit var fragment: UCropFragment
+
     private var currentMode = PhotoEditMode.MAIN
     private val REQUEST_STORAGE_WRITE_ACCESS_PERMISSION = 100
     private val TAG = "PhotoActivity"
-    private lateinit var outputDirectory:File
+    private lateinit var overlayView: OverlayView
+    private lateinit var outputDirectory: File
+    private lateinit var gestureCropImageView: GestureCropImageView
+    private lateinit var downloadManager: PhotoDownloadManager
 
     private lateinit var cropAdapter: CropAdapter
+    var ratio = -1F
+    var corner = -1
+    val reflect = OverlayView::class.java
+        .getDeclaredField("mCurrentTouchCornerIndex")
+        .apply { isAccessible = true }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_photo)
         contentUri = intent.data
-        outputDirectory = getOutputDirectory()
-//        crop
-        initCrop()
+        downloadManager = PhotoDownloadManager(this, this)
+
+
+        initCropView()
+        initMainView()
+
+    }
+
+    private fun initCropView() {
         cropAdapter = CropAdapter(this, CropRatio.values())
         binding.cropRecyclerView.layoutManager =
             LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
         binding.cropRecyclerView.adapter = cropAdapter
+        gestureCropImageView = binding.ucrop.cropImageView
+        cropAdapter.setOnItemClickListener(
+            object : OnItemClickListener<CropRatio> {
+                override fun onItemClick(view: View, position: Int, item: CropRatio) {
+                    if(item != CropRatio.RATIO_FREE){
+                        gestureCropImageView.targetAspectRatio = getRatioAspect(item)
+                        gestureCropImageView.setImageToWrapCropBounds()
+                    }
+                    cropAdapter.currentRatio = item
+                }
+            })
 
-//         main
-        binding.back.setOnClickListener {
-            finishMode()
-        }
-        binding.cropView.setOnClickListener{
-            changeCropMode()
-        }
-        binding.filterView.setOnClickListener{
+        overlayView = binding.ucrop.overlayView
+        overlayView.visibility = View.GONE
+        overlayView.freestyleCropMode = OverlayView.FREESTYLE_CROP_MODE_ENABLE
 
+        binding.ucrop.cropImageView.setCropBoundsChangeListener {
+            overlayView.setTargetAspectRatio(it)
+            ratio = it
         }
-        binding.deleteView.setOnClickListener{
-            contentResolver.delete(contentUri!!, null, null)
-            finishMode()
+
+        gestureCropImageView.isScaleEnabled = true
+        gestureCropImageView.isRotateEnabled = false
+
+        overlayView.setOnTouchListener { _, event ->
+            val action = event.action and MotionEvent.ACTION_MASK
+
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_DOWN ||
+                cropAdapter.currentRatio == CropRatio.RATIO_FREE) {
+                overlayView.onTouchEvent(event).also { corner = reflect.getInt(overlayView) }
+            } else {
+                if (action == MotionEvent.ACTION_MOVE && corner in 0..3) {
+                    newPositionForUpdateCropViewRect(
+                        corner,
+                        ratio,
+                        event.x,
+                        event.y,
+                        overlayView.cropViewRect
+                    )
+                        .run { event.setLocation(first, second) }
+                }
+                overlayView.onTouchEvent(event)
+            }
         }
-        binding.finish.setOnClickListener{
-            fragment.cropAndSaveImage()
-//            saveCroppedImage()
+
+        gestureCropImageView.setTransformImageListener(mImageListener)
+        setImageData(contentUri)
+        setupRotateWidget()
+    }
+
+    private val mImageListener: TransformImageListener = object : TransformImageListener {
+        override fun onRotate(currentAngle: Float) {
+            binding.degreeView.text = currentAngle.toString()
+        }
+
+        override fun onScale(currentScale: Float) {
+            binding.degreeView.text = currentScale.toString()
+        }
+
+        override fun onLoadComplete() {
+            binding.ucrop.animate().alpha(1f).setDuration(300).interpolator = AccelerateInterpolator()
+        }
+
+        override fun onLoadFailure(e: java.lang.Exception) {
+
         }
     }
 
+    private fun setImageData(uri: Uri?) {
+        uri?.let {
+            val outputUri = Uri.fromFile(File(cacheDir, "tryangle.jpg"))
+            gestureCropImageView.setImageUri(it, outputUri)
+        }
+    }
+
+    private fun setupRotateWidget() {
+        binding.rotateWheelView.setScrollingListener(object :
+            ProgressWheelView.ScrollingListener {
+            override fun onScroll(delta: Float, totalDistance: Float) {
+                gestureCropImageView.postRotate(delta / ROTATE_WIDGET_SENSITIVITY_COEFFICIENT)
+            }
+
+            override fun onScrollEnd() {
+                gestureCropImageView.setImageToWrapCropBounds()
+            }
+
+            override fun onScrollStart() {
+                gestureCropImageView.cancelAllAnimations()
+            }
+        })
+
+
+        binding.rotateImageView.setOnClickListener { rotateByAngle(90) }
+    }
+
+    private fun rotateByAngle(angle: Int) {
+        gestureCropImageView.postRotate(angle.toFloat())
+        gestureCropImageView.setImageToWrapCropBounds()
+    }
+
+    private fun initMainView() {
+        binding.back.setOnClickListener {
+            finishMode()
+        }
+        binding.cropView.setOnClickListener {
+            changeCropMode()
+        }
+        binding.filterView.setOnClickListener {
+
+        }
+        binding.deleteView.setOnClickListener {
+            contentResolver.delete(contentUri!!, null, null)
+            finishMode()
+        }
+        binding.finish.setOnClickListener {
+            cropAndSaveImage()
+        }
+    }
+
+    private fun cropAndSaveImage() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                REQUEST_STORAGE_WRITE_ACCESS_PERMISSION
+            )
+            return
+        }
+        binding.progressBar.visibility = View.VISIBLE
+        gestureCropImageView.cropAndSaveImage(
+            DEFAULT_COMPRESS_FORMAT,
+            DEFAULT_COMPRESS_QUALITY,
+            object : BitmapCropCallback {
+                override fun onBitmapCropped(
+                    resultUri: Uri,
+                    offsetX: Int,
+                    offsetY: Int,
+                    imageWidth: Int,
+                    imageHeight: Int
+                ) {
+                    downloadManager.saveFileToAlbum(resultUri)
+                }
+
+                override fun onCropFailure(t: Throwable) {
+                    t.printStackTrace()
+                }
+            })
+    }
+
     /** 현재 모드 종료  */
-    fun finishMode(){
+    fun finishMode() {
         when (currentMode) {
             PhotoEditMode.MAIN -> {
                 finish()
@@ -118,168 +267,43 @@ class PhotoActivity : AppCompatActivity(), UCropFragmentCallback {
         finishMode()
     }
 
-    private fun initCrop() {
-        var uCrop = contentUri?.let {
-            UCrop.of(
-                it,
-                Uri.fromFile(File(cacheDir, "tryangle.jpg"))
-            )
-        }
-
-        uCrop = advancedConfig(uCrop!!)
-
-        fragment = uCrop.getFragment(uCrop.getIntent(this).getExtras())
-        supportFragmentManager.beginTransaction()
-            .add(R.id.imageLayout, fragment, UCropFragment.TAG)
-            .commitAllowingStateLoss()
-    }
 
     /** 메인모드로 전환 */
     private fun changeMainMode() {
         currentMode = PhotoEditMode.MAIN
-        updateView(PhotoEditMode.MAIN.layoutId)
         binding.finish.visibility = View.GONE
+        updateView(PhotoEditMode.MAIN.layoutId)
+        overlayView.visibility = View.GONE
     }
 
     /** 사진 크기 편집 모드로 전환 */
     private fun changeCropMode() {
-        binding.finish.visibility = View.VISIBLE
         currentMode = PhotoEditMode.CROP
+        binding.finish.visibility = View.VISIBLE
         updateView(PhotoEditMode.CROP.layoutId)
+        overlayView.visibility = View.VISIBLE
     }
 
     /** ucrop 라이브러리 고급 설정 */
     private fun advancedConfig(uCrop: UCrop): UCrop {
         val options = UCrop.Options()
         options.setCompressionFormat(Bitmap.CompressFormat.PNG)
-        options.setCompressionQuality(80)
+        options.setCompressionQuality(90)
         options.setHideBottomControls(true)
         options.setFreeStyleCropEnabled(true)
-
-        /*
-        If you want to configure how gestures work for all UCropActivity tabs
-
-        options.setAllowedGestures(UCropActivity.SCALE, UCropActivity.ROTATE, UCropActivity.ALL);
-        * */
-
-        /*
-        This sets max size for bitmap that will be decoded from source Uri.
-        More size - more memory allocation, default implementation uses screen diagonal.
-
-        options.setMaxBitmapSize(640);
-        * */
-
-
-        /*
-
-        Tune everything (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧
-
-        options.setMaxScaleMultiplier(5);
-        options.setImageToCropBoundsAnimDuration(666);
-        options.setDimmedLayerColor(Color.CYAN);
-        options.setCircleDimmedLayer(true);
-        options.setShowCropFrame(false);
-        options.setCropGridStrokeWidth(20);
-        options.setCropGridColor(Color.GREEN);
-        options.setCropGridColumnCount(2);
-        options.setCropGridRowCount(1);
-        options.setToolbarCropDrawable(R.drawable.your_crop_icon);
-        options.setToolbarCancelDrawable(R.drawable.your_cancel_icon);
-
-        // Color palette
-        options.setToolbarColor(ContextCompat.getColor(this, R.color.your_color_res));
-        options.setStatusBarColor(ContextCompat.getColor(this, R.color.your_color_res));
-        options.setToolbarWidgetColor(ContextCompat.getColor(this, R.color.your_color_res));
-        options.setRootViewBackgroundColor(ContextCompat.getColor(this, R.color.your_color_res));
-        options.setActiveControlsWidgetColor(ContextCompat.getColor(this, R.color.your_color_res));
-
-        // Aspect ratio options
-        options.setAspectRatioOptions(1,
-            new AspectRatio("WOW", 1, 2),
-            new AspectRatio("MUCH", 3, 4),
-            new AspectRatio("RATIO", CropImageView.DEFAULT_ASPECT_RATIO, CropImageView.DEFAULT_ASPECT_RATIO),
-            new AspectRatio("SO", 16, 9),
-            new AspectRatio("ASPECT", 1, 1));
-
-       */return uCrop.withOptions(options)
+       return uCrop.withOptions(options)
     }
 
 
-    private fun saveCroppedImage() {
-        val imageUri = contentUri
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            )
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(this,
-                 arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE) ,
-                REQUEST_STORAGE_WRITE_ACCESS_PERMISSION
-            )
-            return
+    private fun getRatioAspect(cropRatio: CropRatio): Float {
+        if (cropRatio == CropRatio.RATIO_ORIGINAL) {
+            return CropImageView.SOURCE_IMAGE_ASPECT_RATIO
         }
-
-        if (imageUri != null && imageUri.scheme == "file") {
-            try {
-                copyFileToDownloads(imageUri)
-            } catch (e: Exception) {
-                Toast.makeText(this, e.message, Toast.LENGTH_SHORT).show()
-                Log.e(
-                    TAG,
-                    imageUri.toString(),
-                    e
-                )
-                Toast.makeText(
-                    this,
-                    "파일을 저장하지 못했습니다",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        } else {
-            Toast.makeText(
-                this,
-                "쓰기 권한이 필요합니다",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-        binding.progressBar.visibility = View.GONE
+        return cropRatio.x.toFloat() / cropRatio.y.toFloat()
     }
 
 
-    private fun copyFileToDownloads(croppedFileUri: Uri) {
-        val saveFile = File(outputDirectory, SimpleDateFormat(FILENAME_FORMAT)
-            .format(System.currentTimeMillis()) + ".jpg"
-        )
-
-        val inStream =
-            FileInputStream(File(croppedFileUri.path))
-        val outStream = FileOutputStream(saveFile)
-        val inChannel = inStream.channel
-        val outChannel = outStream.channel
-        inChannel.transferTo(0, inChannel.size(), outChannel)
-        inStream.close()
-        outStream.close()
-
-        MediaScannerConnection.scanFile(
-            baseContext, arrayOf(saveFile.toString()), arrayOf(saveFile.name), null
-        )
-
-        Toast.makeText(this,"사진이 저장되었습니다", Toast.LENGTH_SHORT).show()
-        finishMode()
-    }
-
-
-    private fun getOutputDirectory(): File {
-        val mediaDir = externalMediaDirs.firstOrNull()?.let {
-            File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
-        }
-        return if (mediaDir != null && mediaDir.exists())
-            mediaDir else filesDir
-    }
-
-
-    /* 화면 전환 */
+    /** 화면 전환 */
     private fun updateView(@LayoutRes id: Int) {
         var targetConstSet = ConstraintSet()
         targetConstSet.clone(this, id)
@@ -288,18 +312,6 @@ class PhotoActivity : AppCompatActivity(), UCropFragmentCallback {
         val trans = ChangeBounds()
         trans.interpolator = AccelerateInterpolator()
         TransitionManager.beginDelayedTransition(binding.root, trans)
-    }
-
-    override fun onCropFinish(result: UCropFragment.UCropResult?) {
-        contentUri = result?.mResultData?.let { UCrop.getOutput(it) }
-        saveCroppedImage()
-//        saveCroppedImage(result?.mResultData?.let { UCrop.getOutput(it) })
-        changeMainMode()
-        initCrop()
-    }
-
-    override fun loadingProgress(showLoader: Boolean) {
-        binding.progressBar.visibility = showLoader.visibleIf()
     }
 
     override fun onRequestPermissionsResult(
@@ -312,15 +324,48 @@ class PhotoActivity : AppCompatActivity(), UCropFragmentCallback {
         when (requestCode) {
             REQUEST_STORAGE_WRITE_ACCESS_PERMISSION -> {
                 if (!grantResults.isEmpty()
-                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // todo
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                ) {
+                    cropAndSaveImage()
 
-                }else {
+                } else {
                     Toast.makeText(this, "쓰기 권한 획득에 실패했습니다.", Toast.LENGTH_LONG).show()
                     finish()
                 }
             }
         }
 
+    }
+
+    /** 비율 고정하면서 수정되는 overlayview 좌표  */
+    fun newPositionForUpdateCropViewRect(
+        corner: Int,
+        ratio: Float,
+        x: Float,
+        y: Float,
+        rect: RectF
+    ): Pair<Float, Float> {
+        if (corner !in 0..3) return x to y
+
+        var k = 1f / ratio
+
+        if (corner == 1 || corner == 3) k = -k
+
+        val w = if (corner == 0 || corner == 3) rect.left else rect.right
+        val h = if (corner == 0 || corner == 1) rect.top else rect.bottom
+
+        val kk1 = k * k + 1
+        val tx = ((w * k + y - h) * k + x) / kk1
+        val ty = ((y * k + x - w) * k + h) / kk1
+
+        return tx to ty
+    }
+
+    /** 사진 저장하고 난 후 */
+    override fun onSaveFinish(savedUri: Uri?) {
+        contentUri = savedUri
+        setImageData(savedUri)
+        binding.progressBar.visibility = View.GONE
+        changeMainMode()
     }
 }

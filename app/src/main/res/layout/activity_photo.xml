@@ -10,10 +10,20 @@
 
         <FrameLayout
             android:id="@+id/imageLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toTopOf="@+id/menuLayout"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/topLayout">
+
+            <com.yalantis.ucrop.view.UCropView
+                android:id="@+id/ucrop"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:alpha="0" />
+
+        </FrameLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/topLayout"
@@ -106,14 +116,27 @@
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/cropLayout"
+            android:background="@color/colorBlackAlpha"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:layout_constraintTop_toBottomOf="parent">
 
-            <SeekBar
-                android:id="@+id/rotateSeekBar"
+            <TextView
+                android:id="@+id/degreeView"
+                android:textColor="@color/colorWhite"
+                android:padding="4dp"
+                android:textSize="20sp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/rotateWheelView"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <com.gomson.tryangle.photo.ProgressWheelView
+                android:id="@+id/rotateWheelView"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                app:layout_constraintHorizontal_weight="1"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
@@ -123,7 +146,7 @@
                 android:layout_height="wrap_content"
                 app:layout_constraintBottom_toTopOf="@+id/cropRecyclerView"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintLeft_toRightOf="@id/rotateSeekBar" />
+                app:layout_constraintLeft_toRightOf="@id/rotateWheelView" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/cropRecyclerView"
@@ -131,7 +154,7 @@
                 android:layout_height="wrap_content"
                 android:paddingBottom="36dp"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/rotateSeekBar" />
+                app:layout_constraintTop_toBottomOf="@id/rotateWheelView" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
