@@ -624,6 +624,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     override fun onClick(url: String) {
         Log.d(TAG, "가이드 이미지 클릭 ${url}")
 
+        componentList.resetCompleteGuide()
         binding.layerLayout.removeAllViews()
         var startTime = System.currentTimeMillis()
         var endTime = System.currentTimeMillis()
