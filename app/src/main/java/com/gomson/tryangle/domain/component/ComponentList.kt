@@ -42,4 +42,14 @@ class ComponentList: ArrayList<Component>() {
         }
         return objectComponentList
     }
+
+    fun getNotGuidedObjectComponentList(): ArrayList<ObjectComponent> {
+        val objectComponentList = ArrayList<ObjectComponent>()
+        for (component in this) {
+            if (component is ObjectComponent && !component.guideCompleted) {
+                objectComponentList.add(component)
+            }
+        }
+        return objectComponentList
+    }
 }

@@ -596,11 +596,13 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
         guideList.remove(guidingGuide)
         if (guideList.isEmpty()) {
+            guidingGuide = null
             binding.guideTextView.text = getString(R.string.require_more_accurate_position_and_area)
         } else {
             guidingGuide = guidingComponent?.guideList?.get(0)
-            imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
+            binding.guideTextView.text = guidingGuide!!.message
         }
+        imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
     }
 
     fun countDownTimer(timerMode: TimerMode) {
@@ -688,7 +690,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                             guideComponentList.addAll(objectComponentList)
 
                             // 카메라 오브젝트
-                            val cameraObjectComponentList = componentList.getObjectComponentList()
+                            val cameraObjectComponentList = componentList.getNotGuidedObjectComponentList()
 
                             endTime = System.currentTimeMillis()
                             Log.d(TAG, "컴포넌트 준비 타임 ${endTime - startTime}")
@@ -744,6 +746,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             binding.layerLayout.removeAllViews()
             if (!componentList.isEmpty()) {
                 layerLayoutGuideManager.guide(componentList[0].guideList[0])
+            } else {
+                Log.i(TAG, "모든 컴포넌트 가이드 성공")
+                Log.i(TAG, "자동촬영!")
+                countDownTimer(TimerMode.values()[1])
             }
         }
     }
@@ -792,6 +798,13 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
     override fun onMatchComponent() {
         Log.i(TAG, "컴포넌트 매칭 성공")
+        val component = guidingComponent
+            ?: return
+
+        component.guideCompleted = true
+        runOnUiThread {
+            showCameraObject(componentList.getNotGuidedObjectComponentList())
+        }
     }
 
     private fun getRecentImage(): Uri? {

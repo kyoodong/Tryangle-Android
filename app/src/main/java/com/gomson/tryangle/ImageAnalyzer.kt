@@ -86,13 +86,13 @@ class ImageAnalyzer(
         matrix.postRotate(rotation.toFloat())
 
         // 릴리즈용
-//        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
-//            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
+        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
+            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
 
         // 개발용
-        val option = BitmapFactory.Options()
-        option.inScaled = false
-        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test5, option)
+//        val option = BitmapFactory.Options()
+//        option.inScaled = false
+//        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test5, option)
 
         width = bitmap.width
         height = (bitmap.width * ratio).toInt()
@@ -182,7 +182,7 @@ class ImageAnalyzer(
                     // 객체간에 충분히 가까워 진 경우
                     val targetPoint = targetComponent.centerPoint
                     val curRoi = Roi(minX, maxX, minY, maxY)
-                    if (targetPoint.isClose(center) && targetComponent.roi.getIou(curRoi) > 0.9) {
+                    if (targetPoint.isClose(center) || targetComponent.roi.getIou(curRoi) > 0.75) {
                         analyzeListener?.onMatchComponent()
                     }
                 } else if (guide is ObjectGuide) {
