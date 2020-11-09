@@ -72,8 +72,8 @@ class ImageAnalyzer(
 
     override fun analyze(imageProxy: ImageProxy) {
         val curTime = System.currentTimeMillis()
-        if (curTime - lastAnalyzeTime < 50) {
-            Thread.sleep(100)
+        if (curTime - lastAnalyzeTime < 100) {
+            Thread.sleep(50)
             imageProxy.close()
             return
         }
