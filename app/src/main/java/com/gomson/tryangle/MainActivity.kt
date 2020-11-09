@@ -613,6 +613,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
             override fun onFinish() {
                 binding.timerTextView.text = timerMode.text
+                binding.guideTextView.text = ""
                 takePhoto()
             }
         }.start()
@@ -744,14 +745,28 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             binding.layerLayout.addView(guidingComponentImageView)
             match(cameraObjectComponentList[0])
         } else {
-            binding.layerLayout.removeAllViews()
-            if (!componentList.isEmpty()) {
-                layerLayoutGuideManager.guide(componentList[0].guideList[0])
-            } else {
-                Log.i(TAG, "모든 컴포넌트 가이드 성공")
-                Log.i(TAG, "자동촬영!")
-                countDownTimer(TimerMode.values()[1])
+            // @TODO: Line Guide
+//            if (!componentList.isEmpty()) {
+//                layerLayoutGuideManager.guide(componentList[0].guideList[0])
+//            } else {
+
+
+
+            Log.i(TAG, "모든 컴포넌트 가이드 성공")
+            Log.i(TAG, "자동촬영!")
+            imageAnalyzer.setGuide(null, null, null)
+            if (componentList.hasPerson()) {
+                binding.guideTextView.text = "자세를 낮추어 아래에서 찍으면 다리가 길어보입니다."
             }
+
+            handler.postDelayed(Runnable {
+                binding.layerLayout.removeAllViews()
+                countDownTimer(TimerMode.values()[1])
+                binding.guideTextView.text = "자동촬영"
+            }, 2000)
+
+
+//            }
         }
     }
 
@@ -768,14 +783,12 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         val guideList = guideComponent.guideList
             ?: return
 
-
         if (guideList.size == 0) {
             if (guideComponent.mask.isEmpty() || guideComponent.mask[0].isEmpty())
                 return
 
             val guider = GuideImageObjectGuider(guideComponent.mask[0].size, guideComponent.mask.size)
             guider.initGuideList(guideComponent)
-            guideList.addAll(guideComponent.guideList)
         }
 
         guidingComponent = component
