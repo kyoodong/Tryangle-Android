@@ -148,7 +148,7 @@ public class ObjectComponent extends Component {
     }
 
     public void refreshLayer(Bitmap bitmap) {
-        layer = new Layer(mask, roi);
+        layer = new Layer(mask, roi, bitmap);
         centerPoint = layer.getCenterPoint();
         area = layer.getArea();
         roiImage = Bitmap.createBitmap(bitmap,

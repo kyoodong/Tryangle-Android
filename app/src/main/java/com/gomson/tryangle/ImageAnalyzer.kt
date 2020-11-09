@@ -92,7 +92,7 @@ class ImageAnalyzer(
         // 개발용
         val option = BitmapFactory.Options()
         option.inScaled = false
-        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test3, option)
+        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test5, option)
 
         width = bitmap.width
         height = (bitmap.width * ratio).toInt()

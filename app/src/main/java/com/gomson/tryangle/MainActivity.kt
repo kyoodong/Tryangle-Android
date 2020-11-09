@@ -761,6 +761,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         val guideList = guideComponent.guideList
             ?: return
 
+
         if (guideList.size == 0) {
             if (guideComponent.mask.isEmpty() || guideComponent.mask[0].isEmpty())
                 return
@@ -775,7 +776,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         guidingGuide = if (guideList.isEmpty()) null else guideList[0]
         imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
 
-        val imageView = binding.layerLayout.createImageView(guideComponent)
+        val imageView = binding.layerLayout.createImageView(guideComponent, true)
         binding.layerLayout.addView(imageView)
         displayGuide(guidingGuide)
     }
