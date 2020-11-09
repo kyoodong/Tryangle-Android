@@ -1,6 +1,7 @@
 package com.gomson.tryangle
 
 import android.Manifest
+import android.Manifest.permission
 import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -8,9 +9,7 @@ import android.database.Cursor
 import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.net.Uri
-import android.os.Bundle
-import android.os.CountDownTimer
-import android.os.Handler
+import android.os.*
 import android.provider.MediaStore
 import android.util.Base64
 import android.util.Log
@@ -37,6 +36,7 @@ import com.bumptech.glide.request.target.Target
 import com.gomson.tryangle.album.AlbumActivity
 import com.gomson.tryangle.databinding.ActivityMainBinding
 import com.gomson.tryangle.domain.Point
+import com.gomson.tryangle.domain.Spot
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ComponentList
 import com.gomson.tryangle.domain.component.ObjectComponent
@@ -48,6 +48,7 @@ import com.gomson.tryangle.guider.GuideImageObjectGuider
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.network.NetworkManager
 import com.gomson.tryangle.view.guide_image_view.GuideImageAdapter
+import com.google.android.gms.location.*
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
@@ -80,6 +81,8 @@ enum class TimerMode constructor(
     TIMER_10S(10000, R.drawable.timer10s, "10초", "10"),
 }
 
+private const val CODE_REQ_FINE_LOCATION = 10
+
 class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     GuideImageAdapter.OnClickGuideImage {
 
@@ -87,7 +90,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         private const val TAG = "MainActivity"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
-        private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
+        private val REQUIRED_PERMISSIONS = arrayOf(permission.CAMERA, permission.ACCESS_FINE_LOCATION)
     }
 
     // 카메라
@@ -141,6 +144,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     private var targetComponent: Component? = null
     private var guidingGuide: Guide? = null
     private lateinit var layerLayoutGuideManager: LayerLayoutGuideManager
+
+    private lateinit var locationCallback: LocationCallback
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationRequest: LocationRequest
 
     init {
         System.loadLibrary("opencv_java4")
@@ -206,9 +213,35 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         converter = YuvToRgbConverter(this)
         imageService = ImageService(baseContext)
 
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult?) {
+                locationResult ?: return
+                val latestLocation = locationResult.locations[locationResult.locations.size - 1]
+                imageService.getSpotByLocation(latestLocation.latitude, latestLocation.longitude, object: Callback<List<Spot>> {
+                    override fun onResponse(
+                        call: Call<List<Spot>>,
+                        response: Response<List<Spot>>
+                    ) {
+                        Log.i(TAG, "Spot 로딩 성공")
+                    }
+
+                    override fun onFailure(call: Call<List<Spot>>, t: Throwable) {
+                        Log.i(TAG, "Spot 로딩 실패")
+                    }
+                })
+            }
+        }
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        locationRequest = LocationRequest.create()
+        locationRequest.run {
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        }
+
         // 카메라 권한 체크
         if (allPermissionsGranted()) {
             startCamera()
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper())
         } else {
             ActivityCompat.requestPermissions(
                 this,
@@ -479,8 +512,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
                 startCamera()
+                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper())
             } else {
-                Toast.makeText(this, "카메라 권한 획득에 실패했습니다.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "권한 획득에 실패했습니다.", Toast.LENGTH_LONG).show()
                 finish()
             }
         }
@@ -629,7 +663,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         binding.layerLayout.removeAllViews()
         var startTime = System.currentTimeMillis()
         var endTime = System.currentTimeMillis()
-        Glide.with(baseContext).asBitmap().load("${NetworkManager.URL}/${url}").listener(object: RequestListener<Bitmap> {
+        Glide.with(baseContext).asBitmap().load("${NetworkManager.URL}/${url}").listener(object :
+            RequestListener<Bitmap> {
             override fun onLoadFailed(
                 e: GlideException?,
                 model: Any?,
@@ -650,67 +685,75 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                 endTime = System.currentTimeMillis()
                 Log.d(TAG, "비트맵 로딩 타임 ${endTime - startTime}")
                 startTime = System.currentTimeMillis()
-                imageService.getObjectComponentByUrl(url, object : Callback<ObjectComponentListDTO> {
-                    override fun onResponse(
-                        call: Call<ObjectComponentListDTO>,
-                        response: Response<ObjectComponentListDTO>
-                    ) {
-                        endTime = System.currentTimeMillis()
-                        Log.d(TAG, "컴포넌트 로딩 타임 ${endTime - startTime}")
-                        startTime = System.currentTimeMillis()
-                        if (response.isSuccessful) {
-                            Log.i(TAG, "가이드 이미지 컴포넌트 로딩 성공")
-                            val objectComponentListDTO = response.body()
-                                ?: return
-
-                            val base64String = objectComponentListDTO.maskStr
-                            var base64StringList = base64String.split("==")
-                            if (base64StringList.size <= 1) {
-                                Log.d(TAG, "마스크 이미지 없음")
-                                Toast.makeText(baseContext, "마스크 이미지 없음", Toast.LENGTH_SHORT).show()
-                                return
-                            }
-
-                            base64StringList = base64StringList.subList(0, base64StringList.size - 1)
-
-                            val maskList = MaskList()
-                            for (str in base64StringList) {
-                                val base64 = str.plus("==")
-                                maskList.add(Base64.decode(base64, Base64.DEFAULT))
-                            }
-                            objectComponentListDTO.deployMask(maskList)
-                            val objectComponentList = objectComponentListDTO.objectComponentList
-
-                            if (objectComponentList.isEmpty())
-                                return
-
-                            for (objectComponent in objectComponentList) {
-                                objectComponent.refreshLayer(resource)
-                            }
-
-                            guideComponentList.clear()
-                            guideComponentList.addAll(objectComponentList)
-
-                            // 카메라 오브젝트
-                            val cameraObjectComponentList = componentList.getNotGuidedObjectComponentList()
-
+                imageService.getObjectComponentByUrl(
+                    url,
+                    object : Callback<ObjectComponentListDTO> {
+                        override fun onResponse(
+                            call: Call<ObjectComponentListDTO>,
+                            response: Response<ObjectComponentListDTO>
+                        ) {
                             endTime = System.currentTimeMillis()
-                            Log.d(TAG, "컴포넌트 준비 타임 ${endTime - startTime}")
+                            Log.d(TAG, "컴포넌트 로딩 타임 ${endTime - startTime}")
                             startTime = System.currentTimeMillis()
+                            if (response.isSuccessful) {
+                                Log.i(TAG, "가이드 이미지 컴포넌트 로딩 성공")
+                                val objectComponentListDTO = response.body()
+                                    ?: return
 
-                            showCameraObject(cameraObjectComponentList)
-                        } else {
-                            Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패 ${response.code()}")
+                                val base64String = objectComponentListDTO.maskStr
+                                var base64StringList = base64String.split("==")
+                                if (base64StringList.size <= 1) {
+                                    Log.d(TAG, "마스크 이미지 없음")
+                                    Toast.makeText(baseContext, "마스크 이미지 없음", Toast.LENGTH_SHORT)
+                                        .show()
+                                    return
+                                }
+
+                                base64StringList = base64StringList.subList(
+                                    0,
+                                    base64StringList.size - 1
+                                )
+
+                                val maskList = MaskList()
+                                for (str in base64StringList) {
+                                    val base64 = str.plus("==")
+                                    maskList.add(Base64.decode(base64, Base64.DEFAULT))
+                                }
+                                objectComponentListDTO.deployMask(maskList)
+                                val objectComponentList = objectComponentListDTO.objectComponentList
+
+                                if (objectComponentList.isEmpty())
+                                    return
+
+                                for (objectComponent in objectComponentList) {
+                                    objectComponent.refreshLayer(resource)
+                                }
+
+                                guideComponentList.clear()
+                                guideComponentList.addAll(objectComponentList)
+
+                                // 카메라 오브젝트
+                                val cameraObjectComponentList =
+                                    componentList.getNotGuidedObjectComponentList()
+
+                                endTime = System.currentTimeMillis()
+                                Log.d(TAG, "컴포넌트 준비 타임 ${endTime - startTime}")
+                                startTime = System.currentTimeMillis()
+
+                                showCameraObject(cameraObjectComponentList)
+                            } else {
+                                Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패 ${response.code()}")
+                            }
                         }
-                    }
-                    override fun onFailure(
-                        call: Call<ObjectComponentListDTO>,
-                        t: Throwable
-                    ) {
-                        t.printStackTrace()
-                        Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패")
-                    }
-                })
+
+                        override fun onFailure(
+                            call: Call<ObjectComponentListDTO>,
+                            t: Throwable
+                        ) {
+                            t.printStackTrace()
+                            Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패")
+                        }
+                    })
                 return false
             }
         }).submit()
@@ -787,7 +830,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             if (guideComponent.mask.isEmpty() || guideComponent.mask[0].isEmpty())
                 return
 
-            val guider = GuideImageObjectGuider(guideComponent.mask[0].size, guideComponent.mask.size)
+            val guider = GuideImageObjectGuider(
+                guideComponent.mask[0].size,
+                guideComponent.mask.size
+            )
             guider.initGuideList(guideComponent)
         }
 
