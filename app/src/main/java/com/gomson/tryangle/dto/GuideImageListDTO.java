@@ -1,16 +1,16 @@
 package com.gomson.tryangle.dto;
 
-import java.util.List;
+import java.util.ArrayList;
 
 public class GuideImageListDTO {
 
     private GuideDTO guideDTO;
-    private List<String> guideImageList;
+    private ArrayList<String> guideImageList;
 
     public GuideImageListDTO() {
     }
 
-    public GuideImageListDTO(GuideDTO guideDTO, List<String> guideImageList) {
+    public GuideImageListDTO(GuideDTO guideDTO, ArrayList<String> guideImageList) {
         this.guideDTO = guideDTO;
         this.guideImageList = guideImageList;
     }
@@ -19,7 +19,7 @@ public class GuideImageListDTO {
         return guideDTO;
     }
 
-    public List<String> getGuideImageList() {
+    public ArrayList<String> getGuideImageList() {
         return guideImageList;
     }
 }

@@ -8,9 +8,9 @@ public abstract class Component {
 
     private long id;
     private long componentId;
-    protected ArrayList<? extends Guide> guideList;
+    protected ArrayList<Guide> guideList;
 
-    public Component(long id, long componentId, ArrayList<? extends Guide> guideList) {
+    public Component(long id, long componentId, ArrayList<Guide> guideList) {
         this.id = id;
         this.componentId = componentId;
         this.guideList = guideList;
@@ -33,11 +33,11 @@ public abstract class Component {
         this.componentId = componentId;
     }
 
-    public ArrayList<? extends Guide> getGuideList() {
-        return new ArrayList<Guide>(guideList);
+    public void setGuideList(ArrayList<Guide> guideList) {
+        this.guideList = guideList;
     }
 
-    public void setGuideList(ArrayList<? extends Guide> guideList) {
-        this.guideList = guideList;
+    public ArrayList<Guide> getGuideList() {
+        return guideList;
     }
 }

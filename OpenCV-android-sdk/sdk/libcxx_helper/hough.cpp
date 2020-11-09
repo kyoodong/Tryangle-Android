@@ -223,7 +223,7 @@ Java_com_gomson_tryangle_Hough_find_1hough_1line(JNIEnv *env, jobject thiz, jlon
                                                              (jlong) 0,
                                                              default_point, default_point));
 
-    for (int i = 0; i < clusters.size() && i < 3; i++) {
+    for (int i = 0; i < clusters.size() && i < 0; i++) {
         jobject start_point = env->NewObject(class_point, point_constructor, clusters[i].representive_line.start_point.x,
                                              clusters[i].representive_line.start_point.y);
         jobject end_point = env->NewObject(class_point, point_constructor, clusters[i].representive_line.end_point.x,

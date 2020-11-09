@@ -14,16 +14,16 @@
             android:id="@+id/previewLayout"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            app:layout_constraintBottom_toTopOf="@+id/bottomLayout"
+            app:layout_constraintBottom_toTopOf="@id/bottomLayout"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/topLayout"
             app:layout_constraintVertical_weight="1">
 
             <androidx.camera.view.PreviewView
                 android:id="@+id/previewView"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent"/>
 
             <com.gomson.tryangle.GridLinesView
                 android:id="@+id/gridLinesView"
@@ -49,36 +49,6 @@
                 android:layout_height="match_parent"/>
 
         </FrameLayout>
-
-        <ImageView
-            android:id="@+id/layerImageView"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            app:layout_constraintBottom_toTopOf="@id/bottomLayout"
-            app:layout_constraintDimensionRatio="h, 3:4"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/topLayout" />
-
-        <ImageView
-            android:id="@+id/guideImageView"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            app:layout_constraintBottom_toTopOf="@id/bottomLayout"
-            app:layout_constraintDimensionRatio="h, 3:4"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/topLayout" />
-
-        <TextView
-            android:id="@+id/guideTextView"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            app:layout_constraintBottom_toTopOf="@id/bottomLayout"
-            app:layout_constraintDimensionRatio="h, 3:4"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/topLayout" />
 
         <ImageView
             android:id="@+id/thumbUp"
@@ -135,6 +105,17 @@
                 app:layout_constraintTop_toTopOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <TextView
+            android:id="@+id/guideTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/colorWhite"
+            android:gravity="center"
+            android:layout_marginBottom="16dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            app:layout_constraintBottom_toTopOf="@id/guideLayout" />
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/guideLayout"

@@ -1,11 +1,11 @@
 package com.gomson.tryangle.guider
 
+import com.gomson.tryangle.domain.Line
 import com.gomson.tryangle.domain.Point
-import com.gomson.tryangle.domain.Roi
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
-import com.gomson.tryangle.domain.guide.Guide
-import com.gomson.tryangle.domain.guide.ObjectGuide
+import com.gomson.tryangle.domain.guide.`object`.GoldenAreaGuide
+import com.gomson.tryangle.domain.guide.`object`.MiddleObjectLineGuide
 import com.gomson.tryangle.dto.MaskList
 import kotlin.math.abs
 
@@ -14,12 +14,12 @@ open class GuideImageObjectGuider(
     private var imageHeight: Int
 ): Guider() {
 
-    override fun guide(component: Component) {
+    override fun initGuideList(component: Component) {
         val component = component as ObjectComponent
         val imageHeight = this.imageHeight ?: return
         val imageWidth = this.imageWidth ?: return
         val middleSide = imageWidth / 2
-        val error = imageWidth / 2
+        val error = 10
 
         val guideList = component.guideList
         guideList.clear()
@@ -28,15 +28,25 @@ open class GuideImageObjectGuider(
         for (i in goldenAreaList.indices) {
             val iou = getIou(goldenAreaList[i], component.mask)
             if (iou > 0.7) {
-                guideList.add(ObjectGuide(5, Point(i, -1)))
+                // i번 황금영역에 배치하라는 가이드
+                guideList.add(GoldenAreaGuide(goldenAreaList[i], component))
             }
         }
 
         // 중앙에 잘 위치한 경우
-        if (middleDiff <= error) {
-            guideList.add(ObjectGuide(4, null))
+        if (guideList.isEmpty() && middleDiff <= error) {
+            val middleLine = Line(
+                Point(
+                    imageWidth / 2,
+                    0
+                ),
+                Point(
+                    imageWidth / 2,
+                    imageHeight
+                )
+            )
+            guideList.add(MiddleObjectLineGuide(middleLine, component))
         }
-        component.guideList = guideList
     }
 
     private fun getGoldenRatioArea(imageWidth: Int, imageHeight: Int): ArrayList<Pair<Point, Point>> {
