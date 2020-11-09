@@ -59,6 +59,7 @@ class ImageAnalyzer(
 
     var width = 0
     var height = 0
+    private var lastAnalyzeTime = System.currentTimeMillis()
 
     init {
         // 토큰 발급
@@ -70,6 +71,15 @@ class ImageAnalyzer(
     external fun MatchFeature(matAddrInput1: Long, matAddrInput2: Long, ratioInRoi: Int): MatchingResult?
 
     override fun analyze(imageProxy: ImageProxy) {
+        val curTime = System.currentTimeMillis()
+        if (curTime - lastAnalyzeTime < 50) {
+            Thread.sleep(100)
+            imageProxy.close()
+            return
+        }
+
+        lastAnalyzeTime = System.currentTimeMillis()
+
         rotation = imageProxy.imageInfo.rotationDegrees
         if (!::bitmapBuffer.isInitialized) {
             // The image rotation and RGB image buffer are initialized only once
