@@ -596,11 +596,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
         guideList.remove(guidingGuide)
         if (guideList.isEmpty()) {
-            componentList.remove(component)
-            guideComponentList.remove(targetComponent)
-            runOnUiThread {
-                showCameraObject(componentList.getObjectComponentList())
-            }
+            binding.guideTextView.text = getString(R.string.require_more_accurate_position_and_area)
         } else {
             guidingGuide = guidingComponent?.guideList?.get(0)
             imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
@@ -665,6 +661,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                             val base64String = objectComponentListDTO.maskStr
                             var base64StringList = base64String.split("==")
                             if (base64StringList.size <= 1) {
+                                Log.d(TAG, "마스크 이미지 없음")
                                 Toast.makeText(baseContext, "마스크 이미지 없음", Toast.LENGTH_SHORT).show()
                                 return
                             }
@@ -682,8 +679,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                             if (objectComponentList.isEmpty())
                                 return
 
-                            if (objectComponentList.isEmpty())
-                                return
+                            for (objectComponent in objectComponentList) {
+                                objectComponent.refreshLayer(resource)
+                            }
 
                             guideComponentList.clear()
                             guideComponentList.addAll(objectComponentList)
@@ -725,6 +723,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                 val imageView = binding.layerLayout.createImageView(component)
                 imageView.setOnClickListener {
                     Log.i(TAG, "메인 객체 선택")
+                    guideTextView.text = ""
                     binding.layerLayout.removeAllViewsWithout(imageView)
                     guidingComponentImageView = imageView
                     match(component)
@@ -768,14 +767,11 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             val guider = GuideImageObjectGuider(guideComponent.mask[0].size, guideComponent.mask.size)
             guider.initGuideList(guideComponent)
             guideList.addAll(guideComponent.guideList)
-
-            if (guideList.size == 0)
-                return
         }
 
         guidingComponent = component
         targetComponent = guideComponent
-        guidingGuide = guideList[0]
+        guidingGuide = if (guideList.isEmpty()) null else guideList[0]
         imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
 
         val imageView = binding.layerLayout.createImageView(guideComponent)

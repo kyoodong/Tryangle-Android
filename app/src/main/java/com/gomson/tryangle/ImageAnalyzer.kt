@@ -1,10 +1,7 @@
 package com.gomson.tryangle
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Matrix
+import android.graphics.*
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
@@ -89,8 +86,13 @@ class ImageAnalyzer(
         matrix.postRotate(rotation.toFloat())
 
         // 릴리즈용
-        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
-            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
+//        bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
+//            bitmapBuffer.width, bitmapBuffer.height, matrix, true)
+
+        // 개발용
+        val option = BitmapFactory.Options()
+        option.inScaled = false
+        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test3, option)
 
         width = bitmap.width
         height = (bitmap.width * ratio).toInt()
@@ -99,11 +101,6 @@ class ImageAnalyzer(
         width = 640
         height = (width * ratio).toInt()
         bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true)
-
-        // 개발용
-//        val option = BitmapFactory.Options()
-//        option.inScaled = false
-//        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test3, option)
 
         poseGuider = PoseGuider(bitmap.width, bitmap.height)
         objectGuider = ObjectGuider(bitmap.width, bitmap.height)
@@ -181,19 +178,18 @@ class ImageAnalyzer(
 
                 // 가이드 내에서 도달해야하는 목표지점
                 val guide = guidingGuide
-                    ?: return
-                if (guide is ObjectGuide) {
+                if (guide == null) {
+                    // 객체간에 충분히 가까워 진 경우
+                    val targetPoint = targetComponent.centerPoint
+                    val curRoi = Roi(minX, maxX, minY, maxY)
+                    if (targetPoint.isClose(center) && targetComponent.roi.getIou(curRoi) > 0.9) {
+                        analyzeListener?.onMatchComponent()
+                    }
+                } else if (guide is ObjectGuide) {
                     if (guide.isMatch(Roi(minX, maxX, minY, maxY))) {
                         Log.i(TAG, "가이드 목표 도달!")
                         analyzeListener?.onMatchGuide()
                     }
-                }
-
-                // 객체간에 충분히 가까워 진 경우
-                val targetPoint = targetComponent.centerPoint
-                val curRoi = Roi(minX, maxX, minY, maxY)
-                if (targetPoint.isClose(center) && targetComponent.roi.getIou(curRoi) > 0.9) {
-                    analyzeListener?.onMatchComponent()
                 }
 
                 analyzeListener?.onUpdateGuidingComponentPosition(width, height, leftTop)

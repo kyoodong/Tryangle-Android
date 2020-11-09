@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">TryAngle</string>
     <string name="select_main_object">주 대상을 골라보세요</string>
+    <string name="require_more_accurate_position_and_area">대상 객체의 크기와 위치를 정확히 맞춰주세요</string>
 </resources>
