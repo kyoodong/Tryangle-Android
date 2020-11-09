@@ -16,8 +16,8 @@ private const val TIMEOUT = 3L
 internal class NetworkManager {
 
     companion object {
-        const val URL = "http://121.139.71.162:7778"
-//        const val URL = "http://121.139.71.162:7776"
+//        const val URL = "http://121.139.71.162:7778"
+        const val URL = "http://121.139.71.162:7776"
 
         private val client = OkHttpClient.Builder()
             .connectTimeout(TIMEOUT, TimeUnit.MINUTES)

@@ -1,5 +1,6 @@
 package com.gomson.tryangle.network
 
+import com.gomson.tryangle.domain.Spot
 import com.gomson.tryangle.dto.GuideImageListDTO
 import com.gomson.tryangle.dto.ObjectComponentListDTO
 import okhttp3.MultipartBody
@@ -17,4 +18,9 @@ interface ImageRetrofitService {
     @GET("api/image/component")
     fun getObjectComponentByUrl(@Query("url") url: String, @Query("token") token: String)
             : Call<ObjectComponentListDTO>
+
+    @GET("api/spot")
+    fun getSpotByLocation(@Query("x") x: Double,
+                          @Query("y") y: Double, @Query("token") token: String)
+    : Call<List<Spot>>
 }
