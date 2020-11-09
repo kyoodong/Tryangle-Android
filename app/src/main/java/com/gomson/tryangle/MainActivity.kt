@@ -1,6 +1,5 @@
 package com.gomson.tryangle
 
-import android.Manifest
 import android.Manifest.permission
 import android.content.ContentUris
 import android.content.Intent
@@ -9,7 +8,10 @@ import android.database.Cursor
 import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.net.Uri
-import android.os.*
+import android.os.Bundle
+import android.os.CountDownTimer
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.util.Base64
 import android.util.Log
@@ -21,6 +23,7 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.camera2.Camera2Config
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -108,12 +111,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
     private lateinit var camera: Camera
     private lateinit var converter: YuvToRgbConverter
-    private lateinit var guideBitmap: Bitmap
-    private var guideClusters: Array<ArrayList<Guide>>? = null
 
-    private var componentList = ComponentList()
-    private var guideComponentList = ArrayList<ObjectComponent>()
-    private var mainGuide: Guide? = null
+    private val spotList = ArrayList<Spot>()
+    private val componentList = ComponentList()
+    private val guideComponentList = ArrayList<ObjectComponent>()
     private lateinit var imageAnalyzer: ImageAnalyzer
 
     private var cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -222,11 +223,24 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                         call: Call<List<Spot>>,
                         response: Response<List<Spot>>
                     ) {
-                        Log.i(TAG, "Spot 로딩 성공")
+                        if (response.isSuccessful) {
+                            Log.i(TAG, "Spot 로딩 성공")
+                            val spotList = response.body()
+                                ?: return
+
+                            this@MainActivity.spotList.clear()
+                            this@MainActivity.spotList.addAll(spotList)
+
+                            for (spot in spotList) {
+                                spot.imageUrlList
+                            }
+                        } else {
+                            Log.i(TAG, "Spot 로딩 실패 ${response.code()}")
+                        }
                     }
 
                     override fun onFailure(call: Call<List<Spot>>, t: Throwable) {
-                        Log.i(TAG, "Spot 로딩 실패")
+                        Log.i(TAG, "Spot 로딩 실패 ${t.message}")
                     }
                 })
             }
@@ -415,9 +429,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 //                setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                 setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 setTargetAspectRatioCustom(Rational(widthRatio, heightRatio))
-            }
-
-            .build()
+            }.build()
         preview = Preview.Builder()
             .setTargetAspectRatioCustom(Rational(widthRatio, heightRatio))
             .build()
@@ -429,7 +441,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener(Runnable {
             cameraProvider = cameraProviderFuture.get()
-
             bindCameraConfiguration()
         }, ContextCompat.getMainExecutor(this))
     }
