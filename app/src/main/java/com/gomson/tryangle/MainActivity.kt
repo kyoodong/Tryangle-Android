@@ -898,6 +898,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     override fun onUpdateSpot(spotList: ArrayList<Spot>) {
+        var count = 0
         for (spot in spotList) {
             val imageUrlList = spot.imageUrlList
                 ?: continue
@@ -905,7 +906,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             binding.guideImageCategoryTabLayout.addTab(
                 GuideTabItem(spot.name, imageUrlList as ArrayList<String>)
             )
+            count += 1
+        }
 
+        if (count > 0) {
             val tab = this.binding.guideImageCategoryTabLayout.tabLayout.getTabAt(1)
             this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
         }
