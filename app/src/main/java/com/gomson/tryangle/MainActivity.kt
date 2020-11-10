@@ -612,6 +612,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         this.recommendedImageUrlList.addAll(imageList)
 
         runOnUiThread {
+            val tab = this.binding.guideImageCategoryTabLayout.tabLayout.getTabAt(0)
+            this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
             binding.guideImageCategoryTabLayout.addImageUrlList(imageList)
         }
     }
@@ -903,6 +905,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             binding.guideImageCategoryTabLayout.addTab(
                 GuideTabItem(spot.name, imageUrlList as ArrayList<String>)
             )
+
+            val tab = this.binding.guideImageCategoryTabLayout.tabLayout.getTabAt(1)
+            this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
         }
     }
 }
