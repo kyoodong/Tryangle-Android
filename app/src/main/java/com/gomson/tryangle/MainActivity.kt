@@ -309,11 +309,15 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         }
 
         binding.captureButton.setOnClickListener {
-            countDownTimer(TimerMode.values()[currentTimerModeIndex])
+            TimerMode.values()[currentTimerModeIndex].let {
+                if ( it == TimerMode.TIMER_OFF ) {
+                    takePhoto()
+                }
+                else{
+                    countDownTimer(it)
+                }
+            }
         }
-
-        outputDirectory = getOutputDirectory()
-        cameraExecutor = Executors.newSingleThreadExecutor()
 
         binding.ratioBtn.setOnClickListener {
             popupRatioView.contentView.ratio9_16.setColorFilter(
@@ -346,9 +350,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             startActivity(intent)
         }
 
-
         guideImageCategoryTabLayout.setOnClickGuideImageListener(this)
         layerLayoutGuideManager = LayerLayoutGuideManager(binding.layerLayout)
+
         recentImage = getRecentImage()
         Glide.with(this)
             .load(recentImage)
@@ -467,15 +471,15 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
+        binding.captureEffectView.visibility = View.VISIBLE
+
         imageCapture.takePicture(
             outputOptions,
             ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     val savedUri = Uri.fromFile(photoFile)
-                    val msg = "Photo capture succeeded: $savedUri"
-                    Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                    Log.d(TAG, msg)
+                    binding.captureEffectView.visibility = View.GONE
 
                     MediaScannerConnection.scanFile(
                         baseContext, arrayOf(photoFile.toString()), arrayOf(photoFile.name), null
@@ -632,7 +636,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     fun countDownTimer(timerMode: TimerMode) {
-        object : CountDownTimer(timerMode.milliseconds, 1000) {
+        binding.timerTextView.visibility = View.VISIBLE
+        object : CountDownTimer(timerMode.milliseconds + 1000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 binding.timerTextView.text = (millisUntilFinished / 1000).toString()
             }
@@ -640,6 +645,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             override fun onFinish() {
                 binding.timerTextView.text = timerMode.text
                 binding.guideTextView.text = ""
+                binding.timerTextView.visibility = View.GONE
                 takePhoto()
             }
         }.start()

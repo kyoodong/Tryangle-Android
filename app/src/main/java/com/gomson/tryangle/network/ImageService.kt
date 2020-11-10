@@ -46,8 +46,8 @@ class ImageService(context: Context): BaseService(context) {
             issueToken(null)
         }
 
-        val call = NetworkManager.imageService.recommendImage(body, accessToken!!.token)
-        call.enqueue(callback)
+//        val call = NetworkManager.imageService.recommendImage(body, accessToken!!.token)
+//        call.enqueue(callback)
 
 //        try {
 //
