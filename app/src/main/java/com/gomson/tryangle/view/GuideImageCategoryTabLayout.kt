@@ -56,8 +56,8 @@ class GuideImageCategoryTabLayout @JvmOverloads constructor(
 
         imageListView.visibility = if (tab.id == 0) View.VISIBLE else View.INVISIBLE
         if (listener != null)
-            imageListView.getAdapter().setOnClickGuideImageListener(listener!!)
-        imageListView.getAdapter().addImageUrlList(guideTabItem.imageUrlList)
+            imageListView.setOnClickGuideImageListener(listener!!)
+        imageListView.setImageUrlList(guideTabItem.imageUrlList)
         guideImageListViewList.add(imageListView)
         contentLayout.addView(imageListView)
         contentLayout.invalidate()
@@ -65,14 +65,14 @@ class GuideImageCategoryTabLayout @JvmOverloads constructor(
     }
 
     fun addImageUrlList(urlList: ArrayList<String>) {
-        guideImageListViewList[0].getAdapter().setImageUrlList(urlList)
+        guideImageListViewList[0].setImageUrlList(urlList)
     }
 
     fun setOnClickGuideImageListener(listener: GuideImageAdapter.OnClickGuideImage) {
         this.listener = listener
 
         for (imageListView in guideImageListViewList) {
-            imageListView.getAdapter().setOnClickGuideImageListener(listener)
+            imageListView.setOnClickGuideImageListener(listener)
         }
     }
 }
