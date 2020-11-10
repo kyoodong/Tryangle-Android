@@ -58,6 +58,7 @@ class ImageAnalyzer(
     private var failToDetectObjectStartTime: Long = 0
     private var ratio: Float = 1f
     var latestLocation: Location? = null
+    private var hasSpotImages = false
 
     var width = 0
     var height = 0
@@ -364,10 +365,11 @@ class ImageAnalyzer(
             }
         })
 
-        if (latestLocation != null) {
+        if (latestLocation != null && !hasSpotImages) {
             val latestLocation = latestLocation
                 ?: return
 
+            hasSpotImages = true
             Log.i(TAG, "Spot 요청")
             imageService.getSpotByLocation(bitmap, latestLocation.latitude, latestLocation.longitude, object:
                 Callback<List<Spot>> {
@@ -380,14 +382,17 @@ class ImageAnalyzer(
                         val spotList = response.body()
                             ?: return
 
+                        hasSpotImages = true
                         this@ImageAnalyzer.analyzeListener?.onUpdateSpot(spotList as ArrayList<Spot>)
                     } else {
+                        hasSpotImages = false
                         Log.i(TAG, "Spot 로딩 실패 ${response.code()}")
                     }
                 }
 
                 override fun onFailure(call: Call<List<Spot>>, t: Throwable) {
                     Log.i(TAG, "Spot 로딩 실패 ${t.message}")
+                    hasSpotImages = false
                 }
             })
         }
