@@ -28,15 +28,18 @@ class GuideImageCategoryTabLayout @JvmOverloads constructor(
 
         tabLayout.addOnTabSelectedListener(object: TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
-                Log.d(TAG, "onTabSelected")
+                val tab = tab
+                    ?: return
+
+                for (i in guideImageListViewList.indices) {
+                    guideImageListViewList[i].visibility = if (i == tab.id) View.VISIBLE else View.INVISIBLE
+                }
             }
 
             override fun onTabUnselected(tab: TabLayout.Tab?) {
-                Log.d(TAG, "onTabUnselected")
             }
 
             override fun onTabReselected(tab: TabLayout.Tab?) {
-                Log.d(TAG, "onTabReselected")
             }
         })
     }
