@@ -6,8 +6,8 @@ public class Spot {
 
     private long id;
     private String name;
-    private double x;
-    private double y;
+    private double lat;
+    private double lon;
     private List<String> imageUrlList;
 
     public long getId() {
@@ -18,12 +18,12 @@ public class Spot {
         return name;
     }
 
-    public double getX() {
-        return x;
+    public double getLat() {
+        return lat;
     }
 
-    public double getY() {
-        return y;
+    public double getLon() {
+        return lon;
     }
 
     public List<String> getImageUrlList() {
