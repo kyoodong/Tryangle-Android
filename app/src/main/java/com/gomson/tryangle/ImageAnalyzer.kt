@@ -369,7 +369,7 @@ class ImageAnalyzer(
                 ?: return
 
             Log.i(TAG, "Spot 요청")
-            imageService.getSpotByLocation(latestLocation.latitude, latestLocation.longitude, object:
+            imageService.getSpotByLocation(bitmap, latestLocation.latitude, latestLocation.longitude, object:
                 Callback<List<Spot>> {
                 override fun onResponse(
                     call: Call<List<Spot>>,
