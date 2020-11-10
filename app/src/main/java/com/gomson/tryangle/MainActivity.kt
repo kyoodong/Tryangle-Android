@@ -23,7 +23,6 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.camera2.Camera2Config
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -38,6 +37,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.gomson.tryangle.album.AlbumActivity
 import com.gomson.tryangle.databinding.ActivityMainBinding
+import com.gomson.tryangle.domain.GuideTabItem
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.Spot
 import com.gomson.tryangle.domain.component.Component
@@ -52,9 +52,11 @@ import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.network.NetworkManager
 import com.gomson.tryangle.view.guide_image_view.GuideImageAdapter
 import com.google.android.gms.location.*
+import com.google.android.material.tabs.TabLayout
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
+import kotlinx.android.synthetic.main.view_guide_image_category_tab_layout.view.*
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
@@ -214,6 +216,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         converter = YuvToRgbConverter(this)
         imageService = ImageService(baseContext)
 
+        binding.guideImageCategoryTabLayout.addTab(
+            GuideTabItem("추천", recommendedImageUrlList)
+        )
+
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult?) {
                 locationResult ?: return
@@ -232,7 +238,12 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                             this@MainActivity.spotList.addAll(spotList)
 
                             for (spot in spotList) {
-                                spot.imageUrlList
+                                val imageUrlList = spot.imageUrlList
+                                    ?: continue
+
+                                binding.guideImageCategoryTabLayout.addTab(
+                                    GuideTabItem(spot.name, imageUrlList as ArrayList<String>)
+                                )
                             }
                         } else {
                             Log.i(TAG, "Spot 로딩 실패 ${response.code()}")
@@ -365,7 +376,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         }
 
 
-        guideImageListView.getAdapter().setOnClickGuideImageListener(this)
+        guideImageCategoryTabLayout.setOnClickGuideImageListener(this)
         layerLayoutGuideManager = LayerLayoutGuideManager(binding.layerLayout)
         recentImage = getRecentImage()
         Glide.with(this)
@@ -626,8 +637,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         this.recommendedImageUrlList.addAll(imageList)
 
         runOnUiThread {
-            val adapter = guideImageListView.getAdapter()
-            adapter.setImageUrlList(imageList)
+            binding.guideImageCategoryTabLayout.addImageUrlList(imageList)
         }
     }
 
