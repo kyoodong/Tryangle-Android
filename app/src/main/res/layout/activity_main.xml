@@ -149,12 +149,16 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent">
 
-            <ImageView
+            <TextView
                 android:id="@+id/aiBtn"
+                android:text="추천"
+                android:textSize="12sp"
+                android:drawablePadding="8dp"
+                android:textColor="@color/colorWhite"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="24dp"
-                android:background="@drawable/reverse"
+                android:drawableTop="@drawable/ai"
                 android:padding="2dp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
