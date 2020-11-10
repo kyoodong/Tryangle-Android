@@ -2,12 +2,12 @@ package com.gomson.tryangle
 
 import android.content.Context
 import android.graphics.*
+import android.location.Location
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import com.gomson.tryangle.domain.Line
+import com.gomson.tryangle.domain.*
 import com.gomson.tryangle.domain.Point
-import com.gomson.tryangle.domain.Roi
 import com.gomson.tryangle.domain.component.*
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.LineGuide
@@ -23,6 +23,7 @@ import org.opencv.android.Utils
 import org.opencv.core.Mat
 import org.tensorflow.lite.examples.posenet.lib.Posenet
 import retrofit2.Call
+import retrofit2.Callback
 import retrofit2.Response
 import kotlin.math.max
 import kotlin.math.min
@@ -56,6 +57,7 @@ class ImageAnalyzer(
     private var guidingGuide: Guide? = null
     private var failToDetectObjectStartTime: Long = 0
     private var ratio: Float = 1f
+    var latestLocation: Location? = null
 
     var width = 0
     var height = 0
@@ -362,6 +364,34 @@ class ImageAnalyzer(
             }
         })
 
+        if (latestLocation != null) {
+            val latestLocation = latestLocation
+                ?: return
+
+            Log.i(TAG, "Spot 요청")
+            imageService.getSpotByLocation(latestLocation.latitude, latestLocation.longitude, object:
+                Callback<List<Spot>> {
+                override fun onResponse(
+                    call: Call<List<Spot>>,
+                    response: Response<List<Spot>>
+                ) {
+                    if (response.isSuccessful) {
+                        Log.i(TAG, "Spot 로딩 성공")
+                        val spotList = response.body()
+                            ?: return
+
+                        this@ImageAnalyzer.analyzeListener?.onUpdateSpot(spotList as ArrayList<Spot>)
+                    } else {
+                        Log.i(TAG, "Spot 로딩 실패 ${response.code()}")
+                    }
+                }
+
+                override fun onFailure(call: Call<List<Spot>>, t: Throwable) {
+                    Log.i(TAG, "Spot 로딩 실패 ${t.message}")
+                }
+            })
+        }
+
         waitSegmentStartTime = 0
     }
 
@@ -385,5 +415,6 @@ class ImageAnalyzer(
         fun onUpdateRecommendedImage(imageList: ArrayList<String>)
         fun onUpdateGuidingComponentPosition(width: Int, height: Int, leftTopPoint: Point)
         fun onMatchComponent()
+        fun onUpdateSpot(spotList: ArrayList<Spot>)
     }
 }

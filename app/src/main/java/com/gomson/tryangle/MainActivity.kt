@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.graphics.Bitmap
+import android.location.Location
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
@@ -223,37 +224,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult?) {
                 locationResult ?: return
-                val latestLocation = locationResult.locations[locationResult.locations.size - 1]
-                imageService.getSpotByLocation(latestLocation.latitude, latestLocation.longitude, object: Callback<List<Spot>> {
-                    override fun onResponse(
-                        call: Call<List<Spot>>,
-                        response: Response<List<Spot>>
-                    ) {
-                        if (response.isSuccessful) {
-                            Log.i(TAG, "Spot 로딩 성공")
-                            val spotList = response.body()
-                                ?: return
-
-                            this@MainActivity.spotList.clear()
-                            this@MainActivity.spotList.addAll(spotList)
-
-                            for (spot in spotList) {
-                                val imageUrlList = spot.imageUrlList
-                                    ?: continue
-
-                                binding.guideImageCategoryTabLayout.addTab(
-                                    GuideTabItem(spot.name, imageUrlList as ArrayList<String>)
-                                )
-                            }
-                        } else {
-                            Log.i(TAG, "Spot 로딩 실패 ${response.code()}")
-                        }
-                    }
-
-                    override fun onFailure(call: Call<List<Spot>>, t: Throwable) {
-                        Log.i(TAG, "Spot 로딩 실패 ${t.message}")
-                    }
-                })
+                imageAnalyzer.latestLocation = locationResult.locations[locationResult.locations.size - 1]
             }
         }
 
@@ -916,6 +887,17 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         }
         cursor.close()
         return result
+    }
+
+    override fun onUpdateSpot(spotList: ArrayList<Spot>) {
+        for (spot in spotList) {
+            val imageUrlList = spot.imageUrlList
+                ?: continue
+
+            binding.guideImageCategoryTabLayout.addTab(
+                GuideTabItem(spot.name, imageUrlList as ArrayList<String>)
+            )
+        }
     }
 }
 
