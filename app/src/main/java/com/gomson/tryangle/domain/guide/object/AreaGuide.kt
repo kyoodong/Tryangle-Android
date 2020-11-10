@@ -33,6 +33,8 @@ open class AreaGuide(
     }
 
     override fun isMatch(roi: Roi): Boolean {
-        return roi.getIou(Roi(area.first.x, area.second.x, area.first.y, area.second.y)) > 0.7
+        val diff = 0.3
+        val iou = roi.getIou(Roi(area.first.x, area.second.x, area.first.y, area.second.y))
+        return iou > (1 - diff) && iou < (1 + diff)
     }
 }

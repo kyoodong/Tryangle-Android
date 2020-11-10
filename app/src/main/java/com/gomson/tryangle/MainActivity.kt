@@ -542,7 +542,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
                 guidingComponentImageView.x = resultX
                 guidingComponentImageView.y = resultY
-                guidingComponentImageView.invalidate()
+                guidingComponentImageView.requestLayout()
             }, i * 5L)
         }
 

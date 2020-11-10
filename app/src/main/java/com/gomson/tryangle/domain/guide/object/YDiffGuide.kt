@@ -49,6 +49,8 @@ open class YDiffGuide(guideId: Int, message: String, val yDiff: Int, val compone
     }
 
     override fun isMatch(roi: Roi): Boolean {
-        return roi.getIou(component.roi) > 0.95
+        val diff = 0.05
+        val iou = roi.getIou(component.roi)
+        return iou > (1 - diff) && iou > (1 + diff)
     }
 }
