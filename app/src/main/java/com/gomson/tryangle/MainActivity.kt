@@ -280,7 +280,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         }
 
         binding.captureButton.setOnClickListener {
-            countDownTimer(TimerMode.values()[currentTimerModeIndex])
+            TimerMode.values()[currentTimerModeIndex].let {
+                if ( it == TimerMode.TIMER_OFF ) {
+                    takePhoto()
+                }
+                else{
+                    countDownTimer(it)
+                }
+            }
         }
 
         binding.ratioBtn.setOnClickListener {
@@ -605,13 +612,15 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     fun countDownTimer(timerMode: TimerMode) {
-        object : CountDownTimer(timerMode.milliseconds, 1000) {
+        binding.timerTextView.visibility = View.VISIBLE
+        object : CountDownTimer(timerMode.milliseconds + 1000, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 binding.timerTextView.text = (millisUntilFinished / 1000).toString()
             }
 
             override fun onFinish() {
                 binding.timerTextView.text = timerMode.text
+                binding.timerTextView.visibility = View.GONE
                 takePhoto()
             }
         }.start()

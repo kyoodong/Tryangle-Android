@@ -38,6 +38,7 @@
                 android:layout_gravity="center"
                 android:textColor="@color/colorWhite"
                 android:textSize="65sp"
+                android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="@+id/bottomLayout"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
