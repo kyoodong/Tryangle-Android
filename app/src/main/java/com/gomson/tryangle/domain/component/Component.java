@@ -9,6 +9,7 @@ public abstract class Component {
     private long id;
     private long componentId;
     protected ArrayList<Guide> guideList;
+    public boolean guideCompleted;
 
     public Component(long id, long componentId, ArrayList<Guide> guideList) {
         this.id = id;
@@ -39,5 +40,13 @@ public abstract class Component {
 
     public ArrayList<Guide> getGuideList() {
         return guideList;
+    }
+
+    public Boolean getGuideCompleted() {
+        return guideCompleted;
+    }
+
+    public void setGuideCompleted(Boolean guideCompleted) {
+        this.guideCompleted = guideCompleted;
     }
 }

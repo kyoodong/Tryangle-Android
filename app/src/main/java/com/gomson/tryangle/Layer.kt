@@ -2,6 +2,7 @@ package com.gomson.tryangle
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import androidx.core.graphics.get
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.Roi
 import com.gomson.tryangle.dto.MaskList
@@ -10,7 +11,8 @@ import kotlin.collections.ArrayList
 
 class Layer(
     val mask: MaskList,
-    roi: Roi) {
+    roi: Roi,
+    bitmap: Bitmap) {
 
     private val width = mask[0].size
     private val height = mask.size
@@ -26,6 +28,7 @@ class Layer(
 
     var ratioInRoi = 0
     val layeredImage: Bitmap?
+    val colorLayeredImage: Bitmap?
 
 
     private fun bfs(y: Int, x: Int) {
@@ -87,22 +90,28 @@ class Layer(
             centerPoint = Point(cumulativeX / pixelCount, cumulativeY / pixelCount)
 
             val pixels = IntArray(roi.getWidth() * roi.getHeight())
+            val colorPixels = IntArray(roi.getWidth() * roi.getHeight())
             var index = 0
             for (y in roi.top until roi.bottom) {
                 for (x in roi.left until roi.right) {
                     if (mask[y][x] == 0.toByte()) {
                         pixels[index] = Color.argb(0, 0, 0, 0)
+                        colorPixels[index] = Color.argb(0, 0, 0, 0)
                     } else if (mask[y][x] == 1.toByte()) {
                         pixels[index] = Color.argb(50, 127, 127, 127)
+                        colorPixels[index] = bitmap.get(x, y) and 0x00FFFFFF or Color.argb(100, 0, 0, 0)
                     } else {
                         pixels[index] = Color.argb(255 ,127, 127, 127)
+                        colorPixels[index] = Color.argb(255 ,127, 127, 127)
                     }
                     index++
                 }
             }
             layeredImage = Bitmap.createBitmap(pixels, roi.getWidth(), roi.getHeight(), Bitmap.Config.ARGB_8888)
+            colorLayeredImage = Bitmap.createBitmap(colorPixels, roi.getWidth(), roi.getHeight(), Bitmap.Config.ARGB_8888)
         } else {
             layeredImage = null
+            colorLayeredImage = null
         }
     }
 

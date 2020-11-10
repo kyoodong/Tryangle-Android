@@ -23,12 +23,19 @@ class LayerLayout @JvmOverloads constructor(
     val paint = Paint()
 
 
+    override fun removeAllViews() {
+        lineList.clear()
+        areaList.clear()
+
+        super.removeAllViews()
+    }
+
     fun removeAllViewsWithout(view: View) {
         removeAllViews()
         addView(view)
     }
 
-    fun createImageView(component: ObjectComponent): ImageView {
+    fun createImageView(component: ObjectComponent, color: Boolean = false): ImageView {
         val imageView = ImageView(context)
         val layoutWidth = width
         val layoutHeight = height
@@ -40,7 +47,8 @@ class LayerLayout @JvmOverloads constructor(
         imageView.layoutParams = ViewGroup.LayoutParams(width, height)
         val bitmap = Bitmap.createBitmap(component.roi.getWidth(), component.roi.getHeight(), Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        val layerImage = component.layer.layeredImage
+
+        val layerImage = (if (color) component.layer.colorLayeredImage else component.layer.layeredImage)
             ?: return imageView
 
         canvas.drawBitmap(layerImage, null, Rect(0, 0, bitmap.width, bitmap.height), Paint())

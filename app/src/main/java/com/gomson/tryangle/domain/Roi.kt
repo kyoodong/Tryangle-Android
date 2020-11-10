@@ -51,18 +51,18 @@ data class Roi(
         if (lft.right <= rht.left)
             return 0f
 
-        val minX = min(lft.right, rht.left)
-        val maxX = max(lft.right, rht.left)
+        val minX = max(lft.left, rht.left)
+        val maxX = min(lft.right, rht.right)
 
         if (lft.bottom <= rht.top)
             return 0f
 
         val minY = min(lft.bottom, rht.top)
-        val maxY = max(lft.bottom, rht.top)
+        val maxY = min(lft.bottom, rht.bottom)
         val intersectWidth = maxX - minX
         val intersectHeight = maxY - minY
         val intersectArea = intersectWidth * intersectHeight
-        val totalArea = getWidth() * getHeight() + roi.getWidth() * roi.getHeight() - intersectArea
+        val totalArea = min(getWidth() * getHeight(), roi.getWidth() * roi.getHeight())
         return intersectArea / totalArea.toFloat()
     }
 }

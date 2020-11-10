@@ -14,7 +14,7 @@
             android:id="@+id/previewLayout"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            app:layout_constraintBottom_toTopOf="@id/bottomLayout"
+            app:layout_constraintBottom_toTopOf="@id/guideLayout"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/topLayout"
@@ -125,22 +125,19 @@
             android:layout_marginEnd="16dp"
             app:layout_constraintBottom_toTopOf="@id/guideLayout" />
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <LinearLayout
             android:id="@+id/guideLayout"
             android:layout_width="match_parent"
-            android:layout_height="100dp"
+            android:layout_height="150dp"
+            android:orientation="vertical"
             app:layout_constraintBottom_toTopOf="@id/bottomLayout">
 
-            <com.gomson.tryangle.view.guide_image_view.GuideImageListView
-                android:id="@+id/guideImageListView"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+            <com.gomson.tryangle.view.GuideImageCategoryTabLayout
+                android:id="@+id/guideImageCategoryTabLayout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
+        </LinearLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/bottomLayout"

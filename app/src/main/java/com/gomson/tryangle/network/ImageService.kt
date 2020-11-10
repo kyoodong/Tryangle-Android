@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.os.SystemClock
 import android.util.Log
 import com.gomson.tryangle.domain.AccessToken
+import com.gomson.tryangle.domain.Spot
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.dto.GuideImageListDTO
 import com.gomson.tryangle.dto.ObjectComponentListDTO
@@ -62,6 +63,16 @@ class ImageService(context: Context): BaseService(context) {
         try {
             issueToken(null)
             val call = NetworkManager.imageService.getObjectComponentByUrl(url, accessToken!!.token)
+            call.enqueue(callback)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun getSpotByLocation(x: Double, y: Double, callback: Callback<List<Spot>>) {
+        try {
+            issueToken(null)
+            val call = NetworkManager.imageService.getSpotByLocation(x, y, accessToken!!.token)
             call.enqueue(callback)
         } catch (e: Exception) {
             e.printStackTrace()

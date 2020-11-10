@@ -1,16 +1,13 @@
 package com.gomson.tryangle
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Matrix
+import android.graphics.*
+import android.location.Location
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import com.gomson.tryangle.domain.Line
+import com.gomson.tryangle.domain.*
 import com.gomson.tryangle.domain.Point
-import com.gomson.tryangle.domain.Roi
 import com.gomson.tryangle.domain.component.*
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.LineGuide
@@ -26,6 +23,7 @@ import org.opencv.android.Utils
 import org.opencv.core.Mat
 import org.tensorflow.lite.examples.posenet.lib.Posenet
 import retrofit2.Call
+import retrofit2.Callback
 import retrofit2.Response
 import kotlin.math.max
 import kotlin.math.min
@@ -59,9 +57,11 @@ class ImageAnalyzer(
     private var guidingGuide: Guide? = null
     private var failToDetectObjectStartTime: Long = 0
     private var ratio: Float = 1f
+    var latestLocation: Location? = null
 
     var width = 0
     var height = 0
+    private var lastAnalyzeTime = System.currentTimeMillis()
 
     init {
         // 토큰 발급
@@ -73,6 +73,15 @@ class ImageAnalyzer(
     external fun MatchFeature(matAddrInput1: Long, matAddrInput2: Long, ratioInRoi: Int): MatchingResult?
 
     override fun analyze(imageProxy: ImageProxy) {
+        val curTime = System.currentTimeMillis()
+        if (curTime - lastAnalyzeTime < 100) {
+            Thread.sleep(50)
+            imageProxy.close()
+            return
+        }
+
+        lastAnalyzeTime = System.currentTimeMillis()
+
         rotation = imageProxy.imageInfo.rotationDegrees
         if (!::bitmapBuffer.isInitialized) {
             // The image rotation and RGB image buffer are initialized only once
@@ -92,6 +101,11 @@ class ImageAnalyzer(
         bitmap = Bitmap.createBitmap(bitmapBuffer, 0, 0,
             bitmapBuffer.width, bitmapBuffer.height, matrix, true)
 
+        // 개발용
+//        val option = BitmapFactory.Options()
+//        option.inScaled = false
+//        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test5, option)
+
         width = bitmap.width
         height = (bitmap.width * ratio).toInt()
         bitmap = Bitmap.createBitmap(bitmap, 0, (bitmap.height - height) / 2, width, height)
@@ -99,11 +113,6 @@ class ImageAnalyzer(
         width = 640
         height = (width * ratio).toInt()
         bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true)
-
-        // 개발용
-//        val option = BitmapFactory.Options()
-//        option.inScaled = false
-//        bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.test3, option)
 
         poseGuider = PoseGuider(bitmap.width, bitmap.height)
         objectGuider = ObjectGuider(bitmap.width, bitmap.height)
@@ -181,19 +190,18 @@ class ImageAnalyzer(
 
                 // 가이드 내에서 도달해야하는 목표지점
                 val guide = guidingGuide
-                    ?: return
-                if (guide is ObjectGuide) {
+                if (guide == null) {
+                    // 객체간에 충분히 가까워 진 경우
+                    val targetPoint = targetComponent.centerPoint
+                    val curRoi = Roi(minX, maxX, minY, maxY)
+                    if (targetPoint.isClose(center) || targetComponent.roi.getIou(curRoi) > 0.75) {
+                        analyzeListener?.onMatchComponent()
+                    }
+                } else if (guide is ObjectGuide) {
                     if (guide.isMatch(Roi(minX, maxX, minY, maxY))) {
                         Log.i(TAG, "가이드 목표 도달!")
                         analyzeListener?.onMatchGuide()
                     }
-                }
-
-                // 객체간에 충분히 가까워 진 경우
-                val targetPoint = targetComponent.centerPoint
-                val curRoi = Roi(minX, maxX, minY, maxY)
-                if (targetPoint.isClose(center) && targetComponent.roi.getIou(curRoi) > 0.9) {
-                    analyzeListener?.onMatchComponent()
                 }
 
                 analyzeListener?.onUpdateGuidingComponentPosition(width, height, leftTop)
@@ -356,6 +364,34 @@ class ImageAnalyzer(
             }
         })
 
+        if (latestLocation != null) {
+            val latestLocation = latestLocation
+                ?: return
+
+            Log.i(TAG, "Spot 요청")
+            imageService.getSpotByLocation(latestLocation.latitude, latestLocation.longitude, object:
+                Callback<List<Spot>> {
+                override fun onResponse(
+                    call: Call<List<Spot>>,
+                    response: Response<List<Spot>>
+                ) {
+                    if (response.isSuccessful) {
+                        Log.i(TAG, "Spot 로딩 성공")
+                        val spotList = response.body()
+                            ?: return
+
+                        this@ImageAnalyzer.analyzeListener?.onUpdateSpot(spotList as ArrayList<Spot>)
+                    } else {
+                        Log.i(TAG, "Spot 로딩 실패 ${response.code()}")
+                    }
+                }
+
+                override fun onFailure(call: Call<List<Spot>>, t: Throwable) {
+                    Log.i(TAG, "Spot 로딩 실패 ${t.message}")
+                }
+            })
+        }
+
         waitSegmentStartTime = 0
     }
 
@@ -379,5 +415,6 @@ class ImageAnalyzer(
         fun onUpdateRecommendedImage(imageList: ArrayList<String>)
         fun onUpdateGuidingComponentPosition(width: Int, height: Int, leftTopPoint: Point)
         fun onMatchComponent()
+        fun onUpdateSpot(spotList: ArrayList<Spot>)
     }
 }
