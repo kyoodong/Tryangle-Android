@@ -62,7 +62,7 @@ data class Roi(
         val intersectWidth = maxX - minX
         val intersectHeight = maxY - minY
         val intersectArea = intersectWidth * intersectHeight
-        val totalArea = min(getWidth() * getHeight(), roi.getWidth() * roi.getHeight())
+        val totalArea = getWidth() * getHeight()
         return intersectArea / totalArea.toFloat()
     }
 }
