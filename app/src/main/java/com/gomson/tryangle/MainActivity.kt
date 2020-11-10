@@ -283,9 +283,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             countDownTimer(TimerMode.values()[currentTimerModeIndex])
         }
 
-        outputDirectory = getOutputDirectory()
-        cameraExecutor = Executors.newSingleThreadExecutor()
-
         binding.ratioBtn.setOnClickListener {
             popupRatioView.contentView.ratio9_16.setColorFilter(
                 if (currentRatio == RatioMode.RATIO_9_16) COLOR_LIGHTMINT else COLOR_WHITE,
@@ -317,9 +314,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             startActivity(intent)
         }
 
-
         guideImageListView.getAdapter().setOnClickGuideImageListener(this)
         layerLayoutGuideManager = LayerLayoutGuideManager(binding.layerLayout)
+
         recentImage = getRecentImage()
         Glide.with(this)
             .load(recentImage)
@@ -441,15 +438,15 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
+        binding.captureEffectView.visibility = View.VISIBLE
+
         imageCapture.takePicture(
             outputOptions,
             ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     val savedUri = Uri.fromFile(photoFile)
-                    val msg = "Photo capture succeeded: $savedUri"
-                    Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                    Log.d(TAG, msg)
+                    binding.captureEffectView.visibility = View.GONE
 
                     MediaScannerConnection.scanFile(
                         baseContext, arrayOf(photoFile.toString()), arrayOf(photoFile.name), null
