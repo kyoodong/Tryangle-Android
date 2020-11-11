@@ -99,7 +99,7 @@ class Layer(
                         colorPixels[index] = Color.argb(0, 0, 0, 0)
                     } else if (mask[y][x] == 1.toByte()) {
                         pixels[index] = Color.argb(50, 127, 127, 127)
-                        colorPixels[index] = bitmap.get(x, y) and 0x00FFFFFF or Color.argb(100, 0, 0, 0)
+                        colorPixels[index] = bitmap.get(x, y) and 0x00FFFFFF or Color.argb(150, 0, 0, 0)
                     } else {
                         pixels[index] = Color.argb(255 ,127, 127, 127)
                         colorPixels[index] = Color.argb(255 ,127, 127, 127)

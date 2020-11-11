@@ -67,63 +67,58 @@ class PoseGuider(
         val imageWidth = this.imageWidth ?: return
 
         val guideList = component.guideList
+        val gamma = imageHeight / 4
 
-        // @TODO: 서 있는 케이스 추가해야함. 상반신만 있어도 서 있을 수 있음
-        // 서 있는 경우
-        if (component.pose == STAND) {
-            val gamma = imageHeight / 5
+        // 사람이 사진 밑쪽에 위치한 경우
+        if (component.roi.bottom + gamma > imageHeight) {
+            // 발목이 잘린 경우
+            // 무릎은 있으나 발목, 발꿈치 등이 모두 없는 경우
+            if (component.person.has(BodyPart.LEFT_KNEE) &&
+                component.person.has(BodyPart.RIGHT_KNEE) &&
+                !component.person.has(BodyPart.LEFT_ANKLE) &&
+                !component.person.has(BodyPart.RIGHT_ANKLE)) {
+                val personHeight = component.roi.bottom - component.roi.top
+                val diff = -personHeight * 10 / 170
+                guideList.add(CutAnkleGuide(diff, component))
+            }
 
-            // 사람이 사진 밑쪽에 위치한 경우
-            if (component.roi.bottom + gamma > imageHeight) {
-                // 발목이 잘린 경우
-                // 무릎은 있으나 발목, 발꿈치 등이 모두 없는 경우
-                if (component.person.has(BodyPart.LEFT_KNEE) &&
-                    component.person.has(BodyPart.RIGHT_KNEE) &&
+            // 엉덩이는 있지만 무릎에서 잘린 경우
+            if ((component.person.has(BodyPart.LEFT_HIP) || component.person.has(BodyPart.RIGHT_HIP)) &&
+                    !component.person.has(BodyPart.LEFT_KNEE) &&
                     !component.person.has(BodyPart.LEFT_ANKLE) &&
+                    !component.person.has(BodyPart.RIGHT_KNEE) &&
                     !component.person.has(BodyPart.RIGHT_ANKLE)) {
-                    val personHeight = component.roi.bottom - component.roi.top
-                    val diff = -personHeight * 10 / 170
-                    guideList.add(CutAnkleGuide(diff, component))
-                }
-
-                // 엉덩이는 있지만 무릎에서 잘린 경우
-                if ((component.person.has(BodyPart.LEFT_HIP) || component.person.has(BodyPart.RIGHT_HIP)) &&
-                        !component.person.has(BodyPart.LEFT_KNEE) &&
-                        !component.person.has(BodyPart.LEFT_ANKLE) &&
-                        !component.person.has(BodyPart.RIGHT_KNEE) &&
-                        !component.person.has(BodyPart.RIGHT_ANKLE)) {
-                    val personHeight = component.roi.getHeight()
-                    val diff = personHeight * 20 / 170
-                    guideList.add(CutKneeGuide(diff, component))
-                }
-
-                // 머리만 덜렁 있는 사진
-                if (component.person.hasHead() && !component.person.hasUpperBody() && !component.person.hasLowerBody()) {
-                    val personHeight = component.roi.getHeight()
-                    val diff = -personHeight * 20 / 170
-                    guideList.add(CutNeckGuide(diff, component))
-                }
+                val personHeight = component.roi.getHeight()
+                val diff = personHeight * 20 / 170
+                guideList.add(CutKneeGuide(diff, component))
             }
 
-            val foot_lower_threshold = imageHeight / 4
-            // 발 끝을 맞추도록 유도
-            if (component.person.hasFullBody() &&
-                imageHeight > component.roi.bottom + foot_lower_threshold) {
-                val area = Area(
-                    Point(0, imageHeight - foot_lower_threshold),
-                    Point(imageWidth, imageHeight)
-                )
-                guideList.add(BottomToeGuide(area, component))
+            // 머리만 덜렁 있는 사진
+            if (component.person.hasHead() && !component.person.hasUpperBody() && !component.person.hasLowerBody()) {
+                val personHeight = component.roi.getHeight()
+                val diff = -personHeight * 20 / 170
+                guideList.add(CutNeckGuide(diff, component))
             }
+        }
 
-            // 사람이 사진의 윗쪽에 위치한 경우
-            if (component.roi.top < gamma) {
-                if (component.person.hasHead()) {
-                    val top = imageHeight / 3
-                    val diff = top - component.roi.top
-                    guideList.add(FreeSpaceAboveHeadGuide(diff, component))
-                }
+        // 사람이 사진의 윗쪽에 위치한 경우
+        if (component.roi.top < gamma / 2) {
+            if (component.person.hasHead()) {
+                val top = imageHeight / 3
+                val diff = top - component.roi.top
+                guideList.add(FreeSpaceAboveHeadGuide(diff, component))
             }
+        }
+
+        val foot_lower_threshold = imageHeight / 3 * 2
+        // 발 끝을 맞추도록 유도
+        if (component.person.hasLowerBody() &&
+            component.roi.bottom < foot_lower_threshold) {
+            val area = Area(
+                Point(0, foot_lower_threshold),
+                Point(imageWidth, imageHeight)
+            )
+            guideList.add(BottomToeGuide(area, component))
         }
     }
 }

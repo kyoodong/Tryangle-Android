@@ -1,7 +1,6 @@
 package com.gomson.tryangle.domain.component;
 
 import android.graphics.Bitmap;
-import android.util.Log;
 
 import com.gomson.tryangle.Layer;
 import com.gomson.tryangle.domain.Point;
@@ -25,7 +24,7 @@ public class ObjectComponent extends Component {
     private MaskList mask;
     private Roi roi;
 
-    private Bitmap roiImage;
+    private Bitmap croppedImage;
     private Layer layer;
 
     public ObjectComponent() {
@@ -86,12 +85,16 @@ public class ObjectComponent extends Component {
         return roi;
     }
 
-    public Bitmap getRoiImage() {
-        return roiImage;
+    public void setRoi(Roi roi) {
+        this.roi = roi;
     }
 
-    public void setRoiImage(Bitmap roiImage) {
-        this.roiImage = roiImage;
+    public Bitmap getCroppedImage() {
+        return croppedImage;
+    }
+
+    public void setCroppedImage(Bitmap croppedImage) {
+        this.croppedImage = croppedImage;
     }
 
     public Layer getLayer() {
@@ -151,7 +154,7 @@ public class ObjectComponent extends Component {
         layer = new Layer(mask, roi, bitmap);
         centerPoint = layer.getCenterPoint();
         area = layer.getArea();
-        roiImage = Bitmap.createBitmap(bitmap,
+        croppedImage = Bitmap.createBitmap(bitmap,
                 roi.getLeft(), roi.getTop(),
                 roi.getWidth(),
                 roi.getHeight());

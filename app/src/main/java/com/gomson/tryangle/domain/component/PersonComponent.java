@@ -53,7 +53,7 @@ public class PersonComponent extends ObjectComponent {
     public PersonComponent(long id, long componentId, ArrayList<Guide> guideList, int clazz, Point centerPoint, float area,
                            MaskList mask, String roi, Bitmap roiImage, Layer layer, Person person, int pose) {
         super(id, componentId, guideList, clazz, centerPoint, area, mask, roi);
-        setRoiImage(roiImage);
+        setCroppedImage(roiImage);
         setLayer(layer);
         this.person = person;
         this.pose = pose;

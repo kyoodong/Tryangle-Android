@@ -61,6 +61,7 @@ class ImageAnalyzer(
     private var ratio: Float = 1f
     var latestLocation: Location? = null
     private var hasSpotImages = false
+    private var isProcessingSegmentation = false
 
     var width = 0
     var height = 0
@@ -170,7 +171,7 @@ class ImageAnalyzer(
         val guidingComponent = guidingComponent as ObjectComponent
         val targetComponent = targetComponent as ObjectComponent
         val objectImage = Mat()
-        Utils.bitmapToMat(guidingComponent.roiImage, objectImage)
+        Utils.bitmapToMat(guidingComponent.croppedImage, objectImage)
 
         val matchingResult = MatchFeature(objectImage.nativeObjAddr, originalImage.nativeObjAddr,
             guidingComponent.layer.ratioInRoi)
@@ -203,12 +204,16 @@ class ImageAnalyzer(
                     }
                 }
 
+                guidingComponent.roi = Roi(minX, maxX, minY, maxY)
                 analyzeListener?.onUpdateGuidingComponentPosition(width, height, leftTop)
             }
         }
     }
 
     private fun requestSegmentation() {
+        if (isProcessingSegmentation)
+            return
+
         if (waitSegmentStartTime == 0L) {
             waitSegmentStartTime = System.currentTimeMillis()
             prevBitmap = bitmap.copy(bitmap.config, true)
@@ -248,6 +253,7 @@ class ImageAnalyzer(
 
         lastCapturedBitmap = bitmap.copy(bitmap.config, true)
         Log.i(TAG, "Image Segmentation 요청")
+        isProcessingSegmentation = true
         imageService.recommendImage(bitmap, object: retrofit2.Callback<GuideImageListDTO> {
             val bitmap = lastCapturedBitmap.copy(lastCapturedBitmap.config, true)
 
@@ -255,6 +261,7 @@ class ImageAnalyzer(
                 call: Call<GuideImageListDTO>,
                 response: Response<GuideImageListDTO>
             ) {
+                isProcessingSegmentation = false
                 if (response.isSuccessful) {
                     Log.i(TAG, "image Segmentation 성공")
                     val body = response.body()
@@ -318,7 +325,7 @@ class ImageAnalyzer(
                                         objectComponent.area,
                                         objectComponent.mask,
                                         objectComponent.roiStr,
-                                        objectComponent.roiImage,
+                                        objectComponent.croppedImage,
                                         objectComponent.layer,
                                         person,
                                         poseClass
@@ -357,6 +364,7 @@ class ImageAnalyzer(
             }
 
             override fun onFailure(call: Call<GuideImageListDTO>, t: Throwable) {
+                isProcessingSegmentation = false
                 val canvas = Canvas(lastCapturedBitmap)
                 canvas.drawColor(Color.rgb(255, 255, 255))
                 Log.i(TAG, "image Segmentation 서버 에러 ${t.message}")
