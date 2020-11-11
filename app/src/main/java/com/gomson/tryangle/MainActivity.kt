@@ -96,7 +96,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         private const val TAG = "MainActivity"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
-        private val REQUIRED_PERMISSIONS = arrayOf(permission.CAMERA, permission.ACCESS_FINE_LOCATION)
+        private val REQUIRED_PERMISSIONS = arrayOf(permission.CAMERA, permission.ACCESS_FINE_LOCATION, permission.READ_EXTERNAL_STORAGE)
     }
 
     // 카메라
@@ -871,6 +871,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     private fun getRecentImage(): Uri? {
+        if(ContextCompat.checkSelfPermission(
+                baseContext,
+                permission.READ_EXTERNAL_STORAGE
+            ) != PackageManager.PERMISSION_GRANTED)
+        {
+            return null
+        }
+
         val uriExternal: Uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         val cursor: Cursor?
         val projection = arrayOf(
