@@ -1,22 +1,26 @@
 package com.gomson.tryangle
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Matrix
 import android.location.Location
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import com.gomson.tryangle.domain.*
 import com.gomson.tryangle.domain.Point
-import com.gomson.tryangle.domain.component.*
+import com.gomson.tryangle.domain.Roi
+import com.gomson.tryangle.domain.Spot
+import com.gomson.tryangle.domain.component.Component
+import com.gomson.tryangle.domain.component.ComponentList
+import com.gomson.tryangle.domain.component.ObjectComponent
+import com.gomson.tryangle.domain.component.PersonComponent
 import com.gomson.tryangle.domain.guide.Guide
-import com.gomson.tryangle.domain.guide.LineGuide
 import com.gomson.tryangle.domain.guide.`object`.ObjectGuide
 import com.gomson.tryangle.dto.GuideImageListDTO
 import com.gomson.tryangle.dto.MatchingResult
 import com.gomson.tryangle.guider.LineGuider
-import com.gomson.tryangle.guider.ObjectGuider
-import com.gomson.tryangle.guider.PoseGuider
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.pose.PoseClassifier
 import org.opencv.android.Utils
@@ -49,9 +53,7 @@ class ImageAnalyzer(
     private val imageService = ImageService(context)
     private val posenet = Posenet(context)
     private val poseClassifier = PoseClassifier()
-    private lateinit var poseGuider: PoseGuider
-    private lateinit var objectGuider: ObjectGuider
-    private lateinit var lineGuider: LineGuider
+    private val lineGuider = LineGuider()
     private var guidingComponent: Component? = null
     private var targetComponent: Component? = null
     private var guidingGuide: Guide? = null
@@ -114,10 +116,6 @@ class ImageAnalyzer(
         width = 640
         height = (width * ratio).toInt()
         bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true)
-
-        poseGuider = PoseGuider(bitmap.width, bitmap.height)
-        objectGuider = ObjectGuider(bitmap.width, bitmap.height)
-        lineGuider = LineGuider()
 
         // 세그멘테이션을 요청할 필요가 있다면
         if (needToRequestSegmentation) {
@@ -195,7 +193,7 @@ class ImageAnalyzer(
                     // 객체간에 충분히 가까워 진 경우
                     val targetPoint = targetComponent.centerPoint
                     val curRoi = Roi(minX, maxX, minY, maxY)
-                    if (targetPoint.isClose(center) || targetComponent.roi.getIou(curRoi) > 0.75) {
+                    if (targetPoint.isRoughClose(center) || targetComponent.roi.getIou(curRoi) > 0.75) {
                         analyzeListener?.onMatchComponent()
                     }
                 } else if (guide is ObjectGuide) {
@@ -278,6 +276,7 @@ class ImageAnalyzer(
                     }
 
                     body.guideDTO.deployMask()
+                    body.guideDTO.initPerson()
                     this@ImageAnalyzer.analyzeListener?.onUpdateRecommendedImage(body.guideImageList)
 
                     val objectComponents = ArrayList<ObjectComponent>()

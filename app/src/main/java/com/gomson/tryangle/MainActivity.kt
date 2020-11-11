@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.graphics.Bitmap
-import android.location.Location
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
@@ -44,16 +43,18 @@ import com.gomson.tryangle.domain.Spot
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ComponentList
 import com.gomson.tryangle.domain.component.ObjectComponent
+import com.gomson.tryangle.domain.component.PersonComponent
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.LayerLayoutGuideManager
 import com.gomson.tryangle.dto.MaskList
 import com.gomson.tryangle.dto.ObjectComponentListDTO
 import com.gomson.tryangle.guider.GuideImageObjectGuider
+import com.gomson.tryangle.guider.ObjectGuider
+import com.gomson.tryangle.guider.PoseGuider
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.network.NetworkManager
 import com.gomson.tryangle.view.guide_image_view.GuideImageAdapter
 import com.google.android.gms.location.*
-import com.google.android.material.tabs.TabLayout
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
@@ -462,6 +463,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     private fun takePhoto() {
+        binding.layerLayout.removeAllViews()
+
         val imageCapture = imageCapture ?: return
 
         val photoFile = File(
@@ -618,23 +621,54 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         }
     }
 
+    private fun makeStandardGuide(component: ObjectComponent) {
+        component.guideCompleted = true
+        if (component is PersonComponent) {
+            val poseGuider = PoseGuider(
+                component.mask[0].size,
+                component.mask.size
+            )
+
+            poseGuider.initGuideList(component)
+        }
+        val objectGuider = ObjectGuider(
+            component.mask[0].size,
+            component.mask.size
+        )
+
+        objectGuider.initGuideList(component)
+    }
+
     override fun onMatchGuide() {
         Log.i(TAG, "가이드에 맞음!")
-        val component = guidingComponent
+        val guidingComponent = guidingComponent
             ?: return
 
-        val guideList = component.guideList
+        val targetComponent = targetComponent
             ?: return
 
-        guideList.remove(guidingGuide)
-        if (guideList.isEmpty()) {
-            guidingGuide = null
-            binding.guideTextView.text = getString(R.string.require_more_accurate_position_and_area)
-        } else {
-            guidingGuide = guidingComponent?.guideList?.get(0)
-            binding.guideTextView.text = guidingGuide!!.message
+        if (guidingComponent is ObjectComponent) {
+            targetComponent.guideList.remove(guidingGuide)
+            targetComponent.guideCompleted = targetComponent.guideList.isEmpty()
+
+            guidingComponent.guideList.remove(guidingGuide)
+
+            if (!targetComponent.guideCompleted) {
+                guidingGuide = targetComponent.guideList[0]
+                displayGuide(guidingGuide)
+            } else if (!guidingComponent.guideCompleted) {
+                makeStandardGuide(guidingComponent)
+            }
+
+            guidingGuide = if (guidingComponent.guideList.isNotEmpty()) {
+                guidingComponent.guideList[0]
+            } else {
+                null
+            }
+
+            displayGuide(guidingGuide)
+            imageAnalyzer.setGuide(this.guidingComponent, targetComponent, guidingGuide)
         }
-        imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
     }
 
     fun countDownTimer(timerMode: TimerMode) {
@@ -788,13 +822,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             binding.layerLayout.addView(guidingComponentImageView)
             match(cameraObjectComponentList[0])
         } else {
-            // @TODO: Line Guide
-//            if (!componentList.isEmpty()) {
-//                layerLayoutGuideManager.guide(componentList[0].guideList[0])
-//            } else {
-
-
-
             Log.i(TAG, "모든 컴포넌트 가이드 성공")
             Log.i(TAG, "자동촬영!")
             imageAnalyzer.setGuide(null, null, null)
@@ -807,9 +834,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                 countDownTimer(TimerMode.values()[1])
                 binding.guideTextView.text = "자동촬영"
             }, 2000)
-
-
-//            }
         }
     }
 
@@ -817,32 +841,38 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
      * 컴포넌트와 가이드 이미지 컴포넌트를 매칭, 가이드 해주는 메소드
      */
     private fun match(component: ObjectComponent) {
-        val guideComponent = componentMatcher.match(component, guideComponentList)
-        if (guideComponent == null) {
+        val targetComponent = componentMatcher.match(component, guideComponentList)
+        if (targetComponent == null) {
             Toast.makeText(baseContext, "매칭할 오브젝트가 없습니다.", Toast.LENGTH_SHORT).show()
             return
         }
 
-        val guideList = guideComponent.guideList
-            ?: return
-
-        if (guideList.size == 0) {
-            if (guideComponent.mask.isEmpty() || guideComponent.mask[0].isEmpty())
+        if (targetComponent.guideList.isEmpty()) {
+            if (targetComponent.mask.isEmpty() || targetComponent.mask[0].isEmpty())
                 return
 
             val guider = GuideImageObjectGuider(
-                guideComponent.mask[0].size,
-                guideComponent.mask.size
+                targetComponent.mask[0].size,
+                targetComponent.mask.size
             )
-            guider.initGuideList(guideComponent)
+
+            guider.initGuideList(targetComponent)
         }
 
         guidingComponent = component
-        targetComponent = guideComponent
-        guidingGuide = if (guideList.isEmpty()) null else guideList[0]
-        imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
+        this.targetComponent = targetComponent
 
-        val imageView = binding.layerLayout.createImageView(guideComponent, true)
+        guidingGuide = if (targetComponent.guideList.isEmpty()) {
+            // targetComponent 의 가이드가 없으면, guidingGuide 의 표준 구도를 추출
+            makeStandardGuide(component)
+            if (component.guideList.isEmpty()) null else component.guideList[0]
+        } else {
+            if (targetComponent.guideList.isEmpty()) null else targetComponent.guideList[0]
+        }
+
+        imageAnalyzer.setGuide(guidingComponent, this.targetComponent, guidingGuide)
+
+        val imageView = binding.layerLayout.createImageView(targetComponent, true)
         binding.layerLayout.addView(imageView)
         displayGuide(guidingGuide)
     }

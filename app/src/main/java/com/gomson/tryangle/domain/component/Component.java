@@ -2,6 +2,8 @@ package com.gomson.tryangle.domain.component;
 
 import com.gomson.tryangle.domain.guide.Guide;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
 
 public abstract class Component {
@@ -11,13 +13,14 @@ public abstract class Component {
     protected ArrayList<Guide> guideList;
     public boolean guideCompleted;
 
-    public Component(long id, long componentId, ArrayList<Guide> guideList) {
+    public Component(long id, long componentId, @NotNull ArrayList<Guide> guideList) {
         this.id = id;
         this.componentId = componentId;
         this.guideList = guideList;
     }
 
     public Component() {
+        guideList = new ArrayList<>();
     }
 
     public abstract double getPriority();
@@ -38,7 +41,7 @@ public abstract class Component {
         this.guideList = guideList;
     }
 
-    public ArrayList<Guide> getGuideList() {
+    public @NotNull ArrayList<Guide> getGuideList() {
         return guideList;
     }
 

@@ -1,9 +1,9 @@
 package com.gomson.tryangle.guider
 
 import com.gomson.tryangle.domain.component.Component
-import com.gomson.tryangle.pose.PoseClass
 import com.gomson.tryangle.domain.component.PersonComponent
 import com.gomson.tryangle.domain.guide.`object`.*
+import com.gomson.tryangle.pose.STAND
 import org.tensorflow.lite.examples.posenet.lib.BodyPart
 import org.tensorflow.lite.examples.posenet.lib.KeyPoint
 import org.tensorflow.lite.examples.posenet.lib.Person
@@ -66,11 +66,10 @@ class PoseGuider(
         val imageWidth = this.imageWidth ?: return
 
         val guideList = component.guideList
-        guideList.clear()
 
         // @TODO: 서 있는 케이스 추가해야함. 상반신만 있어도 서 있을 수 있음
         // 서 있는 경우
-        if (component.pose == PoseClass.STAND) {
+        if (component.pose == STAND) {
             val gamma = 5
 
             // 사람이 사진 밑쪽에 위치한 경우
@@ -121,7 +120,5 @@ class PoseGuider(
                 }
             }
         }
-
-        component.guideList = guideList
     }
 }

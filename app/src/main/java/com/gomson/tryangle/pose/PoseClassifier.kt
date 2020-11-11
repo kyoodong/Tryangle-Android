@@ -11,7 +11,7 @@ class PoseClassifier {
     private val THRESHOLD = 0.01
     private var keypointMap = HashMap<BodyPart, KeyPoint>()
 
-    fun classify(keypoints: Array<KeyPoint>): PoseClass {
+    fun classify(keypoints: Array<KeyPoint>): Int {
         keypointMap.clear()
 
         for (keypoint in keypoints) {
@@ -30,11 +30,11 @@ class PoseClassifier {
             || (keypointMap[BodyPart.RIGHT_ANKLE] != null && keypointMap[BodyPart.RIGHT_HIP] != null
                     && keypointMap[BodyPart.RIGHT_ANKLE]!!.position.y > keypointMap[BodyPart.RIGHT_HIP]!!.position.y)) {
             Log.d(TAG, "STAND")
-            return PoseClass.STAND
+            return STAND
         }
 
         Log.d(TAG, "UNKNOWN")
-        return PoseClass.UNKNOWN
+        return UNKNOWN
     }
 
 }

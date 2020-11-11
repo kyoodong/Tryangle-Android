@@ -4,7 +4,6 @@ import com.gomson.tryangle.domain.Area
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.Roi
 import com.gomson.tryangle.domain.component.ObjectComponent
-import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.view.LayerLayout
 
 open class AreaGuide(
@@ -32,9 +31,10 @@ open class AreaGuide(
         super.clearGuide(layerLayout)
     }
 
-    override fun isMatch(roi: Roi): Boolean {
-        val diff = 0.3
-        val iou = roi.getIou(Roi(area.first.x, area.second.x, area.first.y, area.second.y))
+    override fun isMatch(componentRoi: Roi): Boolean {
+        val diff = 0.05
+        val areaRoi = Roi(area.first.x, area.second.x, area.first.y, area.second.y)
+        val iou = areaRoi.getIou(componentRoi)
         return iou > (1 - diff) && iou < (1 + diff)
     }
 }
