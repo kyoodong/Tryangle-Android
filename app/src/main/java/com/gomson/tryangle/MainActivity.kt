@@ -589,50 +589,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         }
     }
 
-//    private fun displayGuide() {
-//        val guide = mainGuide ?: return
-//        val canvas = Canvas(guideBitmap)
-//        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
-//
-//        if (guide is LineGuide) {
-//            val lineGuide = guide as LineGuide
-//            val paint = Paint()
-//            paint.color = Color.rgb(255, 0, 0)
-//            paint.isAntiAlias = true
-//            paint.strokeWidth = 5f
-//            canvas.drawLine(lineGuide.startPoint.x.toFloat(),
-//                lineGuide.startPoint.y.toFloat(),
-//                lineGuide.endPoint.x.toFloat(),
-//                lineGuide.endPoint.y.toFloat(), paint)
-//        }
-//
-//        else if (guide is ObjectGuide) {
-//            val objectGuide = guide as ObjectGuide
-//            val layerImage = objectGuide.targetComponent.layer.layeredImage ?: return
-//            val roi = objectGuide.targetComponent.roi + objectGuide.diffPoint
-//            canvas.drawBitmap(layerImage, null, roi.toRect(), null)
-//        }
-//
-//        runOnUiThread {
-//            guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
-//            guideImageView.setImageBitmap(guideBitmap)
-//        }
-//    }
-
-//    override fun onGuideUpdate(guides: Array<ArrayList<Guide>>, mainGuide: Guide) {
-//        this.guideClusters = guides
-//        this.mainGuide = mainGuide
-//
-//        if (!::guideBitmap.isInitialized) {
-//            guideBitmap = Bitmap.createBitmap(
-//                imageAnalyzer.width,
-//                imageAnalyzer.height,
-//                Bitmap.Config.ARGB_8888)
-//        }
-//
-//        displayGuide()
-//        Log.i(TAG, "가이드 업데이트")
-//    }
 
     override fun onUpdateRecommendedImage(imageList: ArrayList<String>) {
         Log.i(TAG, "추천 이미지 ${imageList.size} 개 도착!")

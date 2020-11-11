@@ -128,13 +128,6 @@ class ImageAnalyzer(
                 if (guidingComponent is ObjectComponent) {
                     traceGuidingObjectComponent()
                 }
-//                else if (guidingComponent is LineComponent) {
-//
-//                }
-//
-//                else if (guide is LineGuide) {
-//                    if (guide.isMatch(Line()))
-//                }
             }
 
             traceImage()
