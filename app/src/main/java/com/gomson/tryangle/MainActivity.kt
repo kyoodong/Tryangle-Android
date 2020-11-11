@@ -138,7 +138,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     var isGrid = false
     private val recommendedImageUrlList = ArrayList<String>()
     var currentTimerModeIndex = 0
-    private var recentImage: Uri? = null
     private lateinit var binding: ActivityMainBinding
     private lateinit var imageService: ImageService
     private val componentMatcher = ComponentMatcher()
@@ -353,11 +352,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         guideImageCategoryTabLayout.setOnClickGuideImageListener(this)
         layerLayoutGuideManager = LayerLayoutGuideManager(binding.layerLayout)
 
-        recentImage = getRecentImage()
-        Glide.with(this)
-            .load(recentImage)
-            .dontAnimate()
-            .into(binding.albumBtn)
+        setRecentImageView(getRecentImage())
 
         setAspectRatioView(currentRatio)
         bindCameraConfiguration()
@@ -382,6 +377,15 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             isOpenCvLoaded = true;
         }
 
+    }
+
+    private fun setRecentImageView(uri : Uri?){
+        uri.let{
+            Glide.with(this)
+                .load(it)
+                .dontAnimate()
+                .into(binding.albumBtn)
+        }
     }
 
     /**
@@ -479,6 +483,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     val savedUri = Uri.fromFile(photoFile)
+                    setRecentImageView(savedUri)
                     binding.captureEffectView.visibility = View.GONE
 
                     MediaScannerConnection.scanFile(
