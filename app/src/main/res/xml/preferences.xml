@@ -16,9 +16,11 @@
         app:iconSpaceReserved="false"
         app:title="카메라 설정">
 
-        <ListPreference
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="highDefinition"
             app:iconSpaceReserved="false"
-            app:title="화질" />
+            app:title="고화질" />
 
         <SwitchPreference
             app:iconSpaceReserved="false"
