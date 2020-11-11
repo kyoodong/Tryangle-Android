@@ -18,6 +18,7 @@ import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.component.PersonComponent
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.`object`.ObjectGuide
+import com.gomson.tryangle.domain.guide.`object`.PoseGuide
 import com.gomson.tryangle.dto.GuideImageListDTO
 import com.gomson.tryangle.dto.MatchingResult
 import com.gomson.tryangle.guider.LineGuider
@@ -46,7 +47,7 @@ class ImageAnalyzer(
     private var components = ComponentList()
     private val hough = Hough()
     private lateinit var bitmapBuffer: Bitmap
-    private lateinit var bitmap: Bitmap
+    lateinit var bitmap: Bitmap
     private lateinit var prevBitmap: Bitmap
     private lateinit var lastCapturedBitmap: Bitmap
     private val converter: YuvToRgbConverter = YuvToRgbConverter(context)
@@ -123,7 +124,7 @@ class ImageAnalyzer(
             requestSegmentation()
         } else {
             // 오브젝트별 이미지
-            if (guidingComponent != null && targetComponent != null) {
+            if (guidingComponent != null) {
                 if (guidingComponent is ObjectComponent) {
                     traceGuidingObjectComponent()
                 }
@@ -169,7 +170,6 @@ class ImageAnalyzer(
         Utils.bitmapToMat(bitmap, originalImage)
 
         val guidingComponent = guidingComponent as ObjectComponent
-        val targetComponent = targetComponent as ObjectComponent
         val objectImage = Mat()
         Utils.bitmapToMat(guidingComponent.croppedImage, objectImage)
 
@@ -188,23 +188,47 @@ class ImageAnalyzer(
                 val center = Point(minX + width / 2, minY + height / 2)
                 val leftTop = Point(minX, minY)
 
+                guidingComponent.roi = Roi(minX, maxX, minY, maxY)
+
                 // 가이드 내에서 도달해야하는 목표지점
                 val guide = guidingGuide
                 if (guide == null) {
-                    // 객체간에 충분히 가까워 진 경우
-                    val targetPoint = targetComponent.centerPoint
-                    val curRoi = Roi(minX, maxX, minY, maxY)
-                    if (targetPoint.isRoughClose(center) || targetComponent.roi.getIou(curRoi) > 0.75) {
-                        analyzeListener?.onMatchComponent()
+                    if (targetComponent != null) {
+                        val targetComponent = targetComponent as ObjectComponent
+
+                        // 객체간에 충분히 가까워 진 경우
+                        val targetPoint = targetComponent.centerPoint
+                        val curRoi = Roi(minX, maxX, minY, maxY)
+                        val iou = if (targetComponent.roi < curRoi) {
+                            targetComponent.roi.getIou(curRoi)
+                        } else {
+                            curRoi.getIou(targetComponent.roi)
+                        }
+                        if (targetPoint.isRoughClose(center) || iou > 0.75) {
+                            analyzeListener?.onMatchComponent()
+                        }
                     }
                 } else if (guide is ObjectGuide) {
                     if (guide.isMatch(Roi(minX, maxX, minY, maxY))) {
                         Log.i(TAG, "가이드 목표 도달!")
                         analyzeListener?.onMatchGuide()
                     }
-                }
+                } else if (guide is PoseGuide && guidingComponent is PersonComponent) {
+                    val alpha = 30
+                    val croppedX = max(minX - alpha, 0)
+                    val croppedY = max(minY - alpha, 0)
+                    val croppedWidth = min(width + alpha * 2, this.width - croppedX)
+                    val croppedHeight = min(height + alpha * 2, this.height - croppedY)
 
-                guidingComponent.roi = Roi(minX, maxX, minY, maxY)
+                    val croppedImage = Bitmap.createBitmap(bitmap, croppedX, croppedY, croppedWidth, croppedHeight)
+                    val rescaledImage = Bitmap.createScaledBitmap(croppedImage, MODEL_WIDTH, MODEL_HEIGHT, true)
+                    guidingComponent.person = posenet.estimateSinglePose(rescaledImage)
+
+                    if (guide.isMatch(guidingComponent)) {
+                        Log.i(TAG, "가이드 목표 도달!")
+                        analyzeListener?.onMatchGuide()
+                    }
+                }
                 analyzeListener?.onUpdateGuidingComponentPosition(width, height, leftTop)
             }
         }

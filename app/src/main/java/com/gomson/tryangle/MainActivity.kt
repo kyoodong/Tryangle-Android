@@ -67,12 +67,15 @@ import kotlinx.android.synthetic.main.view_guide_image_category_tab_layout.view.
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
+import org.tensorflow.lite.examples.posenet.lib.Posenet
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.math.max
+import kotlin.math.min
 
 enum class RatioMode constructor(val width: Int, val height: Int) {
     RATIO_1_1(1, 1),
@@ -673,23 +676,16 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             targetComponent.guideList.remove(guidingGuide)
             targetComponent.guideCompleted = targetComponent.guideList.isEmpty()
 
-            guidingComponent.guideList.remove(guidingGuide)
-
-            if (!targetComponent.guideCompleted) {
-                guidingGuide = targetComponent.guideList[0]
-                displayGuide(guidingGuide)
-            } else if (!guidingComponent.guideCompleted) {
-                makeStandardGuide(guidingComponent)
-            }
-
-            guidingGuide = if (guidingComponent.guideList.isNotEmpty()) {
-                guidingComponent.guideList[0]
+            guidingGuide = if (!targetComponent.guideCompleted) {
+                targetComponent.guideList[0]
             } else {
                 null
             }
 
-            displayGuide(guidingGuide)
-            imageAnalyzer.setGuide(this.guidingComponent, targetComponent, guidingGuide)
+            runOnUiThread {
+                displayGuide(guidingGuide)
+                imageAnalyzer.setGuide(this.guidingComponent, targetComponent, guidingGuide)
+            }
         }
     }
 
@@ -843,19 +839,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             guidingComponentImageView = binding.layerLayout.createImageView(component)
             binding.layerLayout.addView(guidingComponentImageView)
             match(cameraObjectComponentList[0])
-        } else {
-            Log.i(TAG, "모든 컴포넌트 가이드 성공")
-            Log.i(TAG, "자동촬영!")
-            imageAnalyzer.setGuide(null, null, null)
-            if (componentList.hasPerson()) {
-                binding.guideTextView.text = "자세를 낮추어 아래에서 찍으면 비율이 좋아집니다"
-            }
-
-            handler.postDelayed(Runnable {
-                binding.layerLayout.removeAllViews()
-                countDownTimer(TimerMode.values()[1])
-                binding.guideTextView.text = "자동촬영"
-            }, 2000)
         }
     }
 
@@ -914,9 +897,56 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             ?: return
 
         component.guideCompleted = true
-        runOnUiThread {
-            showCameraObject(componentList.getNotGuidedObjectComponentList())
+        if (!component.standardGuideCompleted) {
+            component.standardGuideCompleted = true
+
+            if (component is PersonComponent) {
+                val posenet = Posenet(baseContext)
+                val alpha = 30
+                val croppedX = max(component.roi.left - alpha, 0)
+                val croppedY = max(component.roi.top - alpha, 0)
+                val croppedWidth = min(component.roi.getWidth() + alpha * 2, imageAnalyzer.width - croppedX)
+                val croppedHeight = min(component.roi.getHeight() + alpha * 2, imageAnalyzer.height - croppedY)
+
+                val croppedImage = Bitmap.createBitmap(imageAnalyzer.bitmap, croppedX, croppedY, croppedWidth, croppedHeight)
+                val rescaledImage = Bitmap.createScaledBitmap(croppedImage, MODEL_WIDTH, MODEL_HEIGHT, true)
+                component.person = posenet.estimateSinglePose(rescaledImage)
+
+                makeStandardGuide(component)
+                if (component.guideList.isEmpty()) {
+                    layerLayoutGuideManager.guide(null)
+                    autoTakePhoto()
+                } else {
+                    // 표준 구도 가이드 제공
+                    imageAnalyzer.setGuide(guidingComponent, null, component.guideList[0])
+                    runOnUiThread {
+                        layerLayoutGuideManager.guide(component.guideList[0])
+                        binding.layerLayout.removeAllViewsWithout(guidingComponentImageView!!)
+                    }
+                }
+                Log.d(TAG, "init")
+            }
+        } else {
+            layerLayoutGuideManager.guide(null)
+            runOnUiThread {
+                autoTakePhoto()
+            }
         }
+    }
+
+    private fun autoTakePhoto() {
+        Log.i(TAG, "모든 컴포넌트 가이드 성공")
+        Log.i(TAG, "자동촬영!")
+        imageAnalyzer.setGuide(null, null, null)
+        if (componentList.hasPerson()) {
+            binding.guideTextView.text = "자세를 낮추어 아래에서 찍으면 비율이 좋아집니다"
+        }
+
+        handler.postDelayed(Runnable {
+            binding.layerLayout.removeAllViews()
+            countDownTimer(TimerMode.values()[1])
+            binding.guideTextView.text = "자동촬영"
+        }, 2000)
     }
 
     private fun getRecentImage(): Uri? {

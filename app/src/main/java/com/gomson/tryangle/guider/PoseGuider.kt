@@ -10,9 +10,9 @@ import org.tensorflow.lite.examples.posenet.lib.BodyPart
 import org.tensorflow.lite.examples.posenet.lib.KeyPoint
 import org.tensorflow.lite.examples.posenet.lib.Person
 
-private const val POSE_THRESHOLD = 0.02
+private const val POSE_THRESHOLD = 0.4
 
-private fun Person.has(bodyPart: BodyPart): Boolean {
+fun Person.has(bodyPart: BodyPart): Boolean {
     for (kp in keyPoints) {
         if (kp.bodyPart == bodyPart) {
             return kp.score > POSE_THRESHOLD
@@ -21,7 +21,7 @@ private fun Person.has(bodyPart: BodyPart): Boolean {
     return false
 }
 
-private fun Person.get(bodyPart: BodyPart): KeyPoint? {
+fun Person.get(bodyPart: BodyPart): KeyPoint? {
     for (kp in keyPoints) {
         if (kp.bodyPart == bodyPart) {
             return kp
@@ -30,7 +30,7 @@ private fun Person.get(bodyPart: BodyPart): KeyPoint? {
     return null
 }
 
-private fun Person.hasHead(): Boolean {
+fun Person.hasHead(): Boolean {
     return has(BodyPart.LEFT_EAR) &&
             has(BodyPart.RIGHT_EAR) &&
             has(BodyPart.LEFT_EYE) &&
@@ -38,12 +38,12 @@ private fun Person.hasHead(): Boolean {
             has(BodyPart.NOSE)
 }
 
-private fun Person.hasUpperBody(): Boolean {
+fun Person.hasUpperBody(): Boolean {
     return has(BodyPart.LEFT_SHOULDER) &&
             has(BodyPart.RIGHT_SHOULDER)
 }
 
-private fun Person.hasLowerBody(): Boolean {
+fun Person.hasLowerBody(): Boolean {
     return has(BodyPart.LEFT_HIP) &&
            has(BodyPart.RIGHT_HIP) &&
            has(BodyPart.LEFT_KNEE) &&
@@ -52,7 +52,7 @@ private fun Person.hasLowerBody(): Boolean {
            has(BodyPart.RIGHT_ANKLE)
 }
 
-private fun Person.hasFullBody(): Boolean {
+fun Person.hasFullBody(): Boolean {
     return hasLowerBody() && hasUpperBody()
 }
 
@@ -77,9 +77,7 @@ class PoseGuider(
                 component.person.has(BodyPart.RIGHT_KNEE) &&
                 !component.person.has(BodyPart.LEFT_ANKLE) &&
                 !component.person.has(BodyPart.RIGHT_ANKLE)) {
-                val personHeight = component.roi.bottom - component.roi.top
-                val diff = -personHeight * 10 / 170
-                guideList.add(CutAnkleGuide(diff, component))
+                guideList.add(CutAnkleGuide(component))
             }
 
             // 엉덩이는 있지만 무릎에서 잘린 경우
@@ -88,16 +86,12 @@ class PoseGuider(
                     !component.person.has(BodyPart.LEFT_ANKLE) &&
                     !component.person.has(BodyPart.RIGHT_KNEE) &&
                     !component.person.has(BodyPart.RIGHT_ANKLE)) {
-                val personHeight = component.roi.getHeight()
-                val diff = personHeight * 20 / 170
-                guideList.add(CutKneeGuide(diff, component))
+                guideList.add(CutKneeGuide(component))
             }
 
             // 머리만 덜렁 있는 사진
             if (component.person.hasHead() && !component.person.hasUpperBody() && !component.person.hasLowerBody()) {
-                val personHeight = component.roi.getHeight()
-                val diff = -personHeight * 20 / 170
-                guideList.add(CutNeckGuide(diff, component))
+                guideList.add(CutNeckGuide(component))
             }
         }
 

@@ -12,6 +12,7 @@ public abstract class Component {
     private long componentId;
     protected ArrayList<Guide> guideList;
     public boolean guideCompleted;
+    public boolean standardGuideCompleted;
 
     public Component(long id, long componentId, @NotNull ArrayList<Guide> guideList) {
         this.id = id;
@@ -51,5 +52,13 @@ public abstract class Component {
 
     public void setGuideCompleted(Boolean guideCompleted) {
         this.guideCompleted = guideCompleted;
+    }
+
+    public boolean isStandardGuideCompleted() {
+        return standardGuideCompleted;
+    }
+
+    public void setStandardGuideCompleted(boolean standardGuideCompleted) {
+        this.standardGuideCompleted = standardGuideCompleted;
     }
 }

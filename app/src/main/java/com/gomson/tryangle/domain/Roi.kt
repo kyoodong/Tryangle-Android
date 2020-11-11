@@ -1,6 +1,7 @@
 package com.gomson.tryangle.domain
 
 import android.graphics.Rect
+import com.gomson.tryangle.domain.guide.Convertable
 import kotlin.math.max
 import kotlin.math.min
 
@@ -9,7 +10,7 @@ data class Roi(
     val right: Int,
     val top: Int,
     val bottom: Int
-) {
+): Comparable<Roi>, Convertable {
     fun getWidth(): Int {
         return right - left
     }
@@ -28,6 +29,20 @@ data class Roi(
 
     operator fun plus(roi: Roi): Roi {
         return Roi(left + roi.left, right + roi.right, top + roi.top, bottom + roi.bottom)
+    }
+
+    override fun convertTo(
+        originalWidth: Int,
+        originalHeight: Int,
+        targetWidth: Int,
+        targetHeight: Int
+    ): Roi {
+        return Roi(
+            (left.toFloat() / originalWidth * targetWidth).toInt(),
+            (right.toFloat() / originalHeight * targetHeight).toInt(),
+            (top.toFloat() / originalWidth * targetWidth).toInt(),
+            (bottom.toFloat() / originalHeight * targetHeight).toInt()
+        )
     }
 
     fun toRect(): Rect {
@@ -64,5 +79,9 @@ data class Roi(
         val intersectArea = intersectWidth * intersectHeight
         val totalArea = getWidth() * getHeight()
         return intersectArea / totalArea.toFloat()
+    }
+
+    override fun compareTo(other: Roi): Int {
+        return getWidth() * getHeight() - other.getWidth() * other.getHeight()
     }
 }

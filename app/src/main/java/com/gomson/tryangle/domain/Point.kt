@@ -29,7 +29,7 @@ class Point(val x: Int, val y: Int) {
 
     fun isRoughClose(point: Point): Boolean {
         val diff = distance(point)
-        return diff < 30
+        return diff < 20
     }
 
     fun isFar(point: Point): Boolean {

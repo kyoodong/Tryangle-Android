@@ -67,6 +67,10 @@ public class PersonComponent extends ObjectComponent {
         return person;
     }
 
+    public void setPerson(Person person) {
+        this.person = person;
+    }
+
     public void setPosePoints(Map<String, Point> posePoints) {
         this.posePoints = posePoints;
     }
