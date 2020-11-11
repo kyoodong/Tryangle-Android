@@ -1,6 +1,7 @@
 package com.gomson.tryangle.setting
 
 import android.os.Bundle
+import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import com.gomson.tryangle.R
 
@@ -16,5 +17,15 @@ class PreferenceActivity : AppCompatActivity() {
                 PreferenceFragment()
             )
             .commit()
+
+    }
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.getItemId()) {
+            android.R.id.home -> {
+                onBackPressed()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
 }
