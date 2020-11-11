@@ -45,7 +45,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".PreferenceActivity"  android:theme="@style/PreferencesTheme"/>
+        <activity android:name=".setting.PreferenceActivity"  android:theme="@style/PreferencesTheme"/>
         <activity android:name=".album.AlbumActivity"/>
         <activity android:name=".photo.PhotoActivity"/>
     </application>
