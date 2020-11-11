@@ -1,5 +1,7 @@
 package com.gomson.tryangle.guider
 
+import com.gomson.tryangle.domain.Area
+import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.PersonComponent
 import com.gomson.tryangle.domain.guide.`object`.*
@@ -8,7 +10,6 @@ import org.tensorflow.lite.examples.posenet.lib.BodyPart
 import org.tensorflow.lite.examples.posenet.lib.KeyPoint
 import org.tensorflow.lite.examples.posenet.lib.Person
 
-private const val FOOT_LOWER_THRESHOLD = 10
 private const val POSE_THRESHOLD = 0.02
 
 private fun Person.has(bodyPart: BodyPart): Boolean {
@@ -70,7 +71,7 @@ class PoseGuider(
         // @TODO: 서 있는 케이스 추가해야함. 상반신만 있어도 서 있을 수 있음
         // 서 있는 경우
         if (component.pose == STAND) {
-            val gamma = 5
+            val gamma = imageHeight / 5
 
             // 사람이 사진 밑쪽에 위치한 경우
             if (component.roi.bottom + gamma > imageHeight) {
@@ -104,11 +105,15 @@ class PoseGuider(
                 }
             }
 
+            val foot_lower_threshold = imageHeight / 4
             // 발 끝을 맞추도록 유도
             if (component.person.hasFullBody() &&
-                imageHeight > component.roi.bottom + FOOT_LOWER_THRESHOLD) {
-                val diff = imageHeight - component.roi.bottom + FOOT_LOWER_THRESHOLD
-                guideList.add(BottomToeGuide(diff, component))
+                imageHeight > component.roi.bottom + foot_lower_threshold) {
+                val area = Area(
+                    Point(0, imageHeight - foot_lower_threshold),
+                    Point(imageWidth, imageHeight)
+                )
+                guideList.add(BottomToeGuide(area, component))
             }
 
             // 사람이 사진의 윗쪽에 위치한 경우

@@ -33,4 +33,8 @@ data class Area(
     fun getHeight(): Int {
         return rightBottom.y - leftTop.y
     }
+
+    fun getRoi(): Roi {
+        return Roi(leftTop.x, rightBottom.x, leftTop.y, rightBottom.y)
+    }
 }
