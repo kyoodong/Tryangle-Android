@@ -1,9 +1,15 @@
-package com.gomson.tryangle
+package com.gomson.tryangle.setting
 
 import android.os.Bundle
 import androidx.preference.PreferenceFragmentCompat
+import com.gomson.tryangle.R
 
 class PreferenceFragment : PreferenceFragmentCompat() {
+
+    companion object{
+        val KEY_HIGH_DEFINITION = "highDefinition"
+    }
+
     override fun onCreatePreferences(
         savedInstanceState: Bundle?,
         rootKey: String?

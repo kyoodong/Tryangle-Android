@@ -1,8 +1,8 @@
-package com.gomson.tryangle
+package com.gomson.tryangle.setting
 
 import android.os.Bundle
-import android.os.PersistableBundle
 import androidx.appcompat.app.AppCompatActivity
+import com.gomson.tryangle.R
 
 class PreferenceActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -11,7 +11,10 @@ class PreferenceActivity : AppCompatActivity() {
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportFragmentManager.beginTransaction()
-            .replace(R.id.preferenceLayout, PreferenceFragment())
+            .replace(
+                R.id.preferenceLayout,
+                PreferenceFragment()
+            )
             .commit()
     }
 }

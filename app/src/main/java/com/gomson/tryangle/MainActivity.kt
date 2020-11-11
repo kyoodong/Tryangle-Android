@@ -3,6 +3,7 @@ package com.gomson.tryangle
 import android.Manifest.permission
 import android.content.ContentUris
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.graphics.Bitmap
@@ -31,6 +32,8 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
+import androidx.preference.Preference
+import androidx.preference.PreferenceManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -51,6 +54,8 @@ import com.gomson.tryangle.dto.ObjectComponentListDTO
 import com.gomson.tryangle.guider.GuideImageObjectGuider
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.network.NetworkManager
+import com.gomson.tryangle.setting.PreferenceActivity
+import com.gomson.tryangle.setting.PreferenceFragment
 import com.gomson.tryangle.view.guide_image_view.GuideImageAdapter
 import com.google.android.gms.location.*
 import com.google.android.material.tabs.TabLayout
@@ -141,6 +146,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     private lateinit var binding: ActivityMainBinding
     private lateinit var imageService: ImageService
     private val componentMatcher = ComponentMatcher()
+    private var isHighDefinition = false
+    private lateinit var sharedPreferences : SharedPreferences
 
     private var guidingComponentImageView: ImageView? = null
     private var guidingComponent: Component? = null
@@ -248,6 +255,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         COLOR_WHITE = ContextCompat.getColor(this, R.color.colorWhite)
         COLOR_LIGHTGRAY = ContextCompat.getColor(this, R.color.colorLightgray)
         COLOR_LIGHTMINT = ContextCompat.getColor(this, R.color.colorLightMint)
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
 
         layoutInflater.inflate(R.layout.popup_more, null).let {
             popupMoreView = PopupWindow(
@@ -349,6 +357,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             startActivity(intent)
         }
 
+        isHighDefinition = sharedPreferences.getBoolean(PreferenceFragment.KEY_HIGH_DEFINITION, false)
+
         guideImageCategoryTabLayout.setOnClickGuideImageListener(this)
         layerLayoutGuideManager = LayerLayoutGuideManager(binding.layerLayout)
 
@@ -377,6 +387,13 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             isOpenCvLoaded = true;
         }
 
+        sharedPreferences.getBoolean(PreferenceFragment.KEY_HIGH_DEFINITION, false).let{
+            if(isHighDefinition != it){
+                isHighDefinition = it
+                imageCapture = getImageCapture(currentRatio.height, currentRatio.width)
+                bindCameraConfiguration()
+            }
+        }
     }
 
     private fun setRecentImageView(uri : Uri?){
@@ -415,9 +432,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     private fun getImageCapture(heightRatio: Int, widthRatio: Int): ImageCapture {
         val imageCapture = ImageCapture.Builder()
             .apply {
-//                todo
-//                setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-                setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+
+                setCaptureMode(if (isHighDefinition)  ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY else
+                    ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 setTargetAspectRatioCustom(Rational(widthRatio, heightRatio))
             }.build()
         preview = Preview.Builder()
