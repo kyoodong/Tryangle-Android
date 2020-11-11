@@ -5,6 +5,7 @@ import android.graphics.Color
 import androidx.core.graphics.get
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.Roi
+import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.dto.MaskList
 import java.util.*
 import kotlin.collections.ArrayList
@@ -12,7 +13,9 @@ import kotlin.collections.ArrayList
 class Layer(
     val mask: MaskList,
     roi: Roi,
-    bitmap: Bitmap) {
+    bitmap: Bitmap,
+    val color: Int = Guide.GREEN,
+    val transColor: Int = Guide.TRANS_GREEN) {
 
     private val width = mask[0].size
     private val height = mask.size
@@ -98,11 +101,11 @@ class Layer(
                         pixels[index] = Color.argb(0, 0, 0, 0)
                         colorPixels[index] = Color.argb(0, 0, 0, 0)
                     } else if (mask[y][x] == 1.toByte()) {
-                        pixels[index] = Color.argb(50, 127, 127, 127)
+                        pixels[index] = transColor
                         colorPixels[index] = bitmap.get(x, y) and 0x00FFFFFF or Color.argb(100, 0, 0, 0)
                     } else {
-                        pixels[index] = Color.argb(255 ,127, 127, 127)
-                        colorPixels[index] = Color.argb(255 ,127, 127, 127)
+                        pixels[index] = color
+                        colorPixels[index] = color
                     }
                     index++
                 }

@@ -9,7 +9,10 @@ import org.jetbrains.annotations.NotNull;
 
 public class Guide {
 
-    public static final int GREEN = Color.argb(50, 50, 200, 50);
+    public static final int GREEN = Color.argb(200, 123, 225, 185);
+    public static final int PINK = Color.argb(200, 255, 170, 170);
+    public static final int TRANS_GREEN = Color.argb(50, 123, 225, 185);
+    public static final int TRANS_PINK = Color.argb(50, 255, 170, 170);
 
     private Component component;
     private int guideId;

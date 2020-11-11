@@ -64,6 +64,12 @@ public class GuideDTO {
         }
     }
 
+    public void initPerson() {
+        for (PersonComponent component : personComponentList) {
+            component.initPerson();
+        }
+    }
+
     private ObjectComponent getObjectComponentByComponentId(long componentId) {
         for (ObjectComponent component : objectComponentList) {
             if (component.getComponentId() == componentId)

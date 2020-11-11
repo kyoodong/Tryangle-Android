@@ -46,17 +46,16 @@ class ImageService(context: Context): BaseService(context) {
             issueToken(null)
         }
 
-//        val call = NetworkManager.imageService.recommendImage(body, accessToken!!.token)
-//        call.enqueue(callback)
+        val call = NetworkManager.imageService.recommendImage(body, accessToken!!.token)
+        call.enqueue(callback)
 
-//        try {
-//
-//            call.enqueue(callback)
-//        } catch (e: EOFException) {
-//            Log.e(TAG, "객체가 없어 추천 이미지를 받지 못함")
-//        } catch (e: Exception) {
-//            e.printStackTrace()
-//        }
+        try {
+            call.enqueue(callback)
+        } catch (e: EOFException) {
+            Log.e(TAG, "객체가 없어 추천 이미지를 받지 못함")
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun getObjectComponentByUrl(url: String, callback: Callback<ObjectComponentListDTO>) {
@@ -69,10 +68,24 @@ class ImageService(context: Context): BaseService(context) {
         }
     }
 
-    fun getSpotByLocation(x: Double, y: Double, callback: Callback<List<Spot>>) {
+    fun getSpotByLocation(bitmap: Bitmap, lat: Double, lon: Double, callback: Callback<List<Spot>>) {
         try {
             issueToken(null)
-            val call = NetworkManager.imageService.getSpotByLocation(x, y, accessToken!!.token)
+            // RGB Bitmap -> ByteArray
+            val bos = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos)
+            val byteArray = bos.toByteArray()
+            val requestBody = RequestBody.create(
+                MediaType.parse("multipart/form-data"),
+                byteArray
+            )
+            val body = MultipartBody.Part.createFormData(
+                "image",
+                "${SystemClock.uptimeMillis()}.jpeg",
+                requestBody
+            )
+
+            val call = NetworkManager.imageService.getSpotByLocation(body, lat, lon, accessToken!!.token)
             call.enqueue(callback)
         } catch (e: Exception) {
             e.printStackTrace()

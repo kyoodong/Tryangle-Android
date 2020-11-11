@@ -1,13 +1,13 @@
 package com.gomson.tryangle.domain
 
 import com.gomson.tryangle.domain.guide.Guide
-import com.gomson.tryangle.domain.guide.Layer
+import com.gomson.tryangle.domain.guide.Convertable
 
 data class Line(
     val startPoint: Point,
     val endPoint: Point,
     val color: Int = Guide.GREEN
-): Layer() {
+): Convertable {
     override fun convertTo(
         originalWidth: Int,
         originalHeight: Int,

@@ -1,22 +1,27 @@
 package com.gomson.tryangle
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Matrix
 import android.location.Location
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import com.gomson.tryangle.domain.*
 import com.gomson.tryangle.domain.Point
-import com.gomson.tryangle.domain.component.*
+import com.gomson.tryangle.domain.Roi
+import com.gomson.tryangle.domain.Spot
+import com.gomson.tryangle.domain.component.Component
+import com.gomson.tryangle.domain.component.ComponentList
+import com.gomson.tryangle.domain.component.ObjectComponent
+import com.gomson.tryangle.domain.component.PersonComponent
 import com.gomson.tryangle.domain.guide.Guide
-import com.gomson.tryangle.domain.guide.LineGuide
 import com.gomson.tryangle.domain.guide.`object`.ObjectGuide
+import com.gomson.tryangle.domain.guide.`object`.PoseGuide
 import com.gomson.tryangle.dto.GuideImageListDTO
 import com.gomson.tryangle.dto.MatchingResult
 import com.gomson.tryangle.guider.LineGuider
-import com.gomson.tryangle.guider.ObjectGuider
-import com.gomson.tryangle.guider.PoseGuider
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.pose.PoseClassifier
 import org.opencv.android.Utils
@@ -42,22 +47,22 @@ class ImageAnalyzer(
     private var components = ComponentList()
     private val hough = Hough()
     private lateinit var bitmapBuffer: Bitmap
-    private lateinit var bitmap: Bitmap
+    lateinit var bitmap: Bitmap
     private lateinit var prevBitmap: Bitmap
     private lateinit var lastCapturedBitmap: Bitmap
     private val converter: YuvToRgbConverter = YuvToRgbConverter(context)
     private val imageService = ImageService(context)
     private val posenet = Posenet(context)
     private val poseClassifier = PoseClassifier()
-    private lateinit var poseGuider: PoseGuider
-    private lateinit var objectGuider: ObjectGuider
-    private lateinit var lineGuider: LineGuider
+    private val lineGuider = LineGuider()
     private var guidingComponent: Component? = null
     private var targetComponent: Component? = null
     private var guidingGuide: Guide? = null
     private var failToDetectObjectStartTime: Long = 0
     private var ratio: Float = 1f
     var latestLocation: Location? = null
+    private var hasSpotImages = false
+    private var isProcessingSegmentation = false
 
     var width = 0
     var height = 0
@@ -114,26 +119,15 @@ class ImageAnalyzer(
         height = (width * ratio).toInt()
         bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true)
 
-        poseGuider = PoseGuider(bitmap.width, bitmap.height)
-        objectGuider = ObjectGuider(bitmap.width, bitmap.height)
-        lineGuider = LineGuider()
-
         // 세그멘테이션을 요청할 필요가 있다면
         if (needToRequestSegmentation) {
             requestSegmentation()
         } else {
             // 오브젝트별 이미지
-            if (guidingComponent != null && targetComponent != null) {
+            if (guidingComponent != null) {
                 if (guidingComponent is ObjectComponent) {
                     traceGuidingObjectComponent()
                 }
-//                else if (guidingComponent is LineComponent) {
-//
-//                }
-//
-//                else if (guide is LineGuide) {
-//                    if (guide.isMatch(Line()))
-//                }
             }
 
             traceImage()
@@ -169,9 +163,8 @@ class ImageAnalyzer(
         Utils.bitmapToMat(bitmap, originalImage)
 
         val guidingComponent = guidingComponent as ObjectComponent
-        val targetComponent = targetComponent as ObjectComponent
         val objectImage = Mat()
-        Utils.bitmapToMat(guidingComponent.roiImage, objectImage)
+        Utils.bitmapToMat(guidingComponent.croppedImage, objectImage)
 
         val matchingResult = MatchFeature(objectImage.nativeObjAddr, originalImage.nativeObjAddr,
             guidingComponent.layer.ratioInRoi)
@@ -188,28 +181,56 @@ class ImageAnalyzer(
                 val center = Point(minX + width / 2, minY + height / 2)
                 val leftTop = Point(minX, minY)
 
+                guidingComponent.roi = Roi(minX, maxX, minY, maxY)
+
                 // 가이드 내에서 도달해야하는 목표지점
                 val guide = guidingGuide
                 if (guide == null) {
-                    // 객체간에 충분히 가까워 진 경우
-                    val targetPoint = targetComponent.centerPoint
-                    val curRoi = Roi(minX, maxX, minY, maxY)
-                    if (targetPoint.isClose(center) || targetComponent.roi.getIou(curRoi) > 0.75) {
-                        analyzeListener?.onMatchComponent()
+                    if (targetComponent != null) {
+                        val targetComponent = targetComponent as ObjectComponent
+
+                        // 객체간에 충분히 가까워 진 경우
+                        val targetPoint = targetComponent.centerPoint
+                        val curRoi = Roi(minX, maxX, minY, maxY)
+                        val iou = if (targetComponent.roi < curRoi) {
+                            targetComponent.roi.getIou(curRoi)
+                        } else {
+                            curRoi.getIou(targetComponent.roi)
+                        }
+                        if (targetPoint.isRoughClose(center) || iou > 0.75) {
+                            analyzeListener?.onMatchComponent()
+                        }
                     }
                 } else if (guide is ObjectGuide) {
                     if (guide.isMatch(Roi(minX, maxX, minY, maxY))) {
                         Log.i(TAG, "가이드 목표 도달!")
                         analyzeListener?.onMatchGuide()
                     }
-                }
+                } else if (guide is PoseGuide && guidingComponent is PersonComponent) {
+                    val alpha = 30
+                    val croppedX = max(minX - alpha, 0)
+                    val croppedY = max(minY - alpha, 0)
+                    val croppedWidth = min(width + alpha * 2, this.width - croppedX)
+                    val croppedHeight = min(height + alpha * 2, this.height - croppedY)
 
+                    val croppedImage = Bitmap.createBitmap(bitmap, croppedX, croppedY, croppedWidth, croppedHeight)
+                    val rescaledImage = Bitmap.createScaledBitmap(croppedImage, MODEL_WIDTH, MODEL_HEIGHT, true)
+                    guidingComponent.person = posenet.estimateSinglePose(rescaledImage)
+
+                    if (guide.isMatch(guidingComponent)) {
+                        Log.i(TAG, "가이드 목표 도달!")
+                        analyzeListener?.onMatchGuide()
+                    }
+                }
                 analyzeListener?.onUpdateGuidingComponentPosition(width, height, leftTop)
             }
         }
     }
 
     private fun requestSegmentation() {
+        if (isProcessingSegmentation)
+            return
+
         if (waitSegmentStartTime == 0L) {
             waitSegmentStartTime = System.currentTimeMillis()
             prevBitmap = bitmap.copy(bitmap.config, true)
@@ -249,6 +270,7 @@ class ImageAnalyzer(
 
         lastCapturedBitmap = bitmap.copy(bitmap.config, true)
         Log.i(TAG, "Image Segmentation 요청")
+        isProcessingSegmentation = true
         imageService.recommendImage(bitmap, object: retrofit2.Callback<GuideImageListDTO> {
             val bitmap = lastCapturedBitmap.copy(lastCapturedBitmap.config, true)
 
@@ -256,6 +278,7 @@ class ImageAnalyzer(
                 call: Call<GuideImageListDTO>,
                 response: Response<GuideImageListDTO>
             ) {
+                isProcessingSegmentation = false
                 if (response.isSuccessful) {
                     Log.i(TAG, "image Segmentation 성공")
                     val body = response.body()
@@ -277,6 +300,7 @@ class ImageAnalyzer(
                     }
 
                     body.guideDTO.deployMask()
+                    body.guideDTO.initPerson()
                     this@ImageAnalyzer.analyzeListener?.onUpdateRecommendedImage(body.guideImageList)
 
                     val objectComponents = ArrayList<ObjectComponent>()
@@ -292,7 +316,7 @@ class ImageAnalyzer(
                     this@ImageAnalyzer.components.clear()
 
                     for (objectComponent in objectComponents) {
-                        objectComponent.refreshLayer(bitmap)
+                        objectComponent.refreshLayer(bitmap, Guide.PINK, Guide.TRANS_PINK)
 
                         if (objectComponent.layer.layeredImage != null) {
                             if (objectComponent.clazz == ObjectComponent.PERSON) {
@@ -318,7 +342,7 @@ class ImageAnalyzer(
                                         objectComponent.area,
                                         objectComponent.mask,
                                         objectComponent.roiStr,
-                                        objectComponent.roiImage,
+                                        objectComponent.croppedImage,
                                         objectComponent.layer,
                                         person,
                                         poseClass
@@ -357,6 +381,7 @@ class ImageAnalyzer(
             }
 
             override fun onFailure(call: Call<GuideImageListDTO>, t: Throwable) {
+                isProcessingSegmentation = false
                 val canvas = Canvas(lastCapturedBitmap)
                 canvas.drawColor(Color.rgb(255, 255, 255))
                 Log.i(TAG, "image Segmentation 서버 에러 ${t.message}")
@@ -364,12 +389,13 @@ class ImageAnalyzer(
             }
         })
 
-        if (latestLocation != null) {
+        if (latestLocation != null && !hasSpotImages) {
             val latestLocation = latestLocation
                 ?: return
 
+            hasSpotImages = true
             Log.i(TAG, "Spot 요청")
-            imageService.getSpotByLocation(latestLocation.latitude, latestLocation.longitude, object:
+            imageService.getSpotByLocation(bitmap, latestLocation.latitude, latestLocation.longitude, object:
                 Callback<List<Spot>> {
                 override fun onResponse(
                     call: Call<List<Spot>>,
@@ -380,14 +406,17 @@ class ImageAnalyzer(
                         val spotList = response.body()
                             ?: return
 
+                        hasSpotImages = true
                         this@ImageAnalyzer.analyzeListener?.onUpdateSpot(spotList as ArrayList<Spot>)
                     } else {
+                        hasSpotImages = false
                         Log.i(TAG, "Spot 로딩 실패 ${response.code()}")
                     }
                 }
 
                 override fun onFailure(call: Call<List<Spot>>, t: Throwable) {
                     Log.i(TAG, "Spot 로딩 실패 ${t.message}")
+                    hasSpotImages = false
                 }
             })
         }

@@ -1,7 +1,5 @@
 package com.gomson.tryangle.pose
 
-enum class PoseClass {
-
-    UNKNOWN, STAND, SIT
-
-}
+const val UNKNOWN = 0
+const val STAND = 1
+const val SIT = 2

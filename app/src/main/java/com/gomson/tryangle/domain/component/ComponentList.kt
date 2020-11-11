@@ -67,6 +67,7 @@ class ComponentList: ArrayList<Component>() {
     fun resetCompleteGuide() {
         for (component in this) {
             component.guideCompleted = false
+            component.standardGuideCompleted = false
         }
     }
 }

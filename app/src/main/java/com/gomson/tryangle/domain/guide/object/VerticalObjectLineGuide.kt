@@ -25,7 +25,7 @@ open class VerticalObjectLineGuide(
     }
 
     override fun clearGuide(layerLayout: LayerLayout) {
-        layerLayout.areaList.remove(guideLine)
+        layerLayout.lineList.remove(guideLine)
         guideLine = null
         super.clearGuide(layerLayout)
     }

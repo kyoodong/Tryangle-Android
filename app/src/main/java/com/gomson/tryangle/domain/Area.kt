@@ -1,12 +1,13 @@
 package com.gomson.tryangle.domain
 
-import com.gomson.tryangle.domain.guide.Layer
+import com.gomson.tryangle.domain.guide.Guide
+import com.gomson.tryangle.domain.guide.Convertable
 
 data class Area(
     val leftTop: Point,
     val rightBottom: Point,
-    val color: Int = 0
-): Layer() {
+    val color: Int = Guide.GREEN
+): Convertable {
     override fun convertTo(
         originalWidth: Int,
         originalHeight: Int,
@@ -32,5 +33,9 @@ data class Area(
 
     fun getHeight(): Int {
         return rightBottom.y - leftTop.y
+    }
+
+    fun getRoi(): Roi {
+        return Roi(leftTop.x, rightBottom.x, leftTop.y, rightBottom.y)
     }
 }

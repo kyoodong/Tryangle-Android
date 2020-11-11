@@ -7,9 +7,9 @@ class LayerLayoutGuideManager(
 ) {
     private var prevGuide: Guide? = null
 
-    fun guide(guide: Guide) {
+    fun guide(guide: Guide?) {
         prevGuide?.clearGuide(layerLayout)
-        guide.guide(layerLayout)
+        guide?.guide(layerLayout)
         prevGuide = guide
     }
 }

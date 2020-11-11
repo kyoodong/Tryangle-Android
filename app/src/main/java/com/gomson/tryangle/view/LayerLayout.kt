@@ -31,7 +31,7 @@ class LayerLayout @JvmOverloads constructor(
     }
 
     fun removeAllViewsWithout(view: View) {
-        removeAllViews()
+        super.removeAllViews()
         addView(view)
     }
 

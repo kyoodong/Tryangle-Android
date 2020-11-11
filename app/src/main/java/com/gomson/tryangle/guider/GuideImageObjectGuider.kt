@@ -1,5 +1,6 @@
 package com.gomson.tryangle.guider
 
+import com.gomson.tryangle.domain.Area
 import com.gomson.tryangle.domain.Line
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
@@ -29,7 +30,11 @@ open class GuideImageObjectGuider(
             val iou = getIou(goldenAreaList[i], component.mask)
             if (iou > 0.7) {
                 // i번 황금영역에 배치하라는 가이드
-                guideList.add(GoldenAreaGuide(goldenAreaList[i], component))
+                val area = Area(
+                    goldenAreaList[i].first,
+                    goldenAreaList[i].second
+                )
+                guideList.add(GoldenAreaGuide(area, component))
             }
         }
 

@@ -1,5 +1,6 @@
 package com.gomson.tryangle.guider
 
+import com.gomson.tryangle.domain.Area
 import com.gomson.tryangle.domain.Line
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
@@ -29,7 +30,6 @@ open class ObjectGuider(
         val rightDiff = abs(rightSide - component.centerPoint.x)
         val middleDiff = abs(middleSide - component.centerPoint.x)
         val guideList = component.guideList
-        guideList.clear()
 
         // @TODO 황금 비율 영역
 //        golden_ratio_area_list = self.get_golden_ratio_area()
@@ -42,7 +42,7 @@ open class ObjectGuider(
                 if (leftDiff > error)
                     guideList.add(
                         GoldenAreaGuide(
-                            Pair(
+                            Area(
                                 Point(leftSide - 10, 0),
                                 Point(leftSide + 10, imageHeight)
                             ),
@@ -66,7 +66,7 @@ open class ObjectGuider(
             if (rightDiff < middleDiff) {
                 if (rightDiff > error)
                     GoldenAreaGuide(
-                        Pair(
+                        Area(
                             Point(rightSide - 10, 0),
                             Point(rightSide + 10, imageHeight)
                         ), component
@@ -84,7 +84,5 @@ open class ObjectGuider(
                     )
             }
         }
-
-        component.guideList = guideList
     }
 }

@@ -7,7 +7,6 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.graphics.Bitmap
-import android.location.Location
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
@@ -47,18 +46,20 @@ import com.gomson.tryangle.domain.Spot
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ComponentList
 import com.gomson.tryangle.domain.component.ObjectComponent
+import com.gomson.tryangle.domain.component.PersonComponent
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.LayerLayoutGuideManager
 import com.gomson.tryangle.dto.MaskList
 import com.gomson.tryangle.dto.ObjectComponentListDTO
 import com.gomson.tryangle.guider.GuideImageObjectGuider
+import com.gomson.tryangle.guider.ObjectGuider
+import com.gomson.tryangle.guider.PoseGuider
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.network.NetworkManager
 import com.gomson.tryangle.setting.PreferenceActivity
 import com.gomson.tryangle.setting.PreferenceFragment
 import com.gomson.tryangle.view.guide_image_view.GuideImageAdapter
 import com.google.android.gms.location.*
-import com.google.android.material.tabs.TabLayout
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
@@ -66,12 +67,15 @@ import kotlinx.android.synthetic.main.view_guide_image_category_tab_layout.view.
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
+import org.tensorflow.lite.examples.posenet.lib.Posenet
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.math.max
+import kotlin.math.min
 
 enum class RatioMode constructor(val width: Int, val height: Int) {
     RATIO_1_1(1, 1),
@@ -483,6 +487,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     private fun takePhoto() {
+        binding.layerLayout.removeAllViews()
+
         val imageCapture = imageCapture ?: return
 
         val photoFile = File(
@@ -564,7 +570,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
                 guidingComponentImageView.x = resultX
                 guidingComponentImageView.y = resultY
-                guidingComponentImageView.invalidate()
+                guidingComponentImageView.requestLayout()
             }, i * 5L)
         }
 
@@ -583,50 +589,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         }
     }
 
-//    private fun displayGuide() {
-//        val guide = mainGuide ?: return
-//        val canvas = Canvas(guideBitmap)
-//        canvas.drawColor(Color.argb(0, 0, 0, 0), BlendMode.CLEAR)
-//
-//        if (guide is LineGuide) {
-//            val lineGuide = guide as LineGuide
-//            val paint = Paint()
-//            paint.color = Color.rgb(255, 0, 0)
-//            paint.isAntiAlias = true
-//            paint.strokeWidth = 5f
-//            canvas.drawLine(lineGuide.startPoint.x.toFloat(),
-//                lineGuide.startPoint.y.toFloat(),
-//                lineGuide.endPoint.x.toFloat(),
-//                lineGuide.endPoint.y.toFloat(), paint)
-//        }
-//
-//        else if (guide is ObjectGuide) {
-//            val objectGuide = guide as ObjectGuide
-//            val layerImage = objectGuide.targetComponent.layer.layeredImage ?: return
-//            val roi = objectGuide.targetComponent.roi + objectGuide.diffPoint
-//            canvas.drawBitmap(layerImage, null, roi.toRect(), null)
-//        }
-//
-//        runOnUiThread {
-//            guideTextView.text = GUIDE_MSG_LIST[guide.guideId]
-//            guideImageView.setImageBitmap(guideBitmap)
-//        }
-//    }
-
-//    override fun onGuideUpdate(guides: Array<ArrayList<Guide>>, mainGuide: Guide) {
-//        this.guideClusters = guides
-//        this.mainGuide = mainGuide
-//
-//        if (!::guideBitmap.isInitialized) {
-//            guideBitmap = Bitmap.createBitmap(
-//                imageAnalyzer.width,
-//                imageAnalyzer.height,
-//                Bitmap.Config.ARGB_8888)
-//        }
-//
-//        displayGuide()
-//        Log.i(TAG, "가이드 업데이트")
-//    }
 
     override fun onUpdateRecommendedImage(imageList: ArrayList<String>) {
         Log.i(TAG, "추천 이미지 ${imageList.size} 개 도착!")
@@ -634,27 +596,53 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         this.recommendedImageUrlList.addAll(imageList)
 
         runOnUiThread {
+            val tab = this.binding.guideImageCategoryTabLayout.tabLayout.getTabAt(0)
+            this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
             binding.guideImageCategoryTabLayout.addImageUrlList(imageList)
         }
     }
 
+    private fun makeStandardGuide(component: ObjectComponent) {
+        component.guideCompleted = true
+        if (component is PersonComponent) {
+            val poseGuider = PoseGuider(
+                component.mask[0].size,
+                component.mask.size
+            )
+
+            poseGuider.initGuideList(component)
+        }
+        val objectGuider = ObjectGuider(
+            component.mask[0].size,
+            component.mask.size
+        )
+
+        objectGuider.initGuideList(component)
+    }
+
     override fun onMatchGuide() {
         Log.i(TAG, "가이드에 맞음!")
-        val component = guidingComponent
+        val guidingComponent = guidingComponent
             ?: return
 
-        val guideList = component.guideList
+        val targetComponent = targetComponent
             ?: return
 
-        guideList.remove(guidingGuide)
-        if (guideList.isEmpty()) {
-            guidingGuide = null
-            binding.guideTextView.text = getString(R.string.require_more_accurate_position_and_area)
-        } else {
-            guidingGuide = guidingComponent?.guideList?.get(0)
-            binding.guideTextView.text = guidingGuide!!.message
+        if (guidingComponent is ObjectComponent) {
+            targetComponent.guideList.remove(guidingGuide)
+            targetComponent.guideCompleted = targetComponent.guideList.isEmpty()
+
+            guidingGuide = if (!targetComponent.guideCompleted) {
+                targetComponent.guideList[0]
+            } else {
+                null
+            }
+
+            runOnUiThread {
+                displayGuide(guidingGuide)
+                imageAnalyzer.setGuide(this.guidingComponent, targetComponent, guidingGuide)
+            }
         }
-        imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
     }
 
     fun countDownTimer(timerMode: TimerMode) {
@@ -746,7 +734,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                                     return
 
                                 for (objectComponent in objectComponentList) {
-                                    objectComponent.refreshLayer(resource)
+                                    objectComponent.refreshLayer(resource, Guide.GREEN, Guide.TRANS_GREEN)
                                 }
 
                                 guideComponentList.clear()
@@ -807,29 +795,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             guidingComponentImageView = binding.layerLayout.createImageView(component)
             binding.layerLayout.addView(guidingComponentImageView)
             match(cameraObjectComponentList[0])
-        } else {
-            // @TODO: Line Guide
-//            if (!componentList.isEmpty()) {
-//                layerLayoutGuideManager.guide(componentList[0].guideList[0])
-//            } else {
-
-
-
-            Log.i(TAG, "모든 컴포넌트 가이드 성공")
-            Log.i(TAG, "자동촬영!")
-            imageAnalyzer.setGuide(null, null, null)
-            if (componentList.hasPerson()) {
-                binding.guideTextView.text = "자세를 낮추어 아래에서 찍으면 다리가 길어보입니다."
-            }
-
-            handler.postDelayed(Runnable {
-                binding.layerLayout.removeAllViews()
-                countDownTimer(TimerMode.values()[1])
-                binding.guideTextView.text = "자동촬영"
-            }, 2000)
-
-
-//            }
         }
     }
 
@@ -837,32 +802,38 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
      * 컴포넌트와 가이드 이미지 컴포넌트를 매칭, 가이드 해주는 메소드
      */
     private fun match(component: ObjectComponent) {
-        val guideComponent = componentMatcher.match(component, guideComponentList)
-        if (guideComponent == null) {
+        val targetComponent = componentMatcher.match(component, guideComponentList)
+        if (targetComponent == null) {
             Toast.makeText(baseContext, "매칭할 오브젝트가 없습니다.", Toast.LENGTH_SHORT).show()
             return
         }
 
-        val guideList = guideComponent.guideList
-            ?: return
-
-        if (guideList.size == 0) {
-            if (guideComponent.mask.isEmpty() || guideComponent.mask[0].isEmpty())
+        if (targetComponent.guideList.isEmpty()) {
+            if (targetComponent.mask.isEmpty() || targetComponent.mask[0].isEmpty())
                 return
 
             val guider = GuideImageObjectGuider(
-                guideComponent.mask[0].size,
-                guideComponent.mask.size
+                targetComponent.mask[0].size,
+                targetComponent.mask.size
             )
-            guider.initGuideList(guideComponent)
+
+            guider.initGuideList(targetComponent)
         }
 
         guidingComponent = component
-        targetComponent = guideComponent
-        guidingGuide = if (guideList.isEmpty()) null else guideList[0]
-        imageAnalyzer.setGuide(guidingComponent, targetComponent, guidingGuide)
+        this.targetComponent = targetComponent
 
-        val imageView = binding.layerLayout.createImageView(guideComponent, true)
+        guidingGuide = if (targetComponent.guideList.isEmpty()) {
+            // targetComponent 의 가이드가 없으면, guidingGuide 의 표준 구도를 추출
+            makeStandardGuide(component)
+            if (component.guideList.isEmpty()) null else component.guideList[0]
+        } else {
+            if (targetComponent.guideList.isEmpty()) null else targetComponent.guideList[0]
+        }
+
+        imageAnalyzer.setGuide(guidingComponent, this.targetComponent, guidingGuide)
+
+        val imageView = binding.layerLayout.createImageView(targetComponent, true)
         binding.layerLayout.addView(imageView)
         displayGuide(guidingGuide)
     }
@@ -882,9 +853,56 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             ?: return
 
         component.guideCompleted = true
-        runOnUiThread {
-            showCameraObject(componentList.getNotGuidedObjectComponentList())
+        if (!component.standardGuideCompleted) {
+            component.standardGuideCompleted = true
+
+            if (component is PersonComponent) {
+                val posenet = Posenet(baseContext)
+                val alpha = 30
+                val croppedX = max(component.roi.left - alpha, 0)
+                val croppedY = max(component.roi.top - alpha, 0)
+                val croppedWidth = min(component.roi.getWidth() + alpha * 2, imageAnalyzer.width - croppedX)
+                val croppedHeight = min(component.roi.getHeight() + alpha * 2, imageAnalyzer.height - croppedY)
+
+                val croppedImage = Bitmap.createBitmap(imageAnalyzer.bitmap, croppedX, croppedY, croppedWidth, croppedHeight)
+                val rescaledImage = Bitmap.createScaledBitmap(croppedImage, MODEL_WIDTH, MODEL_HEIGHT, true)
+                component.person = posenet.estimateSinglePose(rescaledImage)
+
+                makeStandardGuide(component)
+                if (component.guideList.isEmpty()) {
+                    layerLayoutGuideManager.guide(null)
+                    autoTakePhoto()
+                } else {
+                    // 표준 구도 가이드 제공
+                    imageAnalyzer.setGuide(guidingComponent, null, component.guideList[0])
+                    runOnUiThread {
+                        layerLayoutGuideManager.guide(component.guideList[0])
+                        binding.layerLayout.removeAllViewsWithout(guidingComponentImageView!!)
+                    }
+                }
+                Log.d(TAG, "init")
+            }
+        } else {
+            layerLayoutGuideManager.guide(null)
+            runOnUiThread {
+                autoTakePhoto()
+            }
         }
+    }
+
+    private fun autoTakePhoto() {
+        Log.i(TAG, "모든 컴포넌트 가이드 성공")
+        Log.i(TAG, "자동촬영!")
+        imageAnalyzer.setGuide(null, null, null)
+        if (componentList.hasPerson()) {
+            binding.guideTextView.text = "자세를 낮추어 아래에서 찍으면 비율이 좋아집니다"
+        }
+
+        handler.postDelayed(Runnable {
+            binding.layerLayout.removeAllViews()
+            countDownTimer(TimerMode.values()[1])
+            binding.guideTextView.text = "자동촬영"
+        }, 2000)
     }
 
     private fun getRecentImage(): Uri? {
@@ -926,6 +944,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     override fun onUpdateSpot(spotList: ArrayList<Spot>) {
+        var count = 0
         for (spot in spotList) {
             val imageUrlList = spot.imageUrlList
                 ?: continue
@@ -933,6 +952,12 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             binding.guideImageCategoryTabLayout.addTab(
                 GuideTabItem(spot.name, imageUrlList as ArrayList<String>)
             )
+            count += 1
+        }
+
+        if (count > 0) {
+            val tab = this.binding.guideImageCategoryTabLayout.tabLayout.getTabAt(1)
+            this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
         }
     }
 }
