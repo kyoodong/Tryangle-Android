@@ -782,7 +782,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                                     return
 
                                 for (objectComponent in objectComponentList) {
-                                    objectComponent.refreshLayer(resource)
+                                    objectComponent.refreshLayer(resource, Guide.GREEN, Guide.TRANS_GREEN)
                                 }
 
                                 guideComponentList.clear()
@@ -848,7 +848,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             Log.i(TAG, "자동촬영!")
             imageAnalyzer.setGuide(null, null, null)
             if (componentList.hasPerson()) {
-                binding.guideTextView.text = "자세를 낮추어 아래에서 찍으면 다리가 길어보입니다."
+                binding.guideTextView.text = "자세를 낮추어 아래에서 찍으면 비율이 좋아집니다"
             }
 
             handler.postDelayed(Runnable {

@@ -299,7 +299,7 @@ class ImageAnalyzer(
                     this@ImageAnalyzer.components.clear()
 
                     for (objectComponent in objectComponents) {
-                        objectComponent.refreshLayer(bitmap)
+                        objectComponent.refreshLayer(bitmap, Guide.PINK, Guide.TRANS_PINK)
 
                         if (objectComponent.layer.layeredImage != null) {
                             if (objectComponent.clazz == ObjectComponent.PERSON) {

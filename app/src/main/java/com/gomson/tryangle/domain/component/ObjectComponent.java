@@ -150,8 +150,8 @@ public class ObjectComponent extends Component {
         return objectClassScore + score;
     }
 
-    public void refreshLayer(Bitmap bitmap) {
-        layer = new Layer(mask, roi, bitmap);
+    public void refreshLayer(Bitmap bitmap, int color, int transColor) {
+        layer = new Layer(mask, roi, bitmap, color, transColor);
         centerPoint = layer.getCenterPoint();
         area = layer.getArea();
         croppedImage = Bitmap.createBitmap(bitmap,

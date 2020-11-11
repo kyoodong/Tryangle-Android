@@ -1,11 +1,12 @@
 package com.gomson.tryangle.domain
 
+import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.Layer
 
 data class Area(
     val leftTop: Point,
     val rightBottom: Point,
-    val color: Int = 0
+    val color: Int = Guide.GREEN
 ): Layer() {
     override fun convertTo(
         originalWidth: Int,
