@@ -3,6 +3,7 @@ package com.gomson.tryangle
 import android.Manifest.permission
 import android.content.ContentUris
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.graphics.Bitmap
@@ -31,6 +32,8 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
+import androidx.preference.Preference
+import androidx.preference.PreferenceManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -51,6 +54,8 @@ import com.gomson.tryangle.dto.ObjectComponentListDTO
 import com.gomson.tryangle.guider.GuideImageObjectGuider
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.network.NetworkManager
+import com.gomson.tryangle.setting.PreferenceActivity
+import com.gomson.tryangle.setting.PreferenceFragment
 import com.gomson.tryangle.view.guide_image_view.GuideImageAdapter
 import com.google.android.gms.location.*
 import com.google.android.material.tabs.TabLayout
@@ -96,7 +101,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         private const val TAG = "MainActivity"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
-        private val REQUIRED_PERMISSIONS = arrayOf(permission.CAMERA, permission.ACCESS_FINE_LOCATION)
+        private val REQUIRED_PERMISSIONS = arrayOf(permission.CAMERA, permission.ACCESS_FINE_LOCATION, permission.READ_EXTERNAL_STORAGE)
     }
 
     // 카메라
@@ -138,10 +143,11 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     var isGrid = false
     private val recommendedImageUrlList = ArrayList<String>()
     var currentTimerModeIndex = 0
-    private var recentImage: Uri? = null
     private lateinit var binding: ActivityMainBinding
     private lateinit var imageService: ImageService
     private val componentMatcher = ComponentMatcher()
+    private var isHighDefinition = false
+    private lateinit var sharedPreferences : SharedPreferences
 
     private var guidingComponentImageView: ImageView? = null
     private var guidingComponent: Component? = null
@@ -249,6 +255,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         COLOR_WHITE = ContextCompat.getColor(this, R.color.colorWhite)
         COLOR_LIGHTGRAY = ContextCompat.getColor(this, R.color.colorLightgray)
         COLOR_LIGHTMINT = ContextCompat.getColor(this, R.color.colorLightMint)
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
 
         layoutInflater.inflate(R.layout.popup_more, null).let {
             popupMoreView = PopupWindow(
@@ -350,14 +357,12 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             startActivity(intent)
         }
 
+        isHighDefinition = sharedPreferences.getBoolean(PreferenceFragment.KEY_HIGH_DEFINITION, false)
+
         guideImageCategoryTabLayout.setOnClickGuideImageListener(this)
         layerLayoutGuideManager = LayerLayoutGuideManager(binding.layerLayout)
 
-        recentImage = getRecentImage()
-        Glide.with(this)
-            .load(recentImage)
-            .dontAnimate()
-            .into(binding.albumBtn)
+        setRecentImageView(getRecentImage())
 
         setAspectRatioView(currentRatio)
         bindCameraConfiguration()
@@ -382,6 +387,22 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             isOpenCvLoaded = true;
         }
 
+        sharedPreferences.getBoolean(PreferenceFragment.KEY_HIGH_DEFINITION, false).let{
+            if(isHighDefinition != it){
+                isHighDefinition = it
+                imageCapture = getImageCapture(currentRatio.height, currentRatio.width)
+                bindCameraConfiguration()
+            }
+        }
+    }
+
+    private fun setRecentImageView(uri : Uri?){
+        uri.let{
+            Glide.with(this)
+                .load(it)
+                .dontAnimate()
+                .into(binding.albumBtn)
+        }
     }
 
     /**
@@ -411,9 +432,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     private fun getImageCapture(heightRatio: Int, widthRatio: Int): ImageCapture {
         val imageCapture = ImageCapture.Builder()
             .apply {
-//                todo
-//                setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-                setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+
+                setCaptureMode(if (isHighDefinition)  ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY else
+                    ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 setTargetAspectRatioCustom(Rational(widthRatio, heightRatio))
             }.build()
         preview = Preview.Builder()
@@ -479,6 +500,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     val savedUri = Uri.fromFile(photoFile)
+                    setRecentImageView(savedUri)
                     binding.captureEffectView.visibility = View.GONE
 
                     MediaScannerConnection.scanFile(
@@ -866,6 +888,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     private fun getRecentImage(): Uri? {
+        if(ContextCompat.checkSelfPermission(
+                baseContext,
+                permission.READ_EXTERNAL_STORAGE
+            ) != PackageManager.PERMISSION_GRANTED)
+        {
+            return null
+        }
+
         val uriExternal: Uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         val cursor: Cursor?
         val projection = arrayOf(
