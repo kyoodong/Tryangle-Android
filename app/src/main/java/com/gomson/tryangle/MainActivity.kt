@@ -963,5 +963,9 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
         }
     }
+
+    override fun onUpdateRecommendedCacheImage(imageList: ArrayList<String>) {
+        TODO("Not yet implemented")
+    }
 }
 

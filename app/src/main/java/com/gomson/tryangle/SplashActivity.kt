@@ -101,7 +101,6 @@ class SplashActivity : AppCompatActivity() {
                                     modelService.downloadModel(latestVersion, object: ModelService.ModelCallback {
                                         override fun onSuccess() {
                                             Log.i(TAG, "모델 다운로드 성공")
-                                            showWait("최신버전 모델 다운로드 완료")
                                             count++
 
                                             if (count == 2) {
@@ -152,7 +151,6 @@ class SplashActivity : AppCompatActivity() {
                                     modelService.downloadFeature(latestVersion, object: ModelService.ModelCallback {
                                         override fun onSuccess() {
                                             Log.i(TAG, "피쳐 다운로드 성공")
-                                            showWait("최신버전 피쳐 다운로드 완료")
                                             count++
 
                                             if (count == 2) {

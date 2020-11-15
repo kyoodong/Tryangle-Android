@@ -76,6 +76,7 @@ class ImageAnalyzer(
     }
 
     external fun MatchFeature(matAddrInput1: Long, matAddrInput2: Long, ratioInRoi: Int): MatchingResult?
+    external fun ImageRetrieval(matAddrInput: Long): Array<String>
 
     override fun analyze(imageProxy: ImageProxy) {
         val curTime = System.currentTimeMillis()
@@ -270,6 +271,9 @@ class ImageAnalyzer(
 
         lastCapturedBitmap = bitmap.copy(bitmap.config, true)
         Log.i(TAG, "Image Segmentation 요청")
+
+        val result = ImageRetrieval(curImage.nativeObjAddr)
+
         isProcessingSegmentation = true
         imageService.recommendImage(bitmap, object: retrofit2.Callback<GuideImageListDTO> {
             val bitmap = lastCapturedBitmap.copy(lastCapturedBitmap.config, true)
@@ -445,5 +449,6 @@ class ImageAnalyzer(
         fun onUpdateGuidingComponentPosition(width: Int, height: Int, leftTopPoint: Point)
         fun onMatchComponent()
         fun onUpdateSpot(spotList: ArrayList<Spot>)
+        fun onUpdateRecommendedCacheImage(imageList: ArrayList<String>)
     }
 }
