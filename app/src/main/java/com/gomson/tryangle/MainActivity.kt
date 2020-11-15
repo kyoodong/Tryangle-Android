@@ -2,6 +2,7 @@ package com.gomson.tryangle
 
 import android.Manifest.permission
 import android.content.ContentUris
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -40,6 +41,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.gomson.tryangle.album.AlbumActivity
 import com.gomson.tryangle.databinding.ActivityMainBinding
+import com.gomson.tryangle.domain.AccessToken
 import com.gomson.tryangle.domain.GuideTabItem
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.Spot
@@ -54,7 +56,9 @@ import com.gomson.tryangle.dto.ObjectComponentListDTO
 import com.gomson.tryangle.guider.GuideImageObjectGuider
 import com.gomson.tryangle.guider.ObjectGuider
 import com.gomson.tryangle.guider.PoseGuider
+import com.gomson.tryangle.network.BaseService
 import com.gomson.tryangle.network.ImageService
+import com.gomson.tryangle.network.ModelService
 import com.gomson.tryangle.network.NetworkManager
 import com.gomson.tryangle.setting.PreferenceActivity
 import com.gomson.tryangle.setting.PreferenceFragment
@@ -64,6 +68,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
 import kotlinx.android.synthetic.main.view_guide_image_category_tab_layout.view.*
+import okhttp3.ResponseBody
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
@@ -95,8 +100,6 @@ enum class TimerMode constructor(
     TIMER_7S(7000, R.drawable.timer7s, "7초", "7"),
     TIMER_10S(10000, R.drawable.timer10s, "10초", "10"),
 }
-
-private const val CODE_REQ_FINE_LOCATION = 10
 
 class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     GuideImageAdapter.OnClickGuideImage {

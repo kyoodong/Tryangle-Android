@@ -40,5 +40,6 @@ internal class NetworkManager {
         // 추천 이미지 받을 서버 서비스
         val imageService = retrofit.create(ImageRetrofitService::class.java)
         val accessTokenService = retrofit.create(AccessTokenRetrofitService::class.java)
+        val modelService = retrofit.create(ModelRetrofitService::class.java)
     }
 }

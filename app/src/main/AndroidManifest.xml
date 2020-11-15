@@ -1,53 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.gomson.tryangle">
-
     <!-- 인터넷 권한 -->
-    <uses-permission android:name="android.permission.INTERNET"/>
-
-    <!-- 카메라 권한 -->
+    <uses-permission android:name="android.permission.INTERNET" /> <!-- 카메라 권한 -->
     <uses-feature android:name="android.hardware.camera.any" />
-    <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- 위치 권한 -->
+    <uses-permission android:name="android.permission.CAMERA" /> <!-- 위치 권한 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /> <!-- 스토리지 권한 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /> <!-- 카메라가 없는 기기에는 설치할 수 없음 -->
+    <uses-feature android:name="android.hardware.camera2.full" /> <!-- 전면카메라/후면카메라 권한 -->
+    <uses-feature android:name="android.hardware.camera.any" /> <!-- 플래시 사용 -->
+    <uses-permission android:name="android.permission.FLASHLIGHT" /> <!-- GPS 위치 정보 -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
-    <!-- 스토리지 권한 -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-
-    <!-- 카메라가 없는 기기에는 설치할 수 없음 -->
-    <uses-feature android:name="android.hardware.camera2.full" />
-
-    <!--  전면카메라/후면카메라 권한  -->
-    <uses-feature android:name="android.hardware.camera.any" />
-
-    <!--  플래시 사용  -->
-    <uses-permission android:name="android.permission.FLASHLIGHT" />
-
-    <!--  GPS 위치 정보 -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-
     <application
+        android:name=".TryangleApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:largeHeap="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme"
-        android:largeHeap="true"
-        android:name=".TryangleApplication"
-        android:networkSecurityConfig="@xml/network_security_config">
-        <activity android:name=".MainActivity">
+        android:theme="@style/AppTheme">
+        <activity android:name=".SplashActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".setting.PreferenceActivity"  android:theme="@style/PreferencesTheme"/>
-        <activity android:name=".album.AlbumActivity"/>
-        <activity android:name=".photo.PhotoActivity"/>
+        <activity
+            android:name=".MainActivity"
+            android:theme="@style/AppTheme">
+        </activity>
+        <activity
+            android:name=".setting.PreferenceActivity"
+            android:theme="@style/PreferencesTheme" />
+        <activity android:name=".album.AlbumActivity" />
+        <activity android:name=".photo.PhotoActivity" />
     </application>
 
 </manifest>
