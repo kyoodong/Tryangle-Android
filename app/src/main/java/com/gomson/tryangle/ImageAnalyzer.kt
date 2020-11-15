@@ -273,6 +273,7 @@ class ImageAnalyzer(
         Log.i(TAG, "Image Segmentation 요청")
 
         val result = ImageRetrieval(curImage.nativeObjAddr)
+        analyzeListener?.onUpdateRecommendedCacheImage(result.toCollection(ArrayList()))
 
         isProcessingSegmentation = true
         imageService.recommendImage(bitmap, object: retrofit2.Callback<GuideImageListDTO> {

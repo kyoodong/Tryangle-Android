@@ -17,9 +17,9 @@ interface ModelRetrofitService {
     @GET("api/mobile-model/version/feature")
     fun getLatestFeatureVersion(@Query("token") token: String): Call<ResponseBody>
 
-    @GET("/vectors/{version}/fvecs.bin")
+    @GET("/vectors/{version}/vecs.bin")
     fun downloadFeature(@Path("version") version: String): Call<ResponseBody>
 
-    @GET("/vectors/{version}/fvecs_names.txt")
+    @GET("/vectors/{version}/vecs_names.txt")
     fun downloadFeatureNames(@Path("version") version: String): Call<ResponseBody>
 }

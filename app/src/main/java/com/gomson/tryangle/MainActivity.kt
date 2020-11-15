@@ -169,6 +169,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     init {
         System.loadLibrary("opencv_java4")
         System.loadLibrary("native-lib")
+        System.loadLibrary("pytorch_nativeapp")
     }
 
     val ratioPopupViewClickListener = View.OnClickListener { view ->
@@ -965,7 +966,16 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     override fun onUpdateRecommendedCacheImage(imageList: ArrayList<String>) {
-        TODO("Not yet implemented")
+        Log.i(TAG, "임시 이미지 도착")
+
+        this.recommendedImageUrlList.clear()
+        this.recommendedImageUrlList.addAll(imageList)
+
+        runOnUiThread {
+            val tab = this.binding.guideImageCategoryTabLayout.tabLayout.getTabAt(0)
+            this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
+            binding.guideImageCategoryTabLayout.addImageUrlList(imageList)
+        }
     }
 }
 

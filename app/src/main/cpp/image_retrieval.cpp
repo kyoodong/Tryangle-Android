@@ -391,7 +391,7 @@ Java_com_gomson_tryangle_ImageAnalyzer_ImageRetrieval(
 	torch::jit::script::Module model;
 	try {
 		// torch::jit::load()을 사용해 ScriptModule을 파일로부터 역직렬화
-		model = torch::jit::load("resnet50_model.pt");
+		model = torch::jit::load("/sdcard/Android/data/com.gomson.tryangle/files/resnet50_model.pt");
 		model.eval();
 	}
 	catch (const c10::Error& e) {
@@ -405,7 +405,7 @@ Java_com_gomson_tryangle_ImageAnalyzer_ImageRetrieval(
 	std::vector<std::string> image_names;
 
 	Index index(1024);
-	index.load("vecs.bin", "vecs_names.txt", 1791);
+	index.load("/sdcard/Android/data/com.gomson.tryangle/files/vecs.bin", "/sdcard/Android/data/com.gomson.tryangle/files/vecs_names.txt", 1791);
 
 	// Create Input
 	at::Tensor input_tensor = to_tensor(img);
@@ -422,7 +422,14 @@ Java_com_gomson_tryangle_ImageAnalyzer_ImageRetrieval(
 	index.search(1, feature, k, D, I);
 	image_names = index.get_filename(I, k);
 
-	result = (jobjectArray)env->NewObjectArray(0,env->FindClass("java/lang/String"),env->NewStringUTF(""));
+	jclass string_class = env->FindClass("java/lang/String");
+	result = (jobjectArray)env->NewObjectArray(image_names.size(), string_class, env->NewStringUTF(""));
+
+
+	for (int i = 0; i < image_names.size(); i++) {
+		env->SetObjectArrayElement(result, i, env->NewStringUTF(image_names[i].c_str()));
+	}
+
 	return result;
 }
 

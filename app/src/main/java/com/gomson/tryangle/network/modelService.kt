@@ -26,7 +26,7 @@ private const val TAG = "ImageService"
 class ModelService(context: Context): BaseService(context) {
 
     fun getLatestModelVersion(callback: Callback<ResponseBody>) {
-        val call = NetworkManager.modelService.getLatestFeatureVersion(accessToken!!.token)
+        val call = NetworkManager.modelService.getLatestModelVersion(accessToken!!.token)
         call.enqueue(callback)
     }
 
@@ -69,7 +69,7 @@ class ModelService(context: Context): BaseService(context) {
                     val responseBody = response.body()
                     if (responseBody != null) {
                         count++
-                        saveToFile(responseBody, "fvecs.bin")
+                        saveToFile(responseBody, "vecs.bin")
 
                         if (count == 2) {
                             callback.onSuccess()
@@ -93,7 +93,7 @@ class ModelService(context: Context): BaseService(context) {
                     val responseBody = response.body()
                     if (responseBody != null) {
                         count++
-                        saveToFile(responseBody, "fvecs_names.txt")
+                        saveToFile(responseBody, "vecs_names.txt")
 
                         if (count == 2) {
                             callback.onSuccess()
