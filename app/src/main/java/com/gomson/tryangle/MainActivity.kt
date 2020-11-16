@@ -102,7 +102,7 @@ enum class TimerMode constructor(
 }
 
 class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
-    GuideImageAdapter.OnClickGuideImage {
+    GuideImageAdapter.OnClickGuideImage, SplashFragment.OnCloseSplashListener {
 
     companion object {
         private const val TAG = "MainActivity"
@@ -165,6 +165,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     private lateinit var locationCallback: LocationCallback
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
+    private lateinit var splashFragment: SplashFragment
 
     init {
         System.loadLibrary("opencv_java4")
@@ -230,6 +231,13 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
         converter = YuvToRgbConverter(this)
         imageService = ImageService(baseContext)
+
+        if(savedInstanceState == null) { // initial transaction should be wrapped like this
+            splashFragment = SplashFragment(this)
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.splashLayout, splashFragment)
+                .commitAllowingStateLoss()
+        }
 
         binding.guideImageCategoryTabLayout.addTab(
             GuideTabItem("추천", recommendedImageUrlList)
@@ -373,7 +381,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         setRecentImageView(getRecentImage())
 
         setAspectRatioView(currentRatio)
-        bindCameraConfiguration()
     }
 
     override fun onResume() {
@@ -485,6 +492,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                 this, cameraSelector, preview, imageCapture, imageAnalysis
             )
             preview.setSurfaceProvider(binding.previewView.createSurfaceProvider())
+            splashFragment.onCameraSetup()
         } catch (exc: Exception) {
             Log.e(TAG, "Use case binding failed", exc)
         }
@@ -976,6 +984,12 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
             binding.guideImageCategoryTabLayout.addImageUrlList(imageList)
         }
+    }
+
+    override fun onCloseSplash() {
+        supportFragmentManager.beginTransaction()
+            .remove(splashFragment)
+            .commitAllowingStateLoss()
     }
 }
 
