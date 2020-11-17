@@ -885,8 +885,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                 val croppedImage = Bitmap.createBitmap(imageAnalyzer.bitmap, croppedX, croppedY, croppedWidth, croppedHeight)
                 val rescaledImage = Bitmap.createScaledBitmap(croppedImage, MODEL_WIDTH, MODEL_HEIGHT, true)
                 component.person = posenet.estimateSinglePose(rescaledImage).convertTo(
-                    imageAnalyzer.width,
-                    imageAnalyzer.height,
                     Area(
                         Point(croppedX, croppedY),
                         Point(croppedX + croppedWidth, croppedY + croppedHeight)

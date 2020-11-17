@@ -239,7 +239,6 @@ class ImageAnalyzer(
                     val croppedImage = Bitmap.createBitmap(bitmap, croppedX, croppedY, croppedWidth, croppedHeight)
                     val rescaledImage = Bitmap.createScaledBitmap(croppedImage, MODEL_WIDTH, MODEL_HEIGHT, true)
                     guidingComponent.person = posenet.estimateSinglePose(rescaledImage).convertTo(
-                        width, height,
                         Area(
                             Point(croppedX, croppedY),
                             Point(croppedX + croppedWidth, croppedY + croppedHeight)
