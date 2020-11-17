@@ -26,6 +26,7 @@ import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.pose.PoseClassifier
 import org.opencv.android.Utils
 import org.opencv.core.Mat
+import org.tensorflow.lite.examples.posenet.lib.Device
 import org.tensorflow.lite.examples.posenet.lib.Posenet
 import retrofit2.Call
 import retrofit2.Callback
@@ -52,7 +53,7 @@ class ImageAnalyzer(
     private lateinit var lastCapturedBitmap: Bitmap
     private val converter: YuvToRgbConverter = YuvToRgbConverter(context)
     private val imageService = ImageService(context)
-    private val posenet = Posenet(context)
+    private val posenet = Posenet(context, "posenet_model.tflite", Device.GPU)
     private val poseClassifier = PoseClassifier()
     private val lineGuider = LineGuider()
     private var guidingComponent: Component? = null
@@ -76,6 +77,7 @@ class ImageAnalyzer(
     }
 
     external fun MatchFeature(matAddrInput1: Long, matAddrInput2: Long, ratioInRoi: Int): MatchingResult?
+    external fun ImageRetrieval(matAddrInput: Long): Array<String>
 
     override fun analyze(imageProxy: ImageProxy) {
         val curTime = System.currentTimeMillis()
@@ -270,6 +272,10 @@ class ImageAnalyzer(
 
         lastCapturedBitmap = bitmap.copy(bitmap.config, true)
         Log.i(TAG, "Image Segmentation 요청")
+
+        val result = ImageRetrieval(curImage.nativeObjAddr)
+        analyzeListener?.onUpdateRecommendedCacheImage(result.toCollection(ArrayList()))
+
         isProcessingSegmentation = true
         imageService.recommendImage(bitmap, object: retrofit2.Callback<GuideImageListDTO> {
             val bitmap = lastCapturedBitmap.copy(lastCapturedBitmap.config, true)
@@ -445,5 +451,6 @@ class ImageAnalyzer(
         fun onUpdateGuidingComponentPosition(width: Int, height: Int, leftTopPoint: Point)
         fun onMatchComponent()
         fun onUpdateSpot(spotList: ArrayList<Spot>)
+        fun onUpdateRecommendedCacheImage(imageList: ArrayList<String>)
     }
 }

@@ -2,6 +2,7 @@ package com.gomson.tryangle
 
 import android.Manifest.permission
 import android.content.ContentUris
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -40,6 +41,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.gomson.tryangle.album.AlbumActivity
 import com.gomson.tryangle.databinding.ActivityMainBinding
+import com.gomson.tryangle.domain.AccessToken
 import com.gomson.tryangle.domain.GuideTabItem
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.Spot
@@ -54,7 +56,9 @@ import com.gomson.tryangle.dto.ObjectComponentListDTO
 import com.gomson.tryangle.guider.GuideImageObjectGuider
 import com.gomson.tryangle.guider.ObjectGuider
 import com.gomson.tryangle.guider.PoseGuider
+import com.gomson.tryangle.network.BaseService
 import com.gomson.tryangle.network.ImageService
+import com.gomson.tryangle.network.ModelService
 import com.gomson.tryangle.network.NetworkManager
 import com.gomson.tryangle.setting.PreferenceActivity
 import com.gomson.tryangle.setting.PreferenceFragment
@@ -64,9 +68,11 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
 import kotlinx.android.synthetic.main.view_guide_image_category_tab_layout.view.*
+import okhttp3.ResponseBody
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
+import org.tensorflow.lite.examples.posenet.lib.Device
 import org.tensorflow.lite.examples.posenet.lib.Posenet
 import retrofit2.Call
 import retrofit2.Callback
@@ -96,10 +102,8 @@ enum class TimerMode constructor(
     TIMER_10S(10000, R.drawable.timer10s, "10초", "10"),
 }
 
-private const val CODE_REQ_FINE_LOCATION = 10
-
 class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
-    GuideImageAdapter.OnClickGuideImage {
+    GuideImageAdapter.OnClickGuideImage, SplashFragment.OnCloseSplashListener {
 
     companion object {
         private const val TAG = "MainActivity"
@@ -162,10 +166,13 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     private lateinit var locationCallback: LocationCallback
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
+    private lateinit var splashFragment: SplashFragment
+    private lateinit var posenet: Posenet
 
     init {
         System.loadLibrary("opencv_java4")
         System.loadLibrary("native-lib")
+        System.loadLibrary("pytorch_nativeapp")
     }
 
     val ratioPopupViewClickListener = View.OnClickListener { view ->
@@ -226,6 +233,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
         converter = YuvToRgbConverter(this)
         imageService = ImageService(baseContext)
+        posenet = Posenet(baseContext, "posenet_model.tflite", Device.GPU)
+
+        if(savedInstanceState == null) { // initial transaction should be wrapped like this
+            splashFragment = SplashFragment(this)
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.splashLayout, splashFragment)
+                .commitAllowingStateLoss()
+        }
 
         binding.guideImageCategoryTabLayout.addTab(
             GuideTabItem("추천", recommendedImageUrlList)
@@ -369,7 +384,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         setRecentImageView(getRecentImage())
 
         setAspectRatioView(currentRatio)
-        bindCameraConfiguration()
     }
 
     override fun onResume() {
@@ -481,6 +495,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                 this, cameraSelector, preview, imageCapture, imageAnalysis
             )
             preview.setSurfaceProvider(binding.previewView.createSurfaceProvider())
+            splashFragment.onCameraSetup()
         } catch (exc: Exception) {
             Log.e(TAG, "Use case binding failed", exc)
         }
@@ -857,7 +872,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             component.standardGuideCompleted = true
 
             if (component is PersonComponent) {
-                val posenet = Posenet(baseContext)
                 val alpha = 30
                 val croppedX = max(component.roi.left - alpha, 0)
                 val croppedY = max(component.roi.top - alpha, 0)
@@ -959,6 +973,25 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             val tab = this.binding.guideImageCategoryTabLayout.tabLayout.getTabAt(1)
             this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
         }
+    }
+
+    override fun onUpdateRecommendedCacheImage(imageList: ArrayList<String>) {
+        Log.i(TAG, "임시 이미지 도착")
+
+        this.recommendedImageUrlList.clear()
+        this.recommendedImageUrlList.addAll(imageList)
+
+        runOnUiThread {
+            val tab = this.binding.guideImageCategoryTabLayout.tabLayout.getTabAt(0)
+            this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
+            binding.guideImageCategoryTabLayout.addImageUrlList(imageList)
+        }
+    }
+
+    override fun onCloseSplash() {
+        supportFragmentManager.beginTransaction()
+            .remove(splashFragment)
+            .commitAllowingStateLoss()
     }
 }
 

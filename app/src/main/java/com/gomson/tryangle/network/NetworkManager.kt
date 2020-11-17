@@ -16,8 +16,13 @@ private const val TIMEOUT = 3L
 internal class NetworkManager {
 
     companion object {
-        const val URL = "http://121.139.71.162:7778"
+//        const val URL = "http://121.139.71.162:7778"
+
+        // CPU Dev
 //        const val URL = "http://121.139.71.162:7776"
+
+        // GPU Dev
+        const val URL = "http://121.139.71.162:7777"
 
         private val client = OkHttpClient.Builder()
             .connectTimeout(TIMEOUT, TimeUnit.MINUTES)
@@ -40,5 +45,6 @@ internal class NetworkManager {
         // 추천 이미지 받을 서버 서비스
         val imageService = retrofit.create(ImageRetrofitService::class.java)
         val accessTokenService = retrofit.create(AccessTokenRetrofitService::class.java)
+        val modelService = retrofit.create(ModelRetrofitService::class.java)
     }
 }
