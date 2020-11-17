@@ -184,7 +184,6 @@ class ImageAnalyzer(
                 val width = (maxX - minX)
                 val height = (maxY - minY)
 
-                val center = Point(minX + width / 2, minY + height / 2)
                 val leftTop = Point(minX, minY)
 
                 guidingComponent.roi = Roi(minX, maxX, minY, maxY)

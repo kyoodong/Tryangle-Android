@@ -72,7 +72,7 @@ data class Roi(
         if (lft.bottom <= rht.top)
             return 0f
 
-        val minY = min(lft.bottom, rht.top)
+        val minY = max(lft.top, rht.top)
         val maxY = min(lft.bottom, rht.bottom)
         val intersectWidth = maxX - minX
         val intersectHeight = maxY - minY

@@ -33,7 +33,7 @@ open class AreaGuide(
     override fun isMatch(componentRoi: Roi, guideTime: Long): Boolean {
         val now = System.currentTimeMillis()
         val diffTime = now - guideTime
-        val diff = 0.01 * (diffTime / 1000).toInt()
+        val diff = 0.03 * (diffTime / 1000).toInt()
         val areaRoi = area.getRoi()
         val iou = areaRoi.getIou(componentRoi)
         return iou > (1 - diff) && iou < (1 + diff)
