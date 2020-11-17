@@ -604,13 +604,13 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         }
     }
 
-
     override fun onUpdateRecommendedImage(imageList: ArrayList<String>) {
         Log.i(TAG, "추천 이미지 ${imageList.size} 개 도착!")
         this.recommendedImageUrlList.clear()
         this.recommendedImageUrlList.addAll(imageList)
 
         runOnUiThread {
+            this.binding.guideTextView.text = getString(R.string.select_guide_image)
             val tab = this.binding.guideImageCategoryTabLayout.tabLayout.getTabAt(0)
             this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
             binding.guideImageCategoryTabLayout.addImageUrlList(imageList)

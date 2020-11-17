@@ -65,6 +65,9 @@ class ImageAnalyzer(
     private var hasSpotImages = false
     private var isProcessingSegmentation = false
 
+    // @TODO: 임시이미지 안뜨게함 -> 서버 반응 느리면 뜨게 하자
+    private var isNeedCacheImage = false
+
     var width = 0
     var height = 0
     private var lastAnalyzeTime = System.currentTimeMillis()
@@ -273,8 +276,11 @@ class ImageAnalyzer(
         lastCapturedBitmap = bitmap.copy(bitmap.config, true)
         Log.i(TAG, "Image Segmentation 요청")
 
-        val result = ImageRetrieval(curImage.nativeObjAddr)
-        analyzeListener?.onUpdateRecommendedCacheImage(result.toCollection(ArrayList()))
+        if (isNeedCacheImage) {
+            isNeedCacheImage = false
+            val result = ImageRetrieval(curImage.nativeObjAddr)
+            analyzeListener?.onUpdateRecommendedCacheImage(result.toCollection(ArrayList()))
+        }
 
         isProcessingSegmentation = true
         imageService.recommendImage(bitmap, object: retrofit2.Callback<GuideImageListDTO> {
