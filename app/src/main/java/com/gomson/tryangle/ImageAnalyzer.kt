@@ -204,19 +204,26 @@ class ImageAnalyzer(
                         }
 
                         val diffTime = ((System.currentTimeMillis() - guideTime) / 1000).toInt()
-                        val iouThreshold = diffTime * 0.03
+                        val iouThreshold = diffTime * 0.1
+                        val total = 1 - iouThreshold
 
-                        if (iou >= (1 - iouThreshold)) {
+                        if (iou >= total) {
                             analyzeListener?.onMatchComponent()
+                        } else if (total > 0) {
+                            val percent = iou / total
+                            analyzeListener?.onUpdateMatchGuidePercent(percent)
                         }
                     }
                 }
 
                 // 오브젝트 가이드 매칭 여부
                 else if (guide is ObjectGuide) {
-                    if (guide.isMatch(Roi(minX, maxX, minY, maxY), guideTime)) {
+                    val result = guide.isMatch(Roi(minX, maxX, minY, maxY), guideTime)
+                    if (result.first) {
                         Log.i(TAG, "가이드 목표 도달!")
                         analyzeListener?.onMatchGuide()
+                    } else {
+                        analyzeListener?.onUpdateMatchGuidePercent(result.second)
                     }
                 }
                 // 포즈 가이드 매칭 여부
@@ -468,5 +475,6 @@ class ImageAnalyzer(
         fun onMatchComponent()
         fun onUpdateSpot(spotList: ArrayList<Spot>)
         fun onUpdateRecommendedCacheImage(imageList: ArrayList<String>)
+        fun onUpdateMatchGuidePercent(percent: Double)
     }
 }

@@ -30,12 +30,23 @@ open class AreaGuide(
         super.clearGuide(layerLayout)
     }
 
-    override fun isMatch(componentRoi: Roi, guideTime: Long): Boolean {
+    override fun isMatch(componentRoi: Roi, guideTime: Long): Pair<Boolean, Double> {
         val now = System.currentTimeMillis()
         val diffTime = now - guideTime
         val diff = 0.03 * (diffTime / 1000).toInt()
         val areaRoi = area.getRoi()
-        val iou = areaRoi.getIou(componentRoi)
-        return iou > (1 - diff) && iou < (1 + diff)
+        val iou = if (areaRoi > componentRoi) {
+            componentRoi.getIou(areaRoi)
+        } else {
+            areaRoi.getIou(componentRoi)
+        }
+        val total = (1 - diff).toDouble()
+        val isMatch = iou >= total
+        val percent = if (isMatch || total <= 0.toDouble()) {
+            1.0
+        } else {
+            iou / total
+        }
+        return Pair(isMatch, percent)
     }
 }

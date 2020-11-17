@@ -5,7 +5,6 @@ import com.gomson.tryangle.domain.Line
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.Roi
 import com.gomson.tryangle.domain.component.ObjectComponent
-import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.view.LayerLayout
 import kotlin.math.abs
 
@@ -56,13 +55,20 @@ open class YDiffGuide(guideId: Int, message: String, val yDiff: Int, val compone
         super.clearGuide(layerLayout)
     }
 
-    override fun isMatch(roi: Roi, guideTime: Long): Boolean {
+    override fun isMatch(roi: Roi, guideTime: Long): Pair<Boolean, Double> {
         if (guideLine == null) {
-            return true
+            return Pair(true, 1.0)
         }
 
         val convertedRoi = roi.convertTo(imageWidth, imageHeight, layoutWidth, layoutHeight)
-        val diff = 3
-        return abs(convertedRoi.bottom - guideLine!!.startPoint.y) < diff
+        val threshold = 3
+        val diff = abs(convertedRoi.bottom - guideLine!!.startPoint.y)
+        val isMatch = diff < threshold
+        val percent = if (isMatch) {
+            1.0
+        } else {
+            ((100 - diff) / 100).toDouble()
+        }
+        return Pair(isMatch, percent)
     }
 }

@@ -610,6 +610,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         this.recommendedImageUrlList.addAll(imageList)
 
         runOnUiThread {
+            binding.guidePercentTextView.text = ""
             this.binding.guideTextView.text = getString(R.string.select_guide_image)
             val tab = this.binding.guideImageCategoryTabLayout.tabLayout.getTabAt(0)
             this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
@@ -670,6 +671,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             override fun onFinish() {
                 binding.timerTextView.text = timerMode.text
                 binding.guideTextView.text = ""
+                binding.guidePercentTextView.text = ""
                 binding.timerTextView.visibility = View.GONE
                 takePhoto()
             }
@@ -790,6 +792,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
             // 메인객체 고르기 메시지 노출
             binding.guideTextView.text = getString(R.string.select_main_object)
+            binding.guidePercentTextView.text = ""
             for (component in cameraObjectComponentList) {
                 val imageView = binding.layerLayout.createImageView(component)
                 imageView.setOnClickListener {
@@ -854,6 +857,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     private fun displayGuide(guide: Guide?) {
+        binding.guidePercentTextView.text = ""
+
         if (guide == null) {
             binding.guideTextView.text = getString(R.string.require_more_accurate_position_and_area)
         } else {
@@ -910,12 +915,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         imageAnalyzer.setGuide(null, null, null)
         if (componentList.hasPerson()) {
             binding.guideTextView.text = "자세를 낮추어 아래에서 찍으면 비율이 좋아집니다"
+            binding.guidePercentTextView.text = ""
         }
 
         handler.postDelayed(Runnable {
             binding.layerLayout.removeAllViews()
             countDownTimer(TimerMode.values()[1])
             binding.guideTextView.text = "자동촬영"
+            binding.guidePercentTextView.text = ""
         }, 2000)
     }
 
@@ -992,6 +999,13 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         supportFragmentManager.beginTransaction()
             .remove(splashFragment)
             .commitAllowingStateLoss()
+    }
+
+    override fun onUpdateMatchGuidePercent(percent: Double) {
+        val percentString = "%.1f".format(percent * 100) + "%"
+        runOnUiThread {
+            binding.guidePercentTextView.text = percentString
+        }
     }
 }
 
