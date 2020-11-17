@@ -30,7 +30,7 @@ open class VerticalObjectLineGuide(
         super.clearGuide(layerLayout)
     }
 
-    override fun isMatch(roi: Roi): Boolean {
+    override fun isMatch(roi: Roi, guideTime: Long): Boolean {
         val unitWidth = roi.getWidth() / 3
         return roi.left + unitWidth < line.startPoint.x && line.startPoint.x < roi.right - unitWidth
     }

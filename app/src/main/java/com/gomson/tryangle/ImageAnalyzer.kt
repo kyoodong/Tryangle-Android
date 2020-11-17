@@ -59,6 +59,7 @@ class ImageAnalyzer(
     private var guidingComponent: Component? = null
     private var targetComponent: Component? = null
     private var guidingGuide: Guide? = null
+    private var guideTime = 0L
     private var failToDetectObjectStartTime: Long = 0
     private var ratio: Float = 1f
     var latestLocation: Location? = null
@@ -191,27 +192,36 @@ class ImageAnalyzer(
                 // 가이드 내에서 도달해야하는 목표지점
                 val guide = guidingGuide
                 if (guide == null) {
+                    // 오브젝트 최종 위치 매칭 여부
                     if (targetComponent != null) {
                         val targetComponent = targetComponent as ObjectComponent
 
                         // 객체간에 충분히 가까워 진 경우
-                        val targetPoint = targetComponent.centerPoint
                         val curRoi = Roi(minX, maxX, minY, maxY)
                         val iou = if (targetComponent.roi < curRoi) {
                             targetComponent.roi.getIou(curRoi)
                         } else {
                             curRoi.getIou(targetComponent.roi)
                         }
-                        if (targetPoint.isRoughClose(center) || iou > 0.75) {
+
+                        val diffTime = ((System.currentTimeMillis() - guideTime) / 1000).toInt()
+                        val iouThreshold = diffTime * 0.03
+
+                        if (iou >= (1 - iouThreshold)) {
                             analyzeListener?.onMatchComponent()
                         }
                     }
-                } else if (guide is ObjectGuide) {
-                    if (guide.isMatch(Roi(minX, maxX, minY, maxY))) {
+                }
+
+                // 오브젝트 가이드 매칭 여부
+                else if (guide is ObjectGuide) {
+                    if (guide.isMatch(Roi(minX, maxX, minY, maxY), guideTime)) {
                         Log.i(TAG, "가이드 목표 도달!")
                         analyzeListener?.onMatchGuide()
                     }
-                } else if (guide is PoseGuide && guidingComponent is PersonComponent) {
+                }
+                // 포즈 가이드 매칭 여부
+                else if (guide is PoseGuide && guidingComponent is PersonComponent) {
                     val alpha = 30
                     val croppedX = max(minX - alpha, 0)
                     val croppedY = max(minY - alpha, 0)
@@ -444,6 +454,7 @@ class ImageAnalyzer(
         this.guidingComponent = guidingComponent
         this.targetComponent = targetComponent
         this.guidingGuide = guide
+        this.guideTime = System.currentTimeMillis()
     }
 
     fun setRatio(ratio: Float) {

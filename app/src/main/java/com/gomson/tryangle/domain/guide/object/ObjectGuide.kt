@@ -10,6 +10,6 @@ open abstract class ObjectGuide(
     component: ObjectComponent
 ): Guide(guideId, message, component) {
 
-    abstract fun isMatch(roi: Roi): Boolean
+    abstract fun isMatch(roi: Roi, guideTime: Long): Boolean
 
 }

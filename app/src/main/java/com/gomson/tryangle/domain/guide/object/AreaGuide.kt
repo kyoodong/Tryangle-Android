@@ -30,8 +30,10 @@ open class AreaGuide(
         super.clearGuide(layerLayout)
     }
 
-    override fun isMatch(componentRoi: Roi): Boolean {
-        val diff = 0.05
+    override fun isMatch(componentRoi: Roi, guideTime: Long): Boolean {
+        val now = System.currentTimeMillis()
+        val diffTime = now - guideTime
+        val diff = 0.01 * (diffTime / 1000).toInt()
         val areaRoi = area.getRoi()
         val iou = areaRoi.getIou(componentRoi)
         return iou > (1 - diff) && iou < (1 + diff)

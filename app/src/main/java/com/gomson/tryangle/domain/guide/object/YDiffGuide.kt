@@ -56,7 +56,7 @@ open class YDiffGuide(guideId: Int, message: String, val yDiff: Int, val compone
         super.clearGuide(layerLayout)
     }
 
-    override fun isMatch(roi: Roi): Boolean {
+    override fun isMatch(roi: Roi, guideTime: Long): Boolean {
         if (guideLine == null) {
             return true
         }
