@@ -41,10 +41,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.gomson.tryangle.album.AlbumActivity
 import com.gomson.tryangle.databinding.ActivityMainBinding
-import com.gomson.tryangle.domain.AccessToken
-import com.gomson.tryangle.domain.GuideTabItem
-import com.gomson.tryangle.domain.Point
-import com.gomson.tryangle.domain.Spot
+import com.gomson.tryangle.domain.*
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ComponentList
 import com.gomson.tryangle.domain.component.ObjectComponent
@@ -56,6 +53,7 @@ import com.gomson.tryangle.dto.ObjectComponentListDTO
 import com.gomson.tryangle.guider.GuideImageObjectGuider
 import com.gomson.tryangle.guider.ObjectGuider
 import com.gomson.tryangle.guider.PoseGuider
+import com.gomson.tryangle.guider.convertTo
 import com.gomson.tryangle.network.BaseService
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.network.ModelService
@@ -502,7 +500,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     private fun takePhoto() {
+        imageAnalyzer.setGuide(null, null, null)
         binding.layerLayout.removeAllViews()
+        binding.guidePercentTextView.text = ""
+        binding.guideTextView.text = ""
 
         val imageCapture = imageCapture ?: return
 
@@ -857,8 +858,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     private fun displayGuide(guide: Guide?) {
-        binding.guidePercentTextView.text = ""
-
         if (guide == null) {
             binding.guideTextView.text = getString(R.string.require_more_accurate_position_and_area)
         } else {
@@ -885,7 +884,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
                 val croppedImage = Bitmap.createBitmap(imageAnalyzer.bitmap, croppedX, croppedY, croppedWidth, croppedHeight)
                 val rescaledImage = Bitmap.createScaledBitmap(croppedImage, MODEL_WIDTH, MODEL_HEIGHT, true)
-                component.person = posenet.estimateSinglePose(rescaledImage)
+                component.person = posenet.estimateSinglePose(rescaledImage).convertTo(
+                    imageAnalyzer.width,
+                    imageAnalyzer.height,
+                    Area(
+                        Point(croppedX, croppedY),
+                        Point(croppedX + croppedWidth, croppedY + croppedHeight)
+                    )
+                )
 
                 makeStandardGuide(component)
                 if (component.guideList.isEmpty()) {
@@ -893,13 +899,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                     autoTakePhoto()
                 } else {
                     // 표준 구도 가이드 제공
-                    imageAnalyzer.setGuide(guidingComponent, null, component.guideList[0])
+                    guidingGuide = component.guideList[0]
+                    imageAnalyzer.setGuide(guidingComponent, null, guidingGuide)
                     runOnUiThread {
-                        layerLayoutGuideManager.guide(component.guideList[0])
+                        layerLayoutGuideManager.guide(guidingGuide)
                         binding.layerLayout.removeAllViewsWithout(guidingComponentImageView!!)
+                        displayGuide(guidingGuide)
                     }
                 }
-                Log.d(TAG, "init")
             }
         } else {
             layerLayoutGuideManager.guide(null)

@@ -9,6 +9,7 @@ import android.location.Location
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import com.gomson.tryangle.domain.Area
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.Roi
 import com.gomson.tryangle.domain.Spot
@@ -22,6 +23,7 @@ import com.gomson.tryangle.domain.guide.`object`.PoseGuide
 import com.gomson.tryangle.dto.GuideImageListDTO
 import com.gomson.tryangle.dto.MatchingResult
 import com.gomson.tryangle.guider.LineGuider
+import com.gomson.tryangle.guider.convertTo
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.pose.PoseClassifier
 import org.opencv.android.Utils
@@ -236,7 +238,13 @@ class ImageAnalyzer(
 
                     val croppedImage = Bitmap.createBitmap(bitmap, croppedX, croppedY, croppedWidth, croppedHeight)
                     val rescaledImage = Bitmap.createScaledBitmap(croppedImage, MODEL_WIDTH, MODEL_HEIGHT, true)
-                    guidingComponent.person = posenet.estimateSinglePose(rescaledImage)
+                    guidingComponent.person = posenet.estimateSinglePose(rescaledImage).convertTo(
+                        width, height,
+                        Area(
+                            Point(croppedX, croppedY),
+                            Point(croppedX + croppedWidth, croppedY + croppedHeight)
+                        )
+                    )
 
                     if (guide.isMatch(guidingComponent)) {
                         Log.i(TAG, "가이드 목표 도달!")

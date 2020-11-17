@@ -1,5 +1,7 @@
 package com.gomson.tryangle.guider
 
+import com.gomson.tryangle.MODEL_HEIGHT
+import com.gomson.tryangle.MODEL_WIDTH
 import com.gomson.tryangle.domain.Area
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
@@ -9,6 +11,7 @@ import com.gomson.tryangle.pose.STAND
 import org.tensorflow.lite.examples.posenet.lib.BodyPart
 import org.tensorflow.lite.examples.posenet.lib.KeyPoint
 import org.tensorflow.lite.examples.posenet.lib.Person
+import org.tensorflow.lite.examples.posenet.lib.Position
 
 private const val POSE_THRESHOLD = 0.4
 
@@ -31,29 +34,48 @@ fun Person.get(bodyPart: BodyPart): KeyPoint? {
 }
 
 fun Person.hasHead(): Boolean {
-    return has(BodyPart.LEFT_EAR) &&
-            has(BodyPart.RIGHT_EAR) &&
-            has(BodyPart.LEFT_EYE) &&
-            has(BodyPart.RIGHT_EYE) &&
-            has(BodyPart.NOSE)
+    return has(BodyPart.NOSE)
+            ||
+            (has(BodyPart.LEFT_EAR) || has(BodyPart.RIGHT_EAR))
+            &&
+            (has(BodyPart.LEFT_EYE) || has(BodyPart.RIGHT_EYE))
 }
 
 fun Person.hasUpperBody(): Boolean {
-    return has(BodyPart.LEFT_SHOULDER) &&
+    return has(BodyPart.LEFT_SHOULDER) ||
             has(BodyPart.RIGHT_SHOULDER)
 }
 
 fun Person.hasLowerBody(): Boolean {
-    return has(BodyPart.LEFT_HIP) &&
-           has(BodyPart.RIGHT_HIP) &&
-           has(BodyPart.LEFT_KNEE) &&
-           has(BodyPart.RIGHT_KNEE) &&
-           has(BodyPart.LEFT_ANKLE) &&
-           has(BodyPart.RIGHT_ANKLE)
+    return (has(BodyPart.LEFT_HIP) || has(BodyPart.RIGHT_HIP))
+            &&
+            (has(BodyPart.LEFT_KNEE) || has(BodyPart.RIGHT_KNEE))
+            &&
+            (has(BodyPart.LEFT_ANKLE) || has(BodyPart.RIGHT_ANKLE))
 }
 
 fun Person.hasFullBody(): Boolean {
     return hasLowerBody() && hasUpperBody()
+}
+
+fun Person.convertTo(cropArea: Area): Person {
+    val result = Person()
+    result.score = score
+    for (keyPoint in keyPoints) {
+        val kp = KeyPoint()
+        kp.score = keyPoint.score
+        kp.bodyPart = keyPoint.bodyPart
+        val cropX = keyPoint.position.x.toDouble() / MODEL_WIDTH * cropArea.getWidth()
+        val cropY = keyPoint.position.y.toDouble() / MODEL_HEIGHT * cropArea.getHeight()
+        val x = cropX + cropArea.leftTop.x
+        val y = cropY + cropArea.leftTop.y
+        kp.position = Position()
+        kp.position.x = x.toInt()
+        kp.position.y = y.toInt()
+        result.keyPoints += kp
+    }
+
+    return result
 }
 
 class PoseGuider(
@@ -96,11 +118,13 @@ class PoseGuider(
         }
 
         // 사람이 사진의 윗쪽에 위치한 경우
-        if (component.roi.top < gamma / 2) {
+        if (component.roi.top < gamma) {
             if (component.person.hasHead()) {
-                val top = imageHeight / 3
-                val diff = top - component.roi.top
-                guideList.add(FreeSpaceAboveHeadGuide(diff, component))
+                val area = Area(
+                    Point(0, 0),
+                    Point(imageWidth, imageHeight / 4)
+                )
+                guideList.add(FreeSpaceAboveHeadGuide(area, component))
             }
         }
 
