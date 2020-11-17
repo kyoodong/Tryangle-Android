@@ -26,6 +26,7 @@ import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.pose.PoseClassifier
 import org.opencv.android.Utils
 import org.opencv.core.Mat
+import org.tensorflow.lite.examples.posenet.lib.Device
 import org.tensorflow.lite.examples.posenet.lib.Posenet
 import retrofit2.Call
 import retrofit2.Callback
@@ -52,7 +53,7 @@ class ImageAnalyzer(
     private lateinit var lastCapturedBitmap: Bitmap
     private val converter: YuvToRgbConverter = YuvToRgbConverter(context)
     private val imageService = ImageService(context)
-    private val posenet = Posenet(context)
+    private val posenet = Posenet(context, "posenet_model.tflite", Device.GPU)
     private val poseClassifier = PoseClassifier()
     private val lineGuider = LineGuider()
     private var guidingComponent: Component? = null

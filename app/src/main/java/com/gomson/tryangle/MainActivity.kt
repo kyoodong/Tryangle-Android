@@ -72,6 +72,7 @@ import okhttp3.ResponseBody
 import org.opencv.android.BaseLoaderCallback
 import org.opencv.android.LoaderCallbackInterface
 import org.opencv.android.OpenCVLoader
+import org.tensorflow.lite.examples.posenet.lib.Device
 import org.tensorflow.lite.examples.posenet.lib.Posenet
 import retrofit2.Call
 import retrofit2.Callback
@@ -166,6 +167,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
     private lateinit var splashFragment: SplashFragment
+    private lateinit var posenet: Posenet
 
     init {
         System.loadLibrary("opencv_java4")
@@ -231,6 +233,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
         converter = YuvToRgbConverter(this)
         imageService = ImageService(baseContext)
+        posenet = Posenet(baseContext, "posenet_model.tflite", Device.GPU)
 
         if(savedInstanceState == null) { // initial transaction should be wrapped like this
             splashFragment = SplashFragment(this)
@@ -869,7 +872,6 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             component.standardGuideCompleted = true
 
             if (component is PersonComponent) {
-                val posenet = Posenet(baseContext)
                 val alpha = 30
                 val croppedX = max(component.roi.left - alpha, 0)
                 val croppedY = max(component.roi.top - alpha, 0)
