@@ -79,7 +79,7 @@ class LayerLayout @JvmOverloads constructor(
             val text = area.text
             if (text != null) {
                 paint.color = Color.WHITE
-                paint.textSize = 5f
+                paint.textSize = 35f
                 canvas.drawText(text,
                     (area.leftTop.x + area.getWidth() / 2).toFloat(),
                     (area.leftTop.y + area.getHeight() / 2).toFloat(),

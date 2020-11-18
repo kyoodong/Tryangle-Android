@@ -15,14 +15,22 @@ class FreeSpaceAboveHeadGuide(
 
     var imageWidth = 0
     var imageHeight = 0
+    var convertedArea: Area? = null
 
     override fun guide(layerLayout: LayerLayout) {
         imageWidth = component.mask[0].size
         imageHeight = component.mask.size
 
         area.text = "머리 금지 영역"
-        layerLayout.areaList.add(area.convertTo(imageWidth, imageHeight, layerLayout.width, layerLayout.height))
+        convertedArea = area.convertTo(imageWidth, imageHeight, layerLayout.width, layerLayout.height)
+        layerLayout.areaList.add(convertedArea!!)
         super.guide(layerLayout)
+    }
+
+    override fun clearGuide(layerLayout: LayerLayout) {
+        layerLayout.areaList.remove(convertedArea)
+        convertedArea = null
+        super.clearGuide(layerLayout)
     }
 
     override fun isMatch(component: PersonComponent, guideTime: Long): Boolean {

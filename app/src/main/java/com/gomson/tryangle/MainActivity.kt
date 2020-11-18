@@ -892,7 +892,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             ?: return
 
         component.guideCompleted = true
-        if (!component.standardGuideCompleted) {
+        if (!component.standardGuideCompleted && phaseTargetGuide) {
             component.standardGuideCompleted = true
 
             if (component is PersonComponent) {
