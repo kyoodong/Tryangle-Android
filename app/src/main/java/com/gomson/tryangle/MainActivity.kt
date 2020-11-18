@@ -167,6 +167,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     private lateinit var splashFragment: SplashFragment
     private lateinit var posenet: Posenet
 
+    private var phaseTargetGuide = false
+
     init {
         System.loadLibrary("opencv_java4")
         System.loadLibrary("native-lib")
@@ -620,7 +622,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     private fun makeStandardGuide(component: ObjectComponent) {
+        phaseTargetGuide = false
         component.guideCompleted = true
+        component.guideList.clear()
+
         if (component is PersonComponent) {
             val poseGuider = PoseGuider(
                 component.mask[0].size,
@@ -646,13 +651,27 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             ?: return
 
         if (guidingComponent is ObjectComponent) {
-            targetComponent.guideList.remove(guidingGuide)
-            targetComponent.guideCompleted = targetComponent.guideList.isEmpty()
+            // 가이드 사진 컴포넌트에 대한 가이드
+            if (phaseTargetGuide) {
+                targetComponent.guideList.remove(guidingGuide)
+                targetComponent.guideCompleted = targetComponent.guideList.isEmpty()
 
-            guidingGuide = if (!targetComponent.guideCompleted) {
-                targetComponent.guideList[0]
-            } else {
-                null
+                guidingGuide = if (!targetComponent.guideCompleted) {
+                    targetComponent.guideList[0]
+                } else {
+                    null
+                }
+            }
+
+            // 카메라 사진 컴포넌트에 대한 가이드
+            else {
+                guidingComponent.guideList.remove(guidingGuide)
+                guidingComponent.guideCompleted = guidingComponent.guideList.isEmpty()
+                guidingGuide = if (!guidingComponent.guideCompleted) {
+                    guidingComponent.guideList[0]
+                } else {
+                    null
+                }
             }
 
             runOnUiThread {
@@ -685,6 +704,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     override fun onClick(url: String) {
         Log.d(TAG, "가이드 이미지 클릭 ${url}")
 
+        phaseTargetGuide = true
         componentList.resetCompleteGuide()
         binding.layerLayout.removeAllViews()
         var startTime = System.currentTimeMillis()
