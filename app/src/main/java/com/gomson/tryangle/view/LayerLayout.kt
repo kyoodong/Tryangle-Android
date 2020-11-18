@@ -1,10 +1,7 @@
 package com.gomson.tryangle.view
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Rect
+import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
@@ -69,6 +66,7 @@ class LayerLayout @JvmOverloads constructor(
                 line.endPoint.x.toFloat(), line.endPoint.y.toFloat(), paint)
         }
 
+        paint.textAlign = Paint.Align.CENTER
         for (area in areaList) {
             paint.color = area.color
             canvas.drawRect(
@@ -77,6 +75,17 @@ class LayerLayout @JvmOverloads constructor(
                 area.rightBottom.x.toFloat(),
                 area.rightBottom.y.toFloat(),
                 paint)
+
+            val text = area.text
+            if (text != null) {
+                paint.color = Color.WHITE
+                paint.textSize = 35f
+                canvas.drawText(text,
+                    (area.leftTop.x + area.getWidth() / 2).toFloat(),
+                    (area.leftTop.y + area.getHeight() / 2).toFloat(),
+                    paint
+                )
+            }
         }
     }
 }

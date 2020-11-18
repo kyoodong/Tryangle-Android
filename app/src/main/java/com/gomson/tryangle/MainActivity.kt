@@ -41,10 +41,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.gomson.tryangle.album.AlbumActivity
 import com.gomson.tryangle.databinding.ActivityMainBinding
-import com.gomson.tryangle.domain.AccessToken
-import com.gomson.tryangle.domain.GuideTabItem
-import com.gomson.tryangle.domain.Point
-import com.gomson.tryangle.domain.Spot
+import com.gomson.tryangle.domain.*
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ComponentList
 import com.gomson.tryangle.domain.component.ObjectComponent
@@ -56,6 +53,7 @@ import com.gomson.tryangle.dto.ObjectComponentListDTO
 import com.gomson.tryangle.guider.GuideImageObjectGuider
 import com.gomson.tryangle.guider.ObjectGuider
 import com.gomson.tryangle.guider.PoseGuider
+import com.gomson.tryangle.guider.convertTo
 import com.gomson.tryangle.network.BaseService
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.network.ModelService
@@ -168,6 +166,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     private lateinit var locationRequest: LocationRequest
     private lateinit var splashFragment: SplashFragment
     private lateinit var posenet: Posenet
+
+    private var phaseTargetGuide = false
 
     init {
         System.loadLibrary("opencv_java4")
@@ -502,7 +502,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     private fun takePhoto() {
+        imageAnalyzer.setGuide(null, null, null)
         binding.layerLayout.removeAllViews()
+        binding.guidePercentTextView.text = ""
+        binding.guideTextView.text = ""
 
         val imageCapture = imageCapture ?: return
 
@@ -604,13 +607,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         }
     }
 
-
     override fun onUpdateRecommendedImage(imageList: ArrayList<String>) {
         Log.i(TAG, "추천 이미지 ${imageList.size} 개 도착!")
         this.recommendedImageUrlList.clear()
         this.recommendedImageUrlList.addAll(imageList)
 
         runOnUiThread {
+            binding.guidePercentTextView.text = ""
+            this.binding.guideTextView.text = getString(R.string.select_guide_image)
             val tab = this.binding.guideImageCategoryTabLayout.tabLayout.getTabAt(0)
             this.binding.guideImageCategoryTabLayout.tabLayout.selectTab(tab)
             binding.guideImageCategoryTabLayout.addImageUrlList(imageList)
@@ -618,7 +622,10 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     private fun makeStandardGuide(component: ObjectComponent) {
+        phaseTargetGuide = false
         component.guideCompleted = true
+        component.guideList.clear()
+
         if (component is PersonComponent) {
             val poseGuider = PoseGuider(
                 component.mask[0].size,
@@ -644,13 +651,27 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             ?: return
 
         if (guidingComponent is ObjectComponent) {
-            targetComponent.guideList.remove(guidingGuide)
-            targetComponent.guideCompleted = targetComponent.guideList.isEmpty()
+            // 가이드 사진 컴포넌트에 대한 가이드
+            if (phaseTargetGuide) {
+                targetComponent.guideList.remove(guidingGuide)
+                targetComponent.guideCompleted = targetComponent.guideList.isEmpty()
 
-            guidingGuide = if (!targetComponent.guideCompleted) {
-                targetComponent.guideList[0]
-            } else {
-                null
+                guidingGuide = if (!targetComponent.guideCompleted) {
+                    targetComponent.guideList[0]
+                } else {
+                    null
+                }
+            }
+
+            // 카메라 사진 컴포넌트에 대한 가이드
+            else {
+                guidingComponent.guideList.remove(guidingGuide)
+                guidingComponent.guideCompleted = guidingComponent.guideList.isEmpty()
+                guidingGuide = if (!guidingComponent.guideCompleted) {
+                    guidingComponent.guideList[0]
+                } else {
+                    null
+                }
             }
 
             runOnUiThread {
@@ -670,6 +691,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             override fun onFinish() {
                 binding.timerTextView.text = timerMode.text
                 binding.guideTextView.text = ""
+                binding.guidePercentTextView.text = ""
                 binding.timerTextView.visibility = View.GONE
                 takePhoto()
             }
@@ -682,6 +704,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     override fun onClick(url: String) {
         Log.d(TAG, "가이드 이미지 클릭 ${url}")
 
+        phaseTargetGuide = true
         componentList.resetCompleteGuide()
         binding.layerLayout.removeAllViews()
         var startTime = System.currentTimeMillis()
@@ -790,6 +813,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
             // 메인객체 고르기 메시지 노출
             binding.guideTextView.text = getString(R.string.select_main_object)
+            binding.guidePercentTextView.text = ""
             for (component in cameraObjectComponentList) {
                 val imageView = binding.layerLayout.createImageView(component)
                 imageView.setOnClickListener {
@@ -868,7 +892,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             ?: return
 
         component.guideCompleted = true
-        if (!component.standardGuideCompleted) {
+        if (!component.standardGuideCompleted && phaseTargetGuide) {
             component.standardGuideCompleted = true
 
             if (component is PersonComponent) {
@@ -880,7 +904,12 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
                 val croppedImage = Bitmap.createBitmap(imageAnalyzer.bitmap, croppedX, croppedY, croppedWidth, croppedHeight)
                 val rescaledImage = Bitmap.createScaledBitmap(croppedImage, MODEL_WIDTH, MODEL_HEIGHT, true)
-                component.person = posenet.estimateSinglePose(rescaledImage)
+                component.person = posenet.estimateSinglePose(rescaledImage).convertTo(
+                    Area(
+                        Point(croppedX, croppedY),
+                        Point(croppedX + croppedWidth, croppedY + croppedHeight)
+                    )
+                )
 
                 makeStandardGuide(component)
                 if (component.guideList.isEmpty()) {
@@ -888,13 +917,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                     autoTakePhoto()
                 } else {
                     // 표준 구도 가이드 제공
-                    imageAnalyzer.setGuide(guidingComponent, null, component.guideList[0])
+                    guidingGuide = component.guideList[0]
+                    imageAnalyzer.setGuide(guidingComponent, null, guidingGuide)
                     runOnUiThread {
-                        layerLayoutGuideManager.guide(component.guideList[0])
+                        layerLayoutGuideManager.guide(guidingGuide)
                         binding.layerLayout.removeAllViewsWithout(guidingComponentImageView!!)
+                        displayGuide(guidingGuide)
                     }
                 }
-                Log.d(TAG, "init")
             }
         } else {
             layerLayoutGuideManager.guide(null)
@@ -910,12 +940,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         imageAnalyzer.setGuide(null, null, null)
         if (componentList.hasPerson()) {
             binding.guideTextView.text = "자세를 낮추어 아래에서 찍으면 비율이 좋아집니다"
+            binding.guidePercentTextView.text = ""
         }
 
         handler.postDelayed(Runnable {
             binding.layerLayout.removeAllViews()
             countDownTimer(TimerMode.values()[1])
             binding.guideTextView.text = "자동촬영"
+            binding.guidePercentTextView.text = ""
         }, 2000)
     }
 
@@ -992,6 +1024,13 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         supportFragmentManager.beginTransaction()
             .remove(splashFragment)
             .commitAllowingStateLoss()
+    }
+
+    override fun onUpdateMatchGuidePercent(percent: Double) {
+        val percentString = "%.1f".format(percent * 100) + "%"
+        runOnUiThread {
+            binding.guidePercentTextView.text = percentString
+        }
     }
 }
 

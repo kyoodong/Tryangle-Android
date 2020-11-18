@@ -5,6 +5,7 @@ import com.gomson.tryangle.domain.Roi
 import com.gomson.tryangle.domain.component.ObjectComponent
 import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.view.LayerLayout
+import kotlin.math.abs
 
 open class VerticalObjectLineGuide(
     guidId: Int,
@@ -30,8 +31,26 @@ open class VerticalObjectLineGuide(
         super.clearGuide(layerLayout)
     }
 
-    override fun isMatch(roi: Roi): Boolean {
+    override fun isMatch(roi: Roi, guideTime: Long): Pair<Boolean, Double> {
         val unitWidth = roi.getWidth() / 3
-        return roi.left + unitWidth < line.startPoint.x && line.startPoint.x < roi.right - unitWidth
+        val isMatch = roi.left + unitWidth < line.startPoint.x && line.startPoint.x < roi.right - unitWidth
+        val total = unitWidth
+        val percent = when {
+            isMatch -> {
+                1.0
+            }
+            total <= 0 -> {
+                1.0
+            }
+            line.startPoint.x < roi.left + unitWidth -> {
+                val distance = abs(line.startPoint.x - (roi.left + unitWidth))
+                ((total - distance) / total).toDouble()
+            }
+            else -> {
+                val distance = abs(line.startPoint.x - (roi.right - unitWidth))
+                ((total - distance) / total).toDouble()
+            }
+        }
+        return Pair(isMatch, percent)
     }
 }

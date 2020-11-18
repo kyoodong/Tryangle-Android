@@ -9,6 +9,6 @@ open abstract class PoseGuide(
     component: PersonComponent
 ): Guide(guideId, message, component) {
 
-    abstract fun isMatch(component: PersonComponent): Boolean
+    abstract fun isMatch(component: PersonComponent, guideTime: Long): Boolean
 
 }

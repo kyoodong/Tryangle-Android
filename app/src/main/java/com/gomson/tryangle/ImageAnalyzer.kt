@@ -9,6 +9,7 @@ import android.location.Location
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import com.gomson.tryangle.domain.Area
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.Roi
 import com.gomson.tryangle.domain.Spot
@@ -22,6 +23,7 @@ import com.gomson.tryangle.domain.guide.`object`.PoseGuide
 import com.gomson.tryangle.dto.GuideImageListDTO
 import com.gomson.tryangle.dto.MatchingResult
 import com.gomson.tryangle.guider.LineGuider
+import com.gomson.tryangle.guider.convertTo
 import com.gomson.tryangle.network.ImageService
 import com.gomson.tryangle.pose.PoseClassifier
 import org.opencv.android.Utils
@@ -59,11 +61,15 @@ class ImageAnalyzer(
     private var guidingComponent: Component? = null
     private var targetComponent: Component? = null
     private var guidingGuide: Guide? = null
+    private var guideTime = 0L
     private var failToDetectObjectStartTime: Long = 0
     private var ratio: Float = 1f
     var latestLocation: Location? = null
     private var hasSpotImages = false
     private var isProcessingSegmentation = false
+
+    // @TODO: 임시이미지 안뜨게함 -> 서버 반응 느리면 뜨게 하자
+    private var isNeedCacheImage = false
 
     var width = 0
     var height = 0
@@ -180,7 +186,6 @@ class ImageAnalyzer(
                 val width = (maxX - minX)
                 val height = (maxY - minY)
 
-                val center = Point(minX + width / 2, minY + height / 2)
                 val leftTop = Point(minX, minY)
 
                 guidingComponent.roi = Roi(minX, maxX, minY, maxY)
@@ -188,27 +193,43 @@ class ImageAnalyzer(
                 // 가이드 내에서 도달해야하는 목표지점
                 val guide = guidingGuide
                 if (guide == null) {
+                    // 오브젝트 최종 위치 매칭 여부
                     if (targetComponent != null) {
                         val targetComponent = targetComponent as ObjectComponent
 
                         // 객체간에 충분히 가까워 진 경우
-                        val targetPoint = targetComponent.centerPoint
                         val curRoi = Roi(minX, maxX, minY, maxY)
                         val iou = if (targetComponent.roi < curRoi) {
                             targetComponent.roi.getIou(curRoi)
                         } else {
                             curRoi.getIou(targetComponent.roi)
                         }
-                        if (targetPoint.isRoughClose(center) || iou > 0.75) {
+
+                        val diffTime = ((System.currentTimeMillis() - guideTime) / 1000).toInt()
+                        val iouThreshold = diffTime * 0.1
+                        val total = 1 - iouThreshold
+
+                        if (iou >= total) {
                             analyzeListener?.onMatchComponent()
+                        } else if (total > 0) {
+                            val percent = iou / total
+                            analyzeListener?.onUpdateMatchGuidePercent(percent)
                         }
                     }
-                } else if (guide is ObjectGuide) {
-                    if (guide.isMatch(Roi(minX, maxX, minY, maxY))) {
+                }
+
+                // 오브젝트 가이드 매칭 여부
+                else if (guide is ObjectGuide) {
+                    val result = guide.isMatch(Roi(minX, maxX, minY, maxY), guideTime)
+                    if (result.first) {
                         Log.i(TAG, "가이드 목표 도달!")
                         analyzeListener?.onMatchGuide()
+                    } else {
+                        analyzeListener?.onUpdateMatchGuidePercent(result.second)
                     }
-                } else if (guide is PoseGuide && guidingComponent is PersonComponent) {
+                }
+                // 포즈 가이드 매칭 여부
+                else if (guide is PoseGuide && guidingComponent is PersonComponent) {
                     val alpha = 30
                     val croppedX = max(minX - alpha, 0)
                     val croppedY = max(minY - alpha, 0)
@@ -217,9 +238,14 @@ class ImageAnalyzer(
 
                     val croppedImage = Bitmap.createBitmap(bitmap, croppedX, croppedY, croppedWidth, croppedHeight)
                     val rescaledImage = Bitmap.createScaledBitmap(croppedImage, MODEL_WIDTH, MODEL_HEIGHT, true)
-                    guidingComponent.person = posenet.estimateSinglePose(rescaledImage)
+                    guidingComponent.person = posenet.estimateSinglePose(rescaledImage).convertTo(
+                        Area(
+                            Point(croppedX, croppedY),
+                            Point(croppedX + croppedWidth, croppedY + croppedHeight)
+                        )
+                    )
 
-                    if (guide.isMatch(guidingComponent)) {
+                    if (guide.isMatch(guidingComponent, guideTime)) {
                         Log.i(TAG, "가이드 목표 도달!")
                         analyzeListener?.onMatchGuide()
                     }
@@ -273,8 +299,11 @@ class ImageAnalyzer(
         lastCapturedBitmap = bitmap.copy(bitmap.config, true)
         Log.i(TAG, "Image Segmentation 요청")
 
-        val result = ImageRetrieval(curImage.nativeObjAddr)
-        analyzeListener?.onUpdateRecommendedCacheImage(result.toCollection(ArrayList()))
+        if (isNeedCacheImage) {
+            isNeedCacheImage = false
+            val result = ImageRetrieval(curImage.nativeObjAddr)
+            analyzeListener?.onUpdateRecommendedCacheImage(result.toCollection(ArrayList()))
+        }
 
         isProcessingSegmentation = true
         imageService.recommendImage(bitmap, object: retrofit2.Callback<GuideImageListDTO> {
@@ -438,6 +467,7 @@ class ImageAnalyzer(
         this.guidingComponent = guidingComponent
         this.targetComponent = targetComponent
         this.guidingGuide = guide
+        this.guideTime = System.currentTimeMillis()
     }
 
     fun setRatio(ratio: Float) {
@@ -452,5 +482,6 @@ class ImageAnalyzer(
         fun onMatchComponent()
         fun onUpdateSpot(spotList: ArrayList<Spot>)
         fun onUpdateRecommendedCacheImage(imageList: ArrayList<String>)
+        fun onUpdateMatchGuidePercent(percent: Double)
     }
 }

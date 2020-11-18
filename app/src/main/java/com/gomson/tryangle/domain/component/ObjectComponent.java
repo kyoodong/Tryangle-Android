@@ -15,7 +15,7 @@ import java.util.ArrayList;
 
 public class ObjectComponent extends Component {
 
-    public static final int PERSON = 1;
+    public static final int PERSON = 0;
 
     private int clazz;
     private Point centerPoint;
