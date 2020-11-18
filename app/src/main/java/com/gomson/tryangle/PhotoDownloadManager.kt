@@ -1,5 +1,6 @@
 package com.gomson.tryangle
 
+import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
 import android.media.MediaScannerConnection
@@ -8,10 +9,9 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.annotation.RequiresApi
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
+import java.io.*
 import java.text.SimpleDateFormat
+
 
 class PhotoDownloadManager(val context: Context, val callback: PhotoSaveCallback) {
 
@@ -69,7 +69,24 @@ class PhotoDownloadManager(val context: Context, val callback: PhotoSaveCallback
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
 
+
         val item = resolver.insert(uri, values)
+
+        val saveFile = File(
+            outputDirectory, getFileName()
+        )
+
+        val inStream =
+            FileInputStream(File(uri.path))
+        val outStream = FileOutputStream(saveFile)
+        val inChannel = inStream.channel
+        val outChannel = outStream.channel
+        inChannel.transferTo(0, inChannel.size(), outChannel)
+        inStream.close()
+        outStream.close()
+
+
+        values.clear()
         values.put(MediaStore.Images.Media.IS_PENDING, 0)
         item?.let { resolver.update(it, values, null, null) }
         return item
