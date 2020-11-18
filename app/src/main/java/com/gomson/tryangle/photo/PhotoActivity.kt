@@ -1,11 +1,15 @@
 package com.gomson.tryangle.photo
 
 import android.Manifest
+import android.app.Activity
+import android.app.RecoverableSecurityException
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
 import android.graphics.RectF
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.transition.ChangeBounds
 import android.transition.TransitionManager
@@ -53,6 +57,8 @@ enum class PhotoEditMode constructor(@LayoutRes val layoutId: Int) {
     CROP(R.layout.activity_photo_crop),
 //    FILTER(R.layout.activity_photo_filter),
 }
+
+private const val DELETE_PERMISSION_REQUEST = 30
 
 class PhotoActivity : AppCompatActivity(), PhotoDownloadManager.PhotoSaveCallback {
 
@@ -208,11 +214,45 @@ class PhotoActivity : AppCompatActivity(), PhotoDownloadManager.PhotoSaveCallbac
 
         }
         binding.deleteView.setOnClickListener {
-            contentResolver.delete(contentUri!!, null, null)
-            finishMode()
+            try {
+                val uri = contentUri
+                if (uri != null) {
+                    contentResolver.delete(uri, null, null)
+                    finishMode()
+                }
+            } catch (e: RecoverableSecurityException) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val intentSender = e.userAction.actionIntent.intentSender
+                    intentSender?.let {
+                        startIntentSenderForResult(
+                            intentSender,
+                            DELETE_PERMISSION_REQUEST,
+                            null,
+                            0,
+                            0,
+                            0,
+                            null
+                        )
+                    }
+                }
+            }
         }
         binding.finish.setOnClickListener {
             cropAndSaveImage()
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (resultCode == Activity.RESULT_OK && requestCode == DELETE_PERMISSION_REQUEST) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val uri = contentUri
+                if (uri != null) {
+                    contentResolver.delete(uri, null, null)
+                    finishMode()
+                }
+            }
         }
     }
 

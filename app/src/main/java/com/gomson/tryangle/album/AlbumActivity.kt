@@ -70,8 +70,20 @@ class AlbumActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+
+        if (permissionsGranted()) {
+            getBucketImages()
+            albumAdapter.set(uriList)
+        }
+    }
+
     /* 디바이스의 이미지와 폴더리스트를 가져옴 */
     private fun getBucketImages() {
+        bucketHashMap.clear()
+        uriList.clear()
+
         val uriExternal: Uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         val cursor: Cursor?
         val columnIndexID: Int

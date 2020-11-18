@@ -24,6 +24,12 @@ class AlbumAdapter(private val context: Context) :
         items.addAll(list)
     }
 
+    fun set(list: MutableList<DeviceAlbum>) {
+        items.clear()
+        items.addAll(list)
+        notifyDataSetChanged()
+    }
+
     override fun getItemCount() = items.size
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
