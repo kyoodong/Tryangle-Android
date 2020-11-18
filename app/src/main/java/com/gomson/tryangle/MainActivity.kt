@@ -530,6 +530,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                     MediaScannerConnection.scanFile(
                         baseContext, arrayOf(photoFile.toString()), arrayOf(photoFile.name), null
                     )
+
+                    val photoDownloadManager = PhotoDownloadManager(baseContext, object: PhotoDownloadManager.PhotoSaveCallback {
+                        override fun onSaveFinish(savedUri: Uri?) {
+                            Log.d(TAG, "save")
+                        }
+                    })
+
+                    photoDownloadManager.saveFileToAlbum(savedUri)
                 }
 
                 override fun onError(exception: ImageCaptureException) {

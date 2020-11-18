@@ -69,7 +69,10 @@ class PhotoDownloadManager(val context: Context, val callback: PhotoSaveCallback
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
 
-        val item = resolver.insert(uri, values)
+        val item = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+        val inStream = FileInputStream(File(uri.path))
+        val outStream = resolver.openOutputStream(item!!)
+        outStream!!.write(inStream.readBytes())
         values.put(MediaStore.Images.Media.IS_PENDING, 0)
         item?.let { resolver.update(it, values, null, null) }
         return item
