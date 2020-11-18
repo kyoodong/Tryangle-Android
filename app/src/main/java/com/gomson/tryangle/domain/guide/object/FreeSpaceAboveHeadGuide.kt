@@ -25,7 +25,11 @@ class FreeSpaceAboveHeadGuide(
         super.guide(layerLayout)
     }
 
-    override fun isMatch(component: PersonComponent): Boolean {
+    override fun isMatch(component: PersonComponent, guideTime: Long): Boolean {
+        val diffTime = (System.currentTimeMillis() - guideTime) / 1000
+        if (diffTime > 3)
+            return true
+
         val rightEar = component.person.get(BodyPart.RIGHT_EAR)
         val leftEar = component.person.get(BodyPart.LEFT_EAR)
         val rightEye = component.person.get(BodyPart.RIGHT_EYE)

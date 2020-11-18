@@ -245,7 +245,7 @@ class ImageAnalyzer(
                         )
                     )
 
-                    if (guide.isMatch(guidingComponent)) {
+                    if (guide.isMatch(guidingComponent, guideTime)) {
                         Log.i(TAG, "가이드 목표 도달!")
                         analyzeListener?.onMatchGuide()
                     }
