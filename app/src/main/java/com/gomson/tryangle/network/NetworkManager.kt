@@ -17,13 +17,13 @@ internal class NetworkManager {
 
     companion object {
         // Release
-        const val URL = "http://121.139.71.162:7778"
+//        const val URL = "http://121.139.71.162:7778"
 
         // CPU Dev
 //        const val URL = "http://121.139.71.162:7776"
 
         // GPU Dev
-//        const val URL = "http://121.139.71.162:7777"
+        const val URL = "http://121.139.71.162:7777"
 
         private val client = OkHttpClient.Builder()
             .connectTimeout(TIMEOUT, TimeUnit.MINUTES)

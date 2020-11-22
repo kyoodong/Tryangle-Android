@@ -63,6 +63,7 @@ import com.gomson.tryangle.setting.PreferenceFragment
 import com.gomson.tryangle.view.guide_image_view.GuideImageAdapter
 import com.google.android.gms.location.*
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.item_bucket.*
 import kotlinx.android.synthetic.main.popup_more.view.*
 import kotlinx.android.synthetic.main.popup_ratio.view.*
 import kotlinx.android.synthetic.main.view_guide_image_category_tab_layout.view.*
@@ -502,7 +503,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     }
 
     private fun takePhoto() {
-        imageAnalyzer.setGuide(null, null, null)
+        imageAnalyzer.setGuide(null, null, null, false)
         binding.layerLayout.removeAllViews()
         binding.guidePercentTextView.text = ""
         binding.guideTextView.text = ""
@@ -684,7 +685,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
 
             runOnUiThread {
                 displayGuide(guidingGuide)
-                imageAnalyzer.setGuide(this.guidingComponent, targetComponent, guidingGuide)
+                imageAnalyzer.setGuide(this.guidingComponent, targetComponent, guidingGuide, true)
             }
         }
     }
@@ -717,6 +718,8 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
         binding.layerLayout.removeAllViews()
         var startTime = System.currentTimeMillis()
         var endTime = System.currentTimeMillis()
+        imageAnalyzer.setGuide(null, null, null, true)
+
         Glide.with(baseContext).asBitmap().load("${NetworkManager.URL}/${url}").listener(object :
             RequestListener<Bitmap> {
             override fun onLoadFailed(
@@ -797,6 +800,14 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                                 showCameraObject(cameraObjectComponentList)
                             } else {
                                 Log.e(TAG, "가이드 이미지 컴포넌트 로딩 실패 ${response.code()}")
+                                val imageView = ImageView(baseContext)
+                                imageView.setImageBitmap(resource)
+                                imageView.layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                                imageView.alpha = 0.35f
+                                binding.layerLayout.addView(imageView)
                             }
                         }
 
@@ -878,7 +889,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
             if (targetComponent.guideList.isEmpty()) null else targetComponent.guideList[0]
         }
 
-        imageAnalyzer.setGuide(guidingComponent, this.targetComponent, guidingGuide)
+        imageAnalyzer.setGuide(guidingComponent, this.targetComponent, guidingGuide, true)
 
         val imageView = binding.layerLayout.createImageView(targetComponent, true)
         binding.layerLayout.addView(imageView)
@@ -926,7 +937,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
                 } else {
                     // 표준 구도 가이드 제공
                     guidingGuide = component.guideList[0]
-                    imageAnalyzer.setGuide(guidingComponent, null, guidingGuide)
+                    imageAnalyzer.setGuide(guidingComponent, null, guidingGuide, true)
                     runOnUiThread {
                         layerLayoutGuideManager.guide(guidingGuide)
                         binding.layerLayout.removeAllViewsWithout(guidingComponentImageView!!)
@@ -945,7 +956,7 @@ class MainActivity : AppCompatActivity(), ImageAnalyzer.OnAnalyzeListener,
     private fun autoTakePhoto() {
         Log.i(TAG, "모든 컴포넌트 가이드 성공")
         Log.i(TAG, "자동촬영!")
-        imageAnalyzer.setGuide(null, null, null)
+        imageAnalyzer.setGuide(null, null, null, false)
         if (componentList.hasPerson()) {
             binding.guideTextView.text = "자세를 낮추어 아래에서 찍으면 비율이 좋아집니다"
             binding.guidePercentTextView.text = ""

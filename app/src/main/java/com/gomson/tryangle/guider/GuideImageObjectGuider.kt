@@ -5,6 +5,7 @@ import com.gomson.tryangle.domain.Line
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.ObjectComponent
+import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.`object`.GoldenAreaGuide
 import com.gomson.tryangle.domain.guide.`object`.MiddleObjectLineGuide
 import com.gomson.tryangle.dto.MaskList
@@ -32,7 +33,9 @@ open class GuideImageObjectGuider(
                 // i번 황금영역에 배치하라는 가이드
                 val area = Area(
                     goldenAreaList[i].first,
-                    goldenAreaList[i].second
+                    goldenAreaList[i].second,
+                    Guide.GREEN,
+                    "황금영역"
                 )
                 guideList.add(GoldenAreaGuide(area, component))
             }

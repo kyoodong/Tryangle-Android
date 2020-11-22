@@ -6,6 +6,7 @@ import com.gomson.tryangle.domain.Area
 import com.gomson.tryangle.domain.Point
 import com.gomson.tryangle.domain.component.Component
 import com.gomson.tryangle.domain.component.PersonComponent
+import com.gomson.tryangle.domain.guide.Guide
 import com.gomson.tryangle.domain.guide.`object`.*
 import com.gomson.tryangle.pose.STAND
 import org.tensorflow.lite.examples.posenet.lib.BodyPart
@@ -128,13 +129,15 @@ class PoseGuider(
             }
         }
 
-        val foot_lower_threshold = imageHeight / 3 * 2
+        val foot_lower_threshold = imageHeight / 10 * 9
         // 발 끝을 맞추도록 유도
-        if (component.person.hasLowerBody() &&
+        if (//component.person.hasLowerBody() &&
             component.roi.bottom < foot_lower_threshold) {
             val area = Area(
                 Point(0, foot_lower_threshold),
-                Point(imageWidth, imageHeight)
+                Point(imageWidth, imageHeight),
+                Guide.GREEN,
+                "발 끝 영역"
             )
             guideList.add(BottomToeGuide(area, component))
         }
