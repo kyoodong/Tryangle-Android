@@ -67,6 +67,7 @@ class ImageAnalyzer(
     var latestLocation: Location? = null
     private var hasSpotImages = false
     private var isProcessingSegmentation = false
+    private var isGuiding = false
 
     // @TODO: 임시이미지 안뜨게함 -> 서버 반응 느리면 뜨게 하자
     private var isNeedCacheImage = false
@@ -128,7 +129,7 @@ class ImageAnalyzer(
         bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true)
 
         // 세그멘테이션을 요청할 필요가 있다면
-        if (needToRequestSegmentation) {
+        if (needToRequestSegmentation && !isGuiding) {
             requestSegmentation()
         } else {
             // 오브젝트별 이미지
@@ -463,11 +464,12 @@ class ImageAnalyzer(
         posenet.close()
     }
 
-    fun setGuide(guidingComponent: Component?, targetComponent: Component?, guide: Guide?) {
+    fun setGuide(guidingComponent: Component?, targetComponent: Component?, guide: Guide?, isGuiding: Boolean) {
         this.guidingComponent = guidingComponent
         this.targetComponent = targetComponent
         this.guidingGuide = guide
         this.guideTime = System.currentTimeMillis()
+        this.isGuiding = isGuiding
     }
 
     fun setRatio(ratio: Float) {
